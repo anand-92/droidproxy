@@ -203,12 +203,12 @@ struct ServiceRow<ExtraContent: View>: View {
                 isExpanded = true
             }
         }
-        .onChange(of: accounts) { _, newAccounts in
+        .onChange(of: accounts) { newAccounts in
             if newAccounts.contains(where: { $0.isExpired }) {
                 isExpanded = true
             }
         }
-        .onChange(of: isExpanded) { _, newValue in
+        .onChange(of: isExpanded) { newValue in
             onExpandChange?(newValue)
         }
         .alert("Remove Account", isPresented: $showingRemoveConfirmation) {
@@ -284,7 +284,7 @@ struct SettingsView: View {
 
                 Section {
                     Toggle("Launch at login", isOn: $launchAtLogin)
-                        .onChange(of: launchAtLogin) { _, newValue in
+                        .onChange(of: launchAtLogin) { newValue in
                             toggleLaunchAtLogin(newValue)
                         }
 
