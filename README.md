@@ -1,7 +1,7 @@
 # DroidProxy
 
 <p align="center">
-  <img src="icon.png" alt="DroidProxy" width="128">
+  <img src="logo.png" alt="DroidProxy" width="128">
 </p>
 
 A native macOS menu bar app that proxies Claude Code authentication for use with AI coding tools like [<img src="factory-logo.svg" alt="Factory.ai" height="16">](https://app.factory.ai) Droids. Built on [CLIProxyAPIPlus](https://github.com/router-for-me/CLIProxyAPIPlus).
