@@ -59,7 +59,7 @@ class ThinkingProxy {
 
         static func defaultAdaptiveEffort(for model: String) -> String {
             if model.contains("opus-4-6") {
-                return AppPreferences.forceMaxOpus46Effort ? "max" : "high"
+                return AppPreferences.forceMaxOpus46Effort ? "max" : "auto"
             }
             return "high"
         }

@@ -274,7 +274,7 @@ struct SettingsView: View {
                         }
 
                     Toggle("Force Opus 4.6 max effort", isOn: $forceMaxOpus46Effort)
-                        .help("When off, Opus 4.6 adaptive thinking uses high effort by default.")
+                        .help("When off, Opus 4.6 adaptive thinking uses auto effort.")
 
                     HStack {
                         Text("Auth files")
