@@ -329,19 +329,12 @@ struct SettingsView: View {
                     Text("© 2026")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Link("Automaze, Ltd.", destination: URL(string: "https://automaze.io")!)
-                        .font(.caption)
-                        .underline()
-                        .foregroundColor(.secondary)
-                        .onHover { inside in
-                            if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                        }
-                    Text("All rights reserved.")
+                    Text("DroidProxy")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
 
-                Link("Report an issue", destination: URL(string: "https://github.com/automazeio/vibeproxy/issues")!)
+                Link("Report an issue", destination: URL(string: "https://github.com/anand-92/droidproxy/issues")!)
                     .font(.caption)
                     .padding(.top, 6)
                     .onHover { inside in
