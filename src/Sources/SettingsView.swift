@@ -660,7 +660,11 @@ struct SettingsView: View {
         settings["customModels"] = models
 
         do {
-            let data = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .sortedKeys])
+            var data = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .sortedKeys])
+            if var jsonString = String(data: data, encoding: .utf8) {
+                jsonString = jsonString.replacingOccurrences(of: "\\/", with: "/")
+                data = jsonString.data(using: .utf8) ?? data
+            }
             try data.write(to: url, options: .atomic)
             factoryModelsInstalled = true
             authResultSuccess = true
