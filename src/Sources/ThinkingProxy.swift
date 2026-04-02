@@ -279,6 +279,9 @@ class ThinkingProxy {
                 ThinkingProxy.fileLog("MODIFIED BODY (first 500): \(String(modifiedBody.prefix(500)))")
                 ThinkingProxy.fileLog("THINKING INJECTED: true")
             }
+            if let result = processOpenAIFastMode(jsonString: modifiedBody, path: rewrittenPath) {
+                modifiedBody = result
+            }
         }
 
         forwardRequest(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
@@ -367,6 +370,34 @@ class ThinkingProxy {
         result.insert(contentsOf: ",\"\(fieldName)\":\(fieldValue)", at: insertIndex)
         return result
     }
+
+    private static let fastTierEligibleResponsePaths: Set<String> = [
+        "/v1/responses",
+        "/api/v1/responses"
+    ]
+
+    private func processOpenAIFastMode(jsonString: String, path: String) -> String? {
+        guard AppPreferences.gpt54FastMode else { return nil }
+
+        let normalizedPath = path.split(separator: "?").first.map(String.init) ?? path
+        guard Self.fastTierEligibleResponsePaths.contains(normalizedPath) else { return nil }
+
+        guard let jsonData = jsonString.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+              let model = json["model"] as? String,
+              model == "gpt-5.4" else {
+            return nil
+        }
+
+        guard json["service_tier"] == nil else { return nil }
+
+        let result = injectJSONField(in: jsonString, afterKey: "model", fieldName: "service_tier",
+                                     fieldValue: "\"priority\"")
+        NSLog("[ThinkingProxy] Injected service_tier=priority for model '\(model)' on path \(path)")
+        ThinkingProxy.fileLog("INJECTED service_tier=priority for model \(model)")
+        return result
+    }
+
     /**
      Forwards Amp API requests to ampcode.com, stripping the /api/ prefix
      */

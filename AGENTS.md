@@ -63,6 +63,7 @@ What it does today:
 - Injects Codex reasoning for exact models `gpt-5.3-codex` and `gpt-5.4`
 - Injects `"reasoning":{"effort":"..."}`
 - Reads effort from `AppPreferences.gpt53CodexReasoningEffort` or `AppPreferences.gpt54ReasoningEffort`
+- Optionally injects `"service_tier":"priority"` for `gpt-5.4` on Responses API paths (`/v1/responses`, `/api/v1/responses`) when `AppPreferences.gpt54FastMode` is enabled and the client did not already set `service_tier`
 - Preserves JSON key order by editing the raw JSON string instead of re-serializing
 
 What it does not do anymore:
@@ -115,7 +116,7 @@ Behavior to know:
 | `src/Sources/ThinkingProxy.swift` | Raw TCP HTTP proxy for thinking injection plus Amp request/response rewriting. |
 | `src/Sources/SettingsView.swift` | SwiftUI settings UI for server status, launch-at-login, provider toggles, auth flows, and per-model effort pickers. |
 | `src/Sources/AuthStatus.swift` | `AuthManager`, account parsing, expiry detection, file deletion, and per-account disabled-state updates. |
-| `src/Sources/AppPreferences.swift` | UserDefaults-backed effort preferences for Opus 4.6, Sonnet 4.6, GPT 5.3 Codex, and GPT 5.4. |
+| `src/Sources/AppPreferences.swift` | UserDefaults-backed effort preferences for Opus 4.6, Sonnet 4.6, GPT 5.3 Codex, and GPT 5.4, plus the GPT 5.4 fast mode toggle. |
 | `src/Sources/Resources/config.yaml` | Bundled CLIProxyAPIPlus config (`port: 8318`, localhost binding, Amp upstream settings, auth dir). |
 | `src/Info.plist` | Bundle metadata. Current source-of-truth values include app name `DroidProxy`, bundle ID `com.droidproxy.app`, and Sparkle feed URL on `anand-92/droidproxy`. |
 
