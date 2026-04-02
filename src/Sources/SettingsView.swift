@@ -427,7 +427,7 @@ struct SettingsView: View {
         .background(oledWindowBackground)
         .accentColor(AccountRowView.accent)
         .preferredColorScheme(.dark)
-        .frame(width: 480, height: 740)
+        .frame(width: 480, height: 814)
         .onAppear {
             authManager.checkAuthStatus()
             checkLaunchAtLogin()
