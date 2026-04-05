@@ -377,15 +377,21 @@ class ThinkingProxy {
     ]
 
     private func processOpenAIFastMode(jsonString: String, path: String) -> String? {
-        guard AppPreferences.gpt54FastMode else { return nil }
-
         let normalizedPath = path.split(separator: "?").first.map(String.init) ?? path
         guard Self.fastTierEligibleResponsePaths.contains(normalizedPath) else { return nil }
 
         guard let jsonData = jsonString.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-              let model = json["model"] as? String,
-              model == "gpt-5.4" else {
+              let model = json["model"] as? String else {
+            return nil
+        }
+
+        switch model {
+        case "gpt-5.4":
+            guard AppPreferences.gpt54FastMode else { return nil }
+        case "gpt-5.3-codex":
+            guard AppPreferences.gpt53CodexFastMode else { return nil }
+        default:
             return nil
         }
 

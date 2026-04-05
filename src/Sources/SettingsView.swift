@@ -223,6 +223,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.sonnet46ThinkingEffortKey) private var sonnet46ThinkingEffort = AppPreferences.defaultSonnet46ThinkingEffort
     @AppStorage(AppPreferences.gpt53CodexReasoningEffortKey) private var gpt53CodexReasoningEffort = AppPreferences.defaultGpt53CodexReasoningEffort
     @AppStorage(AppPreferences.gpt54ReasoningEffortKey) private var gpt54ReasoningEffort = AppPreferences.defaultGpt54ReasoningEffort
+    @AppStorage(AppPreferences.gpt53CodexFastModeKey) private var gpt53CodexFastMode = AppPreferences.defaultGpt53CodexFastMode
     @AppStorage(AppPreferences.gpt54FastModeKey) private var gpt54FastMode = AppPreferences.defaultGpt54FastMode
     @State private var authenticatingService: ServiceType? = nil
     @State private var showingAuthResult = false
@@ -300,12 +301,27 @@ struct SettingsView: View {
                         tint: claudeEffortSelectionColor
                     )
 
-                    effortPickerRow(
-                        "GPT 5.3 Codex reasoning effort",
-                        selection: $gpt53CodexReasoningEffort,
-                        options: ["low", "medium", "high", "xhigh"],
-                        tint: codexEffortSelectionColor
-                    )
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("GPT 5.3 Codex reasoning effort")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Toggle("Fast mode", isOn: $gpt53CodexFastMode)
+                                .toggleStyle(.checkbox)
+                                .font(.caption)
+                                .help("Injects service_tier=priority for GPT 5.3 Codex Responses API requests (Codex fast mode)")
+                        }
+                        Picker("", selection: $gpt53CodexReasoningEffort) {
+                            ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
+                                Text(option).tag(option)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .tint(codexEffortSelectionColor)
+                        .labelsHidden()
+                    }
+                    .padding(.vertical, 2)
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
