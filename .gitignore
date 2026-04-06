@@ -32,3 +32,8 @@ src/Sources/Resources/AppIcon.iconset/
 test-notarization.sh
 .vscode/settings.json
 .sparkle_ed25519_private_key
+
+# Website
+website/node_modules/
+website/dist/
+website/.firebase/
