@@ -1,0 +1,40 @@
+# DroidProxy
+
+DroidProxy is a free, open-source macOS menu bar application that proxies authentication for AI coding tools including Claude Code, Codex, and Gemini.
+
+## What DroidProxy Does
+
+- One-click OAuth authentication for AI coding tools
+- Routes requests through localhost proxy (port 8317)
+- Injects adaptive thinking parameters automatically
+- Per-model effort controls for Claude, GPT, and Gemini models
+- Integrates with Factory.ai Droids
+
+## Supported AI Providers
+
+- Claude Code (Anthropic)
+- Codex (OpenAI)
+- Gemini (Google)
+
+## Supported Models
+
+- Claude Opus 4.6
+- Claude Sonnet 4.6
+- GPT 5.3 Codex
+- GPT 5.4
+- Gemini 3.1 Pro
+- Gemini 3 Flash
+
+## Technical Details
+
+- Platform: macOS 13.0+
+- Architecture: Apple Silicon optimized
+- License: MIT
+- Auto-updates: Sparkle
+
+## Links
+
+- Homepage: /
+- GitHub: https://github.com/anand-92/droidproxy
+- Releases: https://github.com/anand-92/droidproxy/releases
+- Issues: https://github.com/anand-92/droidproxy/issues
