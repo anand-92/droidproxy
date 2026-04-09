@@ -227,6 +227,8 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gpt54FastModeKey) private var gpt54FastMode = AppPreferences.defaultGpt54FastMode
     @AppStorage(AppPreferences.gemini31ProThinkingLevelKey) private var gemini31ProThinkingLevel = AppPreferences.defaultGemini31ProThinkingLevel
     @AppStorage(AppPreferences.gemini3FlashThinkingLevelKey) private var gemini3FlashThinkingLevel = AppPreferences.defaultGemini3FlashThinkingLevel
+    @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
+    @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
     @State private var authenticatingService: ServiceType? = nil
     @State private var showingAuthResult = false
     @State private var authResultMessage = ""
@@ -316,6 +318,36 @@ struct SettingsView: View {
                         }
                         Button(factoryModelsInstalled ? "Re-apply" : "Apply") {
                             applyFactoryCustomModels()
+                        }
+                    }
+                }
+                .listRowBackground(oledSectionBackground)
+
+                Section("Remote Management") {
+                    Toggle("Allow remote access", isOn: $allowRemote)
+                        .onChange(of: allowRemote) { _ in
+                            _ = serverManager.getConfigPath()
+                        }
+
+                    HStack {
+                        Text("Secret key")
+                        Spacer()
+                        SecureField("Enter secret key", text: $secretKey)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 200)
+                            .onSubmit {
+                                _ = serverManager.getConfigPath()
+                            }
+                    }
+
+                    if allowRemote && secretKey.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                            Text("Set a secret key to secure remote access")
+                                .font(.caption)
+                                .foregroundColor(.orange)
                         }
                     }
                 }

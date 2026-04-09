@@ -9,6 +9,8 @@ enum AppPreferences {
     static let gpt54FastModeKey = "gpt54FastMode"
     static let gemini31ProThinkingLevelKey = "gemini31ProThinkingLevel"
     static let gemini3FlashThinkingLevelKey = "gemini3FlashThinkingLevel"
+    static let allowRemoteKey = "allowRemote"
+    static let secretKeyKey = "secretKey"
     static let defaultOpus46ThinkingEffort = "max"
     static let defaultSonnet46ThinkingEffort = "high"
     static let defaultGpt53CodexReasoningEffort = "high"
@@ -17,6 +19,8 @@ enum AppPreferences {
     static let defaultGpt54FastMode = false
     static let defaultGemini31ProThinkingLevel = "high"
     static let defaultGemini3FlashThinkingLevel = "high"
+    static let defaultAllowRemote = false
+    static let defaultSecretKey = ""
 
     static var opus46ThinkingEffort: String {
         let defaults = UserDefaults.standard
@@ -72,5 +76,17 @@ enum AppPreferences {
             return defaultGemini3FlashThinkingLevel
         }
         return defaults.string(forKey: gemini3FlashThinkingLevelKey) ?? defaultGemini3FlashThinkingLevel
+    }
+
+    static var allowRemote: Bool {
+        UserDefaults.standard.bool(forKey: allowRemoteKey)
+    }
+
+    static var secretKey: String {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: secretKeyKey) != nil else {
+            return defaultSecretKey
+        }
+        return defaults.string(forKey: secretKeyKey) ?? defaultSecretKey
     }
 }

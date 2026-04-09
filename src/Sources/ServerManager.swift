@@ -374,7 +374,8 @@ class ServerManager: ObservableObject {
         }
     }
     
-    /// Returns the config path to use, merging bundled config with provider exclusions
+    /// Returns the config path to use, merging bundled config with user settings and provider exclusions.
+    /// User settings (allow-remote, secret-key) are stored in UserDefaults so they persist across app updates.
     func getConfigPath() -> String {
         guard let resourcePath = Bundle.main.resourcePath else {
             return ""
@@ -382,6 +383,22 @@ class ServerManager: ObservableObject {
 
         let bundledConfigPath = (resourcePath as NSString).appendingPathComponent("config.yaml")
         let authDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".cli-proxy-api")
+
+        guard var configContent = try? String(contentsOfFile: bundledConfigPath, encoding: .utf8) else {
+            return bundledConfigPath
+        }
+
+        // Inject user-persisted remote-management settings from UserDefaults
+        let allowRemote = AppPreferences.allowRemote
+        let secretKey = AppPreferences.secretKey
+        configContent = configContent.replacingOccurrences(
+            of: "  allow-remote: false",
+            with: "  allow-remote: \(allowRemote)"
+        )
+        configContent = configContent.replacingOccurrences(
+            of: "  secret-key: \"\"  # Leave empty to disable management API",
+            with: "  secret-key: \"\(secretKey)\""
+        )
 
         // Build list of disabled providers
         var disabledProviders: [String] = []
@@ -391,34 +408,24 @@ class ServerManager: ObservableObject {
             }
         }
 
-        guard !disabledProviders.isEmpty else {
-            return bundledConfigPath
-        }
-
-        guard let bundledContent = try? String(contentsOfFile: bundledConfigPath, encoding: .utf8) else {
-            return bundledConfigPath
-        }
-
-        var additionalConfig = ""
-
         if !disabledProviders.isEmpty {
-            additionalConfig += """
+            configContent += """
 
 # Provider exclusions (auto-added by DroidProxy)
 oauth-excluded-models:
 
 """
             for provider in disabledProviders.sorted() {
-                additionalConfig += "  \(provider):\n"
-                additionalConfig += "    - \"*\"\n"
+                configContent += "  \(provider):\n"
+                configContent += "    - \"*\"\n"
             }
         }
 
-        let mergedContent = bundledContent + additionalConfig
         let mergedConfigPath = authDir.appendingPathComponent("merged-config.yaml")
-        
+
         do {
-            try mergedContent.write(to: mergedConfigPath, atomically: true, encoding: .utf8)
+            try FileManager.default.createDirectory(at: authDir, withIntermediateDirectories: true)
+            try configContent.write(to: mergedConfigPath, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: mergedConfigPath.path)
             return mergedConfigPath.path
         } catch {
