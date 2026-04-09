@@ -237,6 +237,7 @@ struct SettingsView: View {
     @State private var pendingRefresh: DispatchWorkItem?
     @State private var expandedRowCount = 0
     @State private var factoryModelsInstalled = false
+    @State private var remoteManagementExpanded = false
     @State private var claudeModelsExpanded = true
     @State private var codexModelsExpanded = true
     @State private var geminiModelsExpanded = true
@@ -323,31 +324,46 @@ struct SettingsView: View {
                 }
                 .listRowBackground(oledSectionBackground)
 
-                Section("Remote Management") {
-                    Toggle("Allow remote access", isOn: $allowRemote)
-                        .onChange(of: allowRemote) { _ in
-                            _ = serverManager.getConfigPath()
-                        }
-
-                    HStack {
-                        Text("Secret key")
-                        Spacer()
-                        SecureField("Enter secret key", text: $secretKey)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 200)
-                            .onSubmit {
+                Section {
+                    if remoteManagementExpanded {
+                        Toggle("Allow remote access", isOn: $allowRemote)
+                            .onChange(of: allowRemote) { _ in
                                 _ = serverManager.getConfigPath()
                             }
-                    }
 
-                    if allowRemote && secretKey.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                                .font(.caption)
-                            Text("Set a secret key to secure remote access")
-                                .font(.caption)
-                                .foregroundColor(.orange)
+                        HStack {
+                            Text("Secret key")
+                            Spacer()
+                            SecureField("Enter secret key", text: $secretKey)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(maxWidth: 200)
+                                .onSubmit {
+                                    _ = serverManager.getConfigPath()
+                                }
+                        }
+
+                        if allowRemote && secretKey.isEmpty {
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.caption)
+                                Text("Set a secret key to secure remote access")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                    }
+                } header: {
+                    HStack(spacing: 4) {
+                        Text("Remote Management")
+                        Image(systemName: remoteManagementExpanded ? "chevron.down" : "chevron.right")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            remoteManagementExpanded.toggle()
                         }
                     }
                 }
