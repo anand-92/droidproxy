@@ -40,3 +40,4 @@ website/.firebase/
 
 # Reference / context material
 context/
+.agent/
