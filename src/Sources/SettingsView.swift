@@ -352,20 +352,38 @@ struct SettingsView: View {
                                     .foregroundColor(.orange)
                             }
                         }
+                    } else {
+                        HStack(spacing: 6) {
+                            Text(allowRemote ? "Remote access: On" : "Remote access: Off")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            if allowRemote && secretKey.isEmpty {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.caption)
+                                Text("Secret key missing")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                        }
                     }
                 } header: {
-                    HStack(spacing: 4) {
-                        Text("Remote Management")
-                        Image(systemName: remoteManagementExpanded ? "chevron.down" : "chevron.right")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             remoteManagementExpanded.toggle()
                         }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("Remote Management")
+                            Image(systemName: remoteManagementExpanded ? "chevron.down" : "chevron.right")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remote Management")
+                    .accessibilityValue(remoteManagementExpanded ? "Expanded" : "Collapsed")
                 }
                 .listRowBackground(oledSectionBackground)
 
