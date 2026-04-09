@@ -77,7 +77,12 @@ src/
 
 ## Star History
 
-[![Star History Chart](https://starchart.cc/anand-92/droidproxy.svg)](https://starchart.cc/anand-92/droidproxy)
+<a href="https://starchart.cc/anand-92/droidproxy">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://starchart.cc/anand-92/droidproxy.svg?theme=dark">
+    <img alt="Star History Chart" src="https://starchart.cc/anand-92/droidproxy.svg">
+  </picture>
+</a>
 
 ## License
 
