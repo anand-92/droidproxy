@@ -84,6 +84,8 @@ DroidProxy ships with three devil's advocate code reviewer droids -- powered by 
 Copy the droid and command definitions into your personal Factory config:
 
 ```bash
+mkdir -p ~/.factory/droids ~/.factory/commands
+
 # Droids
 cp .factory/droids/challenger-opus.md ~/.factory/droids/
 cp .factory/droids/challenger-gpt.md ~/.factory/droids/
