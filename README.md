@@ -77,7 +77,7 @@ src/
 
 ## Challenger Droids
 
-DroidProxy ships with two devil's advocate code reviewer droids -- one powered by GPT 5.4 and one by Gemini 3.1 Pro. They challenge your code decisions, surface tradeoffs you may have missed, stress-test edge cases, and suggest concrete alternatives. Running both gives you a cross-model second opinion that catches blind spots a single reviewer might miss.
+DroidProxy ships with three devil's advocate code reviewer droids -- powered by Claude Opus 4.6, GPT 5.4, and Gemini 3.1 Pro. They challenge your code decisions, surface tradeoffs you may have missed, stress-test edge cases, and suggest concrete alternatives. Running multiple gives you a cross-model second opinion that catches blind spots a single reviewer might miss.
 
 ### Install
 
@@ -85,10 +85,12 @@ Copy the droid and command definitions into your personal Factory config:
 
 ```bash
 # Droids
+cp .factory/droids/challenger-opus.md ~/.factory/droids/
 cp .factory/droids/challenger-gpt.md ~/.factory/droids/
 cp .factory/droids/challenger-gemini.md ~/.factory/droids/
 
 # Slash commands
+cp .factory/commands/challenge-opus.md ~/.factory/commands/
 cp .factory/commands/challenge-gpt.md ~/.factory/commands/
 cp .factory/commands/challenge-gemini.md ~/.factory/commands/
 ```
@@ -97,6 +99,7 @@ cp .factory/commands/challenge-gemini.md ~/.factory/commands/
 
 In any Droid session, use the slash commands:
 
+- `/challenge-opus` -- summon the Claude Opus 4.6 challenger
 - `/challenge-gpt` -- summon the GPT 5.4 challenger
 - `/challenge-gemini` -- summon the Gemini 3.1 Pro challenger
 
