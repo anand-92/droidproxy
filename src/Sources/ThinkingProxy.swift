@@ -333,9 +333,8 @@ class ThinkingProxy {
 
         var result = jsonString
 
-        if json["stream"] == nil {
-            result = injectJSONField(in: result, afterKey: "model", fieldName: "stream", fieldValue: "true")
-        }
+        result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "stream",
+                                          fieldValue: "true", existsInJSON: json["stream"] != nil)
 
         if AppPreferences.claudeMaxBudgetMode {
             let maxTokens = claudeMaxOutputTokens(for: model)
@@ -343,18 +342,22 @@ class ThinkingProxy {
 
             result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "max_tokens",
                                               fieldValue: "\(maxTokens)", existsInJSON: json["max_tokens"] != nil)
-            result = injectJSONField(in: result, afterKey: "max_tokens",
-                                     fieldName: "thinking",
-                                     fieldValue: "{\"type\":\"enabled\",\"budget_tokens\":\(budgetTokens)}")
-            result = injectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
-                                     fieldValue: "{\"effort\":\"max\"}")
+            result = replaceOrInjectJSONField(in: result, afterKey: "max_tokens",
+                                              fieldName: "thinking",
+                                              fieldValue: "{\"type\":\"enabled\",\"budget_tokens\":\(budgetTokens)}",
+                                              existsInJSON: json["thinking"] != nil)
+            result = replaceOrInjectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
+                                              fieldValue: "{\"effort\":\"max\"}",
+                                              existsInJSON: json["output_config"] != nil)
             NSLog("[ThinkingProxy] Injected max budget thinking for '\(model)' with budget_tokens=\(budgetTokens), max_tokens=\(maxTokens)")
             ThinkingProxy.fileLog("INJECTED max budget thinking: budget_tokens=\(budgetTokens) max_tokens=\(maxTokens) for model \(model)")
         } else {
-            result = injectJSONField(in: result, afterKey: "model", fieldName: "thinking",
-                                     fieldValue: "{\"type\":\"adaptive\"}")
-            result = injectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
-                                     fieldValue: "{\"effort\":\"\(effort)\"}")
+            result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "thinking",
+                                              fieldValue: "{\"type\":\"adaptive\"}",
+                                              existsInJSON: json["thinking"] != nil)
+            result = replaceOrInjectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
+                                              fieldValue: "{\"effort\":\"\(effort)\"}",
+                                              existsInJSON: json["output_config"] != nil)
             NSLog("[ThinkingProxy] Injected adaptive thinking for '\(model)' with effort '\(effort)'")
             ThinkingProxy.fileLog("INJECTED adaptive thinking: effort=\(effort) for model \(model)")
         }
