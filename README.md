@@ -22,6 +22,12 @@ All releases are code-signed and notarized by Apple. Existing installs auto-upda
 - **Codex reasoning controls** -- Injects `reasoning: {"effort":"..."}` for `gpt-5.3-codex` and `gpt-5.4` via the OpenAI-compatible `http://localhost:8317/v1` endpoint
 - **Gemini thinking levels** -- Injects per-model thinking levels for `gemini-3.1-pro-preview` (`low` / `medium` / `high`) and `gemini-3-flash-preview` (`minimal` / `low` / `medium` / `high`) via model name suffix rewriting
 - **Per-model effort controls** -- Configure Opus 4.6 (`low` / `medium` / `high` / `max`), Sonnet 4.6 (`low` / `medium` / `high`), GPT 5.3 Codex (`low` / `medium` / `high` / `xhigh`), GPT 5.4 (`low` / `medium` / `high` / `xhigh`), Gemini 3.1 Pro (`low` / `medium` / `high`), and Gemini 3 Flash (`minimal` / `low` / `medium` / `high`) directly from the Settings window
+- **Max Budget Mode** -- Nuclear launch button that forces maximum `budget_tokens` on every Claude request. Engages full thinking power at the cost of burning through your API quota at warp speed. You've been warned.
+
+<p align="center">
+  <img src="max-mode.png" alt="Max Budget Mode" width="420">
+</p>
+
 - **Sparkle auto-updates** -- Checks daily, installs in the background
 - **Factory integration** -- Use Claude models against `http://localhost:8317`, Codex/OpenAI models against `http://localhost:8317/v1`, and Gemini models against `http://localhost:8317/v1`
 
