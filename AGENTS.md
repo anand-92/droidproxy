@@ -8,8 +8,9 @@ The Swift package lives in `src/`. Run all `swift build`, `swift run`, and `swif
 # Debug build
 cd src && swift build
 
-# Run from source
-cd src && swift run
+# Run the app (menu bar app — swift run does not work for LSUIElement apps)
+# Build the .app bundle first, then open it:
+./create-app-bundle.sh && open DroidProxy.app
 
 # Release .app bundle at repo root
 # Picks up CODESIGN_IDENTITY / APP_VERSION / TARGET_ARCH from env when present

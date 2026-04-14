@@ -229,6 +229,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gemini3FlashThinkingLevelKey) private var gemini3FlashThinkingLevel = AppPreferences.defaultGemini3FlashThinkingLevel
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
     @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
+    @AppStorage(AppPreferences.claudeMaxBudgetModeKey) private var claudeMaxBudgetMode = AppPreferences.defaultClaudeMaxBudgetMode
     @State private var authenticatingService: ServiceType? = nil
     @State private var showingAuthResult = false
     @State private var authResultMessage = ""
@@ -239,6 +240,7 @@ struct SettingsView: View {
     @State private var factoryModelsInstalled = false
     @State private var challengerPluginInstalled = false
     @State private var remoteManagementExpanded = false
+    @State private var showingMaxBudgetWarning = false
     @State private var claudeModelsExpanded = true
     @State private var codexModelsExpanded = true
     @State private var geminiModelsExpanded = true
@@ -448,18 +450,33 @@ struct SettingsView: View {
                                 }
                             }
                             if claudeModelsExpanded {
+                                Toggle("Force max thinking budget", isOn: $claudeMaxBudgetMode)
+                                    .toggleStyle(.checkbox)
+                                    .font(.caption)
+                                    .help("Forces manual thinking with maximum budget_tokens instead of adaptive thinking. This will burn through your usage limits quickly.")
+                                    .onChange(of: claudeMaxBudgetMode) { enabled in
+                                        if enabled {
+                                            showingMaxBudgetWarning = true
+                                            opus46ThinkingEffort = "max"
+                                            sonnet46ThinkingEffort = "max"
+                                        }
+                                    }
                                 effortPickerRow(
                                     "Opus 4.6 thinking effort",
                                     selection: $opus46ThinkingEffort,
                                     options: ["low", "medium", "high", "max"],
                                     tint: claudeEffortSelectionColor
                                 )
+                                .disabled(claudeMaxBudgetMode)
+                                .opacity(claudeMaxBudgetMode ? 0.4 : 1.0)
                                 effortPickerRow(
                                     "Sonnet 4.6 thinking effort",
                                     selection: $sonnet46ThinkingEffort,
-                                    options: ["low", "medium", "high"],
+                                    options: ["low", "medium", "high", "max"],
                                     tint: claudeEffortSelectionColor
                                 )
+                                .disabled(claudeMaxBudgetMode)
+                                .opacity(claudeMaxBudgetMode ? 0.4 : 1.0)
                             }
                         }
                         .padding(.leading, 28)
@@ -665,6 +682,11 @@ struct SettingsView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(authResultMessage)
+        }
+        .alert("Warning", isPresented: $showingMaxBudgetWarning) {
+            Button("I understand", role: .cancel) { }
+        } message: {
+            Text("You are speed running your usage limit. Max budget mode forces the highest possible thinking tokens on every request, which will consume your API quota significantly faster.")
         }
     }
 

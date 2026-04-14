@@ -332,12 +332,32 @@ class ThinkingProxy {
         }
 
         var result = jsonString
-        result = injectJSONField(in: result, afterKey: "model", fieldName: "thinking",
-                                 fieldValue: "{\"type\":\"adaptive\"}")
-        result = injectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
-                                 fieldValue: "{\"effort\":\"\(effort)\"}")
-        NSLog("[ThinkingProxy] Injected adaptive thinking for '\(model)' with effort '\(effort)'")
-        ThinkingProxy.fileLog("INJECTED adaptive thinking: effort=\(effort) for model \(model)")
+
+        if json["stream"] == nil {
+            result = injectJSONField(in: result, afterKey: "model", fieldName: "stream", fieldValue: "true")
+        }
+
+        if AppPreferences.claudeMaxBudgetMode {
+            let maxTokens = claudeMaxOutputTokens(for: model)
+            let budgetTokens = maxTokens - 1
+
+            result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "max_tokens",
+                                              fieldValue: "\(maxTokens)", existsInJSON: json["max_tokens"] != nil)
+            result = injectJSONField(in: result, afterKey: "max_tokens",
+                                     fieldName: "thinking",
+                                     fieldValue: "{\"type\":\"enabled\",\"budget_tokens\":\(budgetTokens)}")
+            result = injectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
+                                     fieldValue: "{\"effort\":\"max\"}")
+            NSLog("[ThinkingProxy] Injected max budget thinking for '\(model)' with budget_tokens=\(budgetTokens), max_tokens=\(maxTokens)")
+            ThinkingProxy.fileLog("INJECTED max budget thinking: budget_tokens=\(budgetTokens) max_tokens=\(maxTokens) for model \(model)")
+        } else {
+            result = injectJSONField(in: result, afterKey: "model", fieldName: "thinking",
+                                     fieldValue: "{\"type\":\"adaptive\"}")
+            result = injectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
+                                     fieldValue: "{\"effort\":\"\(effort)\"}")
+            NSLog("[ThinkingProxy] Injected adaptive thinking for '\(model)' with effort '\(effort)'")
+            ThinkingProxy.fileLog("INJECTED adaptive thinking: effort=\(effort) for model \(model)")
+        }
 
         return result
     }
@@ -351,6 +371,38 @@ class ThinkingProxy {
         default:
             return nil
         }
+    }
+
+    private func claudeMaxOutputTokens(for model: String) -> Int {
+        if model.contains("opus-4-6") { return 128000 }
+        if model.contains("sonnet-4-6") { return 64000 }
+        return 64000
+    }
+
+    /// Replaces an existing JSON field's value or injects it if missing.
+    private func replaceOrInjectJSONField(in json: String, afterKey: String, fieldName: String, fieldValue: String, existsInJSON: Bool) -> String {
+        if existsInJSON {
+            return replaceJSONFieldValue(in: json, fieldName: fieldName, newValue: fieldValue)
+        }
+        return injectJSONField(in: json, afterKey: afterKey, fieldName: fieldName, fieldValue: fieldValue)
+    }
+
+    /// Replaces the value of an existing JSON field using regex.
+    private func replaceJSONFieldValue(in json: String, fieldName: String, newValue: String) -> String {
+        let escapedKey = NSRegularExpression.escapedPattern(for: fieldName)
+        let valuePattern = "(?:\"(?:[^\"\\\\]|\\\\.)*\"|\\-?\\d+(?:\\.\\d+)?|\\{[^}]*\\}|\\[[^\\]]*\\]|true|false|null)"
+        let pattern = "(\"\(escapedKey)\"\\s*:\\s*)\(valuePattern)"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)) else {
+            NSLog("[ThinkingProxy] Warning: Could not find key '\(fieldName)' for value replacement")
+            return json
+        }
+        var result = json
+        let matchRange = Range(match.range, in: json)!
+        let prefixRange = Range(match.range(at: 1), in: json)!
+        let prefix = String(json[prefixRange])
+        result.replaceSubrange(matchRange, with: "\(prefix)\(newValue)")
+        return result
     }
 
     private func claudeAdaptiveThinkingEffort(for model: String) -> String? {
