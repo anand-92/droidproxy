@@ -69,11 +69,12 @@ What it does today:
 - Reads level from `AppPreferences.gemini31ProThinkingLevel` or `AppPreferences.gemini3FlashThinkingLevel`
 - Optionally injects `"service_tier":"priority"` for `gpt-5.4` on Responses API paths (`/v1/responses`, `/api/v1/responses`) when `AppPreferences.gpt54FastMode` is enabled and the client did not already set `service_tier`
 - Preserves JSON key order by editing the raw JSON string instead of re-serializing
+- **Max budget mode**: When `AppPreferences.claudeMaxBudgetMode` is enabled, forces streaming and injects max budget thinking for Claude models (128000/127999 tokens for Opus 4.6, 64000/63999 for Sonnet 4.6)
 
 What it does not do anymore:
 
 - It does not strip or normalize model suffixes
-- It does not add fixed-budget thinking via `budget_tokens`
+- ~~It does not add fixed-budget thinking via `budget_tokens`~~ (now supported via max budget mode)
 - It does not add `anthropic-beta` interleaved-thinking headers
 - It does not implement the old Opus 4.7 / Sonnet 4.7 branching documented in stale docs
 
@@ -121,7 +122,7 @@ Behavior to know:
 | `src/Sources/ThinkingProxy.swift` | Raw TCP HTTP proxy for thinking injection plus Amp request/response rewriting. |
 | `src/Sources/SettingsView.swift` | SwiftUI settings UI for server status, launch-at-login, provider toggles, auth flows, and per-model effort pickers. |
 | `src/Sources/AuthStatus.swift` | `AuthManager`, account parsing, expiry detection, file deletion, and per-account disabled-state updates. |
-| `src/Sources/AppPreferences.swift` | UserDefaults-backed effort preferences for Opus 4.6, Sonnet 4.6, GPT 5.3 Codex, GPT 5.4, Gemini 3.1 Pro, and Gemini 3 Flash, plus fast mode toggles. |
+| `src/Sources/AppPreferences.swift` | UserDefaults-backed effort preferences for Opus 4.6, Sonnet 4.6, GPT 5.3 Codex, GPT 5.4, Gemini 3.1 Pro, and Gemini 3 Flash, plus fast mode toggles and `claudeMaxBudgetMode`. |
 | `src/Sources/Resources/config.yaml` | Bundled CLIProxyAPIPlus config (`port: 8318`, localhost binding, Amp upstream settings, auth dir). |
 | `src/Info.plist` | Bundle metadata. Current source-of-truth values include app name `DroidProxy`, bundle ID `com.droidproxy.app`, and Sparkle feed URL on `anand-92/droidproxy`. |
 
