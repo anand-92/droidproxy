@@ -193,7 +193,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
     func createSettingsWindow() {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1000, height: 900),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -201,7 +201,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         window.center()
         window.delegate = self
         window.isReleasedWhenClosed = false
-        window.backgroundColor = .black
+
+        // Fully transparent titlebar so the traffic-light buttons float over the
+        // Liquid Glass content. Content extends edge-to-edge under the title bar.
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = true
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        window.hasShadow = true
+        // Alpha depends on theme: opaque OLED vs translucent Liquid Glass.
+        applyTheme(to: window)
+
+        // Listen for theme changes from SettingsView and update alphaValue live.
+        NotificationCenter.default.addObserver(
+            forName: .droidProxyThemeChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let win = self?.settingsWindow else { return }
+            self?.applyTheme(to: win)
+        }
 
         let contentView = SettingsView(serverManager: serverManager)
         window.contentView = NSHostingView(rootView: contentView)
@@ -209,6 +229,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         settingsWindow = window
     }
     
+    private func applyTheme(to window: NSWindow) {
+        // Both themes keep the window at 0.85 alpha; the SettingsView swaps
+        // the backdrop (colourful gradient vs flat black) on its own.
+        window.alphaValue = 0.85
+    }
+
     func windowDidClose(_ notification: Notification) {
         if notification.object as? NSWindow === settingsWindow {
             settingsWindow = nil
@@ -429,4 +455,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
     }
+}
+
+extension Notification.Name {
+    static let droidProxyThemeChanged = Notification.Name("DroidProxyThemeChanged")
 }

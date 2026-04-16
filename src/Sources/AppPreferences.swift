@@ -12,6 +12,8 @@ enum AppPreferences {
     static let claudeMaxBudgetModeKey = "claudeMaxBudgetMode"
     static let allowRemoteKey = "allowRemote"
     static let secretKeyKey = "secretKey"
+    static let oledThemeKey = "oledTheme"
+    static let defaultOledTheme = false
     static let defaultOpus47ThinkingEffort = "xhigh"
     static let defaultSonnet46ThinkingEffort = "high"
     static let defaultGpt53CodexReasoningEffort = "high"

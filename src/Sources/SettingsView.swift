@@ -1,5 +1,84 @@
 import SwiftUI
 import ServiceManagement
+import AppKit
+
+// MARK: - NSVisualEffectView bridge for live backdrop blur behind the window
+struct VisualEffectBlur: NSViewRepresentable {
+    var material: NSVisualEffectView.Material = .underWindowBackground
+    var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = true
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
+}
+
+// MARK: - Liquid Glass helpers (macOS 26+)
+// These wrap the new Liquid Glass APIs with availability fallbacks so the
+// settings UI keeps its current look on older macOS versions.
+
+extension View {
+    /// Applies a Liquid Glass card background on macOS 26+, falling back to a
+    /// flat rounded-rect fill on older systems.
+    @ViewBuilder
+    func droidGlassCard(cornerRadius: CGFloat = 14, tint: Color? = nil, fallback: Color = Color(red: 0x12/255, green: 0x12/255, blue: 0x12/255)) -> some View {
+        if #available(macOS 26.0, *) {
+            if let tint {
+                self.glassEffect(.regular.tint(tint), in: .rect(cornerRadius: cornerRadius))
+            } else {
+                self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+            }
+        } else {
+            self
+                .background(fallback)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        }
+    }
+
+    /// Applies an interactive Liquid Glass capsule on macOS 26+, else a rounded background.
+    @ViewBuilder
+    func droidGlassCapsule(tint: Color? = nil, interactive: Bool = false) -> some View {
+        if #available(macOS 26.0, *) {
+            switch (tint, interactive) {
+            case (let t?, true):  self.glassEffect(.regular.tint(t).interactive(), in: .capsule)
+            case (let t?, false): self.glassEffect(.regular.tint(t), in: .capsule)
+            case (nil, true):     self.glassEffect(.regular.interactive(), in: .capsule)
+            case (nil, false):    self.glassEffect(.regular, in: .capsule)
+            }
+        } else {
+            self
+                .background(Capsule().fill(Color.white.opacity(0.06)))
+        }
+    }
+
+    /// Applies a prominent Liquid Glass button style on macOS 26+, else plain.
+    @ViewBuilder
+    func droidGlassProminent() -> some View {
+        if #available(macOS 26.0, *) {
+            self.buttonStyle(.glassProminent)
+        } else {
+            self.buttonStyle(.borderedProminent)
+        }
+    }
+
+    @ViewBuilder
+    func droidGlassPlain() -> some View {
+        if #available(macOS 26.0, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.buttonStyle(.bordered)
+        }
+    }
+}
 
 struct HazardStripesView: View {
     let stripeColor: Color
@@ -181,7 +260,7 @@ struct MaxBudgetToggleView: View {
                             .fill(Color.black.opacity(0.3))
                     }
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .droidGlassCard(cornerRadius: 5, tint: dangerRed.opacity(0.25))
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
                         .stroke(dangerRed.opacity(0.3), lineWidth: 1)
@@ -327,6 +406,8 @@ struct ServiceRow<ExtraContent: View>: View {
                     Button("Add Account") {
                         onConnect()
                     }
+                    .droidGlassProminent()
+                    .tint(toggleTint)
                     .controlSize(.small)
                 }
             }
@@ -336,28 +417,34 @@ struct ServiceRow<ExtraContent: View>: View {
                 let enabledCount = accounts.filter { !$0.isDisabled }.count
                 if !accounts.isEmpty {
                     // Collapsible summary
-                    HStack(spacing: 4) {
-                        Text("\(accounts.count) connected account\(accounts.count == 1 ? "" : "s")")
-                            .font(.caption)
-                            .foregroundColor(AccountRowView.accent)
-
-                        if enabledCount > 1 {
-                            Text("• Round-robin w/ auto-failover")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.leading, 28)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             isExpanded.toggle()
                         }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("\(accounts.count) connected account\(accounts.count == 1 ? "" : "s")")
+                                .font(.caption)
+                                .foregroundColor(AccountRowView.accent)
+
+                            if enabledCount > 1 {
+                                Text("• Round-robin w/ auto-failover")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .droidGlassCapsule(tint: AccountRowView.accent.opacity(0.18), interactive: true)
                     }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 28)
+                    .accessibilityLabel("\(accounts.count) connected \(accounts.count == 1 ? "account" : "accounts")")
+                    .accessibilityHint(isExpanded ? "Collapse account list" : "Expand account list")
 
                     // Expanded accounts list
                     if isExpanded {
@@ -430,6 +517,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
     @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
     @AppStorage(AppPreferences.claudeMaxBudgetModeKey) private var claudeMaxBudgetMode = AppPreferences.defaultClaudeMaxBudgetMode
+    @AppStorage(AppPreferences.oledThemeKey) private var oledTheme = AppPreferences.defaultOledTheme
     @State private var authenticatingService: ServiceType? = nil
     @State private var showingAuthResult = false
     @State private var authResultMessage = ""
@@ -450,6 +538,41 @@ struct SettingsView: View {
     private let oledWindowBackground = Color.black
     private let oledSectionBackground = Color(red: 0x12/255, green: 0x12/255, blue: 0x12/255)
     private let oledFooterText = Color(red: 0xA8/255, green: 0xA8/255, blue: 0xA8/255)
+
+    // Translucent row background that reveals the colourful window backdrop.
+    // We deliberately avoid .ultraThinMaterial here — on dark appearance it
+    // vibrancy-composites to an almost-opaque grey which fights the glass look.
+    // A white gradient at low alpha + a hairline inner/outer highlight reads as
+    // actual liquid glass against the multi-hue window gradient below.
+    @ViewBuilder
+    private var glassRowBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.10),
+                            Color.white.opacity(0.02)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.05)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+        .padding(.vertical, 2)
+    }
     
     private enum Timing {
         static let serverRestartDelay: TimeInterval = 0.3
@@ -465,9 +588,36 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            LogoView()
-                .padding(.top, 16)
-                .padding(.bottom, 4)
+            ZStack(alignment: .topTrailing) {
+                LogoView()
+                    .padding(.top, 36) // leave room for the transparent titlebar traffic-lights
+                    .padding(.bottom, 4)
+                    .frame(maxWidth: .infinity)
+                Button {
+                    oledTheme.toggle()
+                    NotificationCenter.default.post(name: .droidProxyThemeChanged, object: nil)
+                } label: {
+                    Image(systemName: oledTheme ? "sun.max.fill" : "moon.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(oledTheme ? Color.yellow.opacity(0.9) : Color.white.opacity(0.75))
+                        .frame(width: 26, height: 26)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(oledTheme ? 0.06 : 0.10))
+                        )
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 12)
+                .padding(.trailing, 12)
+                .help(oledTheme ? "Switch to Liquid Glass theme" : "Switch to OLED black theme")
+                .onHover { inside in
+                    if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
+            }
 
             Form {
                 Section {
@@ -486,12 +636,19 @@ struct SettingsView: View {
                                     .fill(serverManager.isRunning ? Color.green : Color.red)
                                     .frame(width: 8, height: 8)
                                 Text(serverManager.isRunning ? "Running" : "Stopped")
+                                    .font(.caption)
                             }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .droidGlassCapsule(
+                                tint: serverManager.isRunning ? Color.green.opacity(0.4) : Color.red.opacity(0.4),
+                                interactive: true
+                            )
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .listRowBackground(oledSectionBackground)
+                .listRowBackground(glassRowBackground)
 
                 Section {
                     Toggle("Launch at login", isOn: $launchAtLogin)
@@ -505,6 +662,8 @@ struct SettingsView: View {
                         Button("Open Folder") {
                             openAuthFolder()
                         }
+                        .droidGlassPlain()
+                        .controlSize(.small)
                     }
 
                     HStack {
@@ -523,6 +682,8 @@ struct SettingsView: View {
                         Button(factoryModelsInstalled ? "Re-apply" : "Apply") {
                             applyFactoryCustomModels()
                         }
+                        .droidGlassProminent()
+                        .controlSize(.small)
                     }
 
                     HStack {
@@ -548,9 +709,11 @@ struct SettingsView: View {
                         Button(challengerPluginInstalled ? "Re-apply" : "Apply") {
                             applyChallengerPlugin()
                         }
+                        .droidGlassProminent()
+                        .controlSize(.small)
                     }
                 }
-                .listRowBackground(oledSectionBackground)
+                .listRowBackground(glassRowBackground)
 
                 Section {
                     if remoteManagementExpanded {
@@ -613,7 +776,7 @@ struct SettingsView: View {
                     .accessibilityLabel("Remote Management")
                     .accessibilityValue(remoteManagementExpanded ? "Expanded" : "Collapsed")
                 }
-                .listRowBackground(oledSectionBackground)
+                .listRowBackground(glassRowBackground)
 
                 Section("Services") {
                     ServiceRow(
@@ -809,11 +972,10 @@ struct SettingsView: View {
                         .padding(.leading, 28)
                     }
                 }
-                .listRowBackground(oledSectionBackground)
+                .listRowBackground(glassRowBackground)
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .background(oledWindowBackground)
             .scrollDisabled(false)
 
             Spacer()
@@ -852,6 +1014,9 @@ struct SettingsView: View {
                 Link("Report an issue", destination: URL(string: "https://github.com/anand-92/droidproxy/issues")!)
                     .font(.caption)
                     .foregroundColor(oledFooterText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .droidGlassCapsule(tint: Color.white.opacity(0.08), interactive: true)
                     .padding(.top, 6)
                     .onHover { inside in
                         if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
@@ -859,7 +1024,52 @@ struct SettingsView: View {
             }
             .padding(.bottom, 12)
         }
-        .background(oledWindowBackground)
+        .background(
+            ZStack {
+                if oledTheme {
+                    Color.black.ignoresSafeArea()
+                } else {
+                // Layer 1: behind-window blur so the desktop refracts through the
+                // transparent titlebar + translucent rows.
+                VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
+                    .ignoresSafeArea()
+                // Layer 2: dark tint so content stays readable over bright desktops.
+                Color.black.opacity(0.55)
+                    .ignoresSafeArea()
+                // Layer 3: colorful radial accents that the glass rows refract.
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.95, green: 0.45, blue: 0.15).opacity(0.45),
+                        Color.clear
+                    ],
+                    center: .init(x: 0.15, y: 0.1),
+                    startRadius: 10,
+                    endRadius: 420
+                )
+                .ignoresSafeArea()
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.30, green: 0.50, blue: 0.95).opacity(0.35),
+                        Color.clear
+                    ],
+                    center: .init(x: 0.85, y: 0.9),
+                    startRadius: 10,
+                    endRadius: 420
+                )
+                .ignoresSafeArea()
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.90, green: 0.25, blue: 0.35).opacity(0.25),
+                        Color.clear
+                    ],
+                    center: .init(x: 0.9, y: 0.2),
+                    startRadius: 10,
+                    endRadius: 320
+                )
+                .ignoresSafeArea()
+                } // end !oledTheme
+            }
+        )
         .accentColor(AccountRowView.accent)
         .preferredColorScheme(.dark)
         .frame(width: 480, height: 814)
