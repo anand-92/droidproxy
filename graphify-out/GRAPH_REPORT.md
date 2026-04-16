@@ -1,90 +1,84 @@
-# Graph Report - .  (2026-04-09)
+# Graph Report - /Users/dks0662779/droidproxy  (2026-04-16)
 
 ## Corpus Check
-- 83 files · ~388,298 words
+- 85 files · ~397,971 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 261 nodes · 316 edges · 50 communities detected
-- Extraction: 67% EXTRACTED · 33% INFERRED · 0% AMBIGUOUS · INFERRED: 104 edges (avg confidence: 0.59)
+- 248 nodes · 299 edges · 48 communities detected
+- Extraction: 70% EXTRACTED · 30% INFERRED · 0% AMBIGUOUS · INFERRED: 90 edges (avg confidence: 0.53)
 - Token cost: 0 input · 0 output
 
 ## God Nodes (most connected - your core abstractions)
-1. `AppDelegate` - 28 edges
-2. `ThinkingProxy` - 25 edges
-3. `SettingsView` - 16 edges
+1. `ThinkingProxy` - 30 edges
+2. `AppDelegate` - 28 edges
+3. `SettingsView` - 18 edges
 4. `ServerManager` - 13 edges
-5. `Factory Custom Models Configuration` - 9 edges
-6. `ThinkingProxy Current Behavior` - 9 edges
-7. `AuthManager` - 8 edges
-8. `DroidProxy Application` - 8 edges
-9. `ServiceType` - 7 edges
-10. `Thinking Effort Configuration` - 7 edges
+5. `ThinkingProxy.processThinkingParameter` - 9 edges
+6. `AuthManager` - 8 edges
+7. `ServiceType` - 7 edges
+8. `AuthAccount` - 6 edges
+9. `ServiceAccounts` - 6 edges
+10. `Opus 4.7 Max Budget branch (task_budget=128000)` - 6 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `One-Click OAuth Authentication` --semantically_similar_to--> `Auth and Providers System`  [INFERRED] [semantically similar]
-  README.md → AGENTS.md
-- `ThinkingProxy Feature` --semantically_similar_to--> `ThinkingProxy Current Behavior`  [INFERRED] [semantically similar]
-  README.md → AGENTS.md
-- `DroidProxy LLMs.txt Description` --conceptually_related_to--> `DroidProxy Application`  [INFERRED]
-  website/public/llms.txt → README.md
-- `Granular Thinking Effort Controls (v1.8.121)` --conceptually_related_to--> `Thinking Effort Configuration`  [INFERRED]
+- `Setup.tsx Factory custom models reference` --semantically_similar_to--> `SettingsView.droidProxyModels (Factory model list)`  [INFERRED] [semantically similar]
+  website/src/components/Setup.tsx → src/Sources/SettingsView.swift
+- `custom:droidproxy:opus-4-6 (legacy scrubbed)` --semantically_similar_to--> `custom:droidproxy:opus-4-7 Factory model`  [INFERRED] [semantically similar]
   CHANGELOG.md → SETUP.md
-- `Simplified ThinkingProxy (v1.8.121)` --conceptually_related_to--> `ThinkingProxy Current Behavior`  [INFERRED]
-  CHANGELOG.md → AGENTS.md
+- `Features.tsx per-model effort controls section` --references--> `Claude Opus 4.7 model (claude-opus-4-7)`  [EXTRACTED]
+  website/src/components/Features.tsx → CHANGELOG.md
+- `Features.tsx per-model effort controls section` --references--> `Claude Sonnet 4.6 model (claude-sonnet-4-6)`  [EXTRACTED]
+  website/src/components/Features.tsx → CHANGELOG.md
+- `Setup.tsx Factory custom models reference` --references--> `custom:droidproxy:opus-4-7 Factory model`  [EXTRACTED]
+  website/src/components/Setup.tsx → SETUP.md
 
 ## Hyperedges (group relationships)
-- **Client Request Flow Pipeline** — readme_port_8317, agents_thinkingproxy_file, agents_port_8318, readme_cliproxyapiplus [EXTRACTED 1.00]
-- **Multi-Provider Thinking Parameter Injection** — agents_thinkingproxy_behavior, agents_apppreferences, setup_opus46_model, setup_sonnet46_model, setup_gpt53_codex_model, setup_gpt54_model, setup_gemini31_pro_model, setup_gemini3_flash_model [EXTRACTED 1.00]
-- **Authentication and Provider Management System** — agents_authstatus, agents_auth_providers, agents_settingsview, agents_servermanager [EXTRACTED 0.90]
-- **Menu Bar Icon State System** — icon_inactive_app, icon_active_app, icon_gemini_app, icon_claude_app, icon_codex_app [INFERRED 0.90]
-- **AI Service Proxy Integrations** — service_claude_code, service_codex, service_gemini, settings_screenshot_ui [EXTRACTED 1.00]
-- **DroidProxy Brand Identity Assets** — logo_droidproxy_app, glyph_app, icon_inactive_app, icon_active_app, factorylogo_factory_ai [INFERRED 0.80]
-- **AI Service Provider Icons** — website_icon_gemini, website_icon_claude, website_icon_codex, resources_icon_gemini, resources_icon_claude, resources_icon_codex [EXTRACTED 1.00]
-- **DroidProxy Brand Identity Assets** — website_logo, resources_glyph, website_icon_active, resources_icon_active, resources_icon_inactive [INFERRED 0.85]
-- **Website-to-Resources Duplicated Icons** — website_icon_gemini, website_icon_claude, website_icon_codex, website_icon_active [EXTRACTED 1.00]
+- **Per-model thinking/reasoning controls pattern** — apppreferences_opus47ThinkingEffortKey, apppreferences_sonnet46ThinkingEffortKey, apppreferences_gpt53CodexReasoningEffortKey, apppreferences_gpt54ReasoningEffortKey, apppreferences_gemini31ProThinkingLevelKey, apppreferences_gemini3FlashThinkingLevelKey [INFERRED 0.90]
+- **Max Budget Mode end-to-end flow** — apppreferences_claudeMaxBudgetModeKey, settingsview_MaxBudgetToggleView, thinkingproxy_opus47MaxBudget, thinkingproxy_sonnet46MaxBudget, thinkingproxy_taskBudgetsBeta, thinkingproxy_requiredClaudeBetaFlags [EXTRACTED 0.95]
+- **Opus 4.6 to Opus 4.7 migration surface** — apppreferences_opus47ThinkingEffortKey, thinkingproxy_opus47MaxBudget, settingsview_legacyDroidProxyModelIds, concept_factory_model_opus_4_7, concept_factory_model_opus_4_6_legacy, concept_challenger_opus [EXTRACTED 0.95]
 
 ## Communities
 
-### Community 0 - "App Lifecycle & Delegates"
+### Community 0 - "ThinkingProxy Core"
+Cohesion: 0.13
+Nodes (2): Config, ThinkingProxy
+
+### Community 1 - "App Lifecycle"
 Cohesion: 0.1
 Nodes (5): AppDelegate, NSApplicationDelegate, NSObject, NSWindowDelegate, UNUserNotificationCenterDelegate
 
-### Community 1 - "Architecture Documentation"
-Cohesion: 0.09
-Nodes (28): Amp Request Routing, AppDelegate.swift, Architecture Overview, Auth and Providers System, AuthStatus.swift / AuthManager, config.yaml (CLIProxyAPIPlus Config), Localhost Port 8318 (CLIProxyAPIPlus Backend), Rationale: Backend Localhost-Only Binding (+20 more)
-
-### Community 2 - "ThinkingProxy Core"
-Cohesion: 0.16
-Nodes (2): Config, ThinkingProxy
+### Community 2 - "Settings UI"
+Cohesion: 0.1
+Nodes (8): LogoView, AccountRowView, HazardStripesView, MaxBudgetToggleView, ServiceRow, SettingsView, Timing, View
 
 ### Community 3 - "Auth Management"
 Cohesion: 0.13
 Nodes (16): AuthAccount, AuthManager, ServiceAccounts, ServiceType, claude, codex, gemini, CaseIterable (+8 more)
 
-### Community 4 - "Settings UI"
-Cohesion: 0.12
-Nodes (6): LogoView, AccountRowView, ServiceRow, SettingsView, Timing, View
+### Community 4 - "Model Preference Keys"
+Cohesion: 0.1
+Nodes (23): AppPreferences.gemini31ProThinkingLevelKey, AppPreferences.gemini3FlashThinkingLevelKey, AppPreferences.gpt53CodexReasoningEffortKey, AppPreferences.gpt54ReasoningEffortKey, Claude Opus 4.7 model (claude-opus-4-7), Claude Sonnet 4.6 model (claude-sonnet-4-6), Classic extended thinking budget_tokens (Sonnet 4.6), Surgical JSON editing (preserve key order for cache_control) (+15 more)
 
-### Community 5 - "Server Management"
+### Community 5 - "Server Manager"
 Cohesion: 0.2
 Nodes (4): OutputCapture, RingBuffer, ServerManager, Timing
 
-### Community 6 - "Provider Configuration"
-Cohesion: 0.18
-Nodes (18): AppPreferences.swift, ThinkingProxy Current Behavior, Granular Thinking Effort Controls (v1.8.121), Simplified ThinkingProxy (v1.8.121), Claude Provider (Anthropic), Codex Provider (OpenAI), Gemini Provider (Google), Localhost Port 8317 (User-Facing Proxy) (+10 more)
-
-### Community 7 - "Brand & Icon Assets"
-Cohesion: 0.17
-Nodes (15): DroidProxy Brand Identity, Factory.ai Brand / Organization, Factory.ai Logo (SVG), DroidProxy Glyph Icon, DroidProxy Active Menu Bar Icon, DroidProxy Claude Status Icon, DroidProxy Codex Status Icon, DroidProxy Gemini Status Icon (+7 more)
-
-### Community 8 - "Website Components"
+### Community 6 - "Website Components"
 Cohesion: 0.14
 Nodes (0): 
 
-### Community 9 - "Resource Assets"
+### Community 7 - "Max Budget Mode"
 Cohesion: 0.15
-Nodes (13): DroidProxy Glyph Icon, Active Status Icon (App Resources), Claude Service Icon (App Resources), Codex Service Icon (App Resources), Gemini Service Icon (App Resources), Inactive Status Icon (App Resources), Factory.ai Logo SVG, Active Status Icon (Website) (+5 more)
+Nodes (14): AppPreferences.claudeMaxBudgetModeKey, AppPreferences.opus47ThinkingEffortKey, AppPreferences.sonnet46ThinkingEffortKey, Adaptive thinking (thinking.type=adaptive), Max Budget Mode feature, MaxBudgetToggleView (the Big Red Button), SettingsView, SettingsView Claude model effort controls (+6 more)
+
+### Community 8 - "Factory Model Setup"
+Cohesion: 0.22
+Nodes (11): Challenger droids (Opus 4.7 / GPT 5.4 / Gemini 3.1 Pro), challenger-opus droid (custom:droidproxy:opus-4-7), custom:droidproxy:opus-4-6 (legacy scrubbed), custom:droidproxy:opus-4-7 Factory model, Rationale: scrub legacy opus-4-6 entry so users don't end up with stale entries next to Opus 4.7, SettingsView.applyChallengerPlugin, SettingsView.applyFactoryCustomModels, SettingsView.challengerPluginFiles (+3 more)
+
+### Community 9 - "Proxy Startup Flow"
+Cohesion: 0.33
+Nodes (6): AppDelegate, AppDelegate.pollForProxyReadiness, AppDelegate.startServer, CLIProxyAPIPlus backend (port 8318), localhost:8317 proxy endpoint, ThinkingProxy (class)
 
 ### Community 10 - "Tunnel Manager"
 Cohesion: 0.5
@@ -102,123 +96,123 @@ Nodes (1): Notification.Name
 Cohesion: 1.0
 Nodes (1): AppPreferences
 
-### Community 14 - "Changelog Metadata"
+### Community 14 - "xhigh Default Rationale"
 Cohesion: 1.0
-Nodes (2): DroidProxy Changelog, Semantic Versioning
+Nodes (2): AppPreferences.defaultOpus47ThinkingEffort (xhigh), Rationale: xhigh default per Anthropic's recommendation for coding/agentic workloads
 
-### Community 15 - "SEO & Robots Config"
+### Community 15 - "Amp CLI Routing"
 Cohesion: 1.0
-Nodes (2): Robots.txt Configuration, droidproxy.app Sitemap
+Nodes (2): Amp CLI routing rewrites, ThinkingProxy.forwardToAmp
 
-### Community 16 - "Sparkle Install Types"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 17 - "Sparkle Installer Launcher"
+### Community 16 - "Sparkle: SPUInstallationType"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 18 - "Sparkle User Agent"
+### Community 17 - "Sparkle: SUInstallerLauncher"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 19 - "Sparkle User Driver"
+### Community 18 - "Sparkle: SPUUserAgent"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 20 - "Sparkle Appcast Item"
+### Community 19 - "Sparkle: SPUStandardUserDriver Private"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 21 - "Sparkle State Resolver"
+### Community 20 - "Sparkle: SUAppcastItem Private"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 22 - "Sparkle Reminders"
+### Community 21 - "Sparkle: AppcastItemStateResolver"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 23 - "Sparkle Download Data"
+### Community 22 - "Sparkle: GentleUserDriverReminders"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 24 - "Sparkle Updater Delegate"
+### Community 23 - "Sparkle: SPUDownloadData"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 25 - "Sparkle Version Display"
+### Community 24 - "Sparkle: SPUUpdaterDelegate"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 26 - "Sparkle Appcast"
+### Community 25 - "Sparkle: SUVersionDisplayProtocol"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 27 - "Sparkle Updater Settings"
+### Community 26 - "Sparkle: SUAppcast"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 28 - "Sparkle Exports"
+### Community 27 - "Sparkle: SPUUpdaterSettings"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 29 - "Sparkle Standard Driver"
+### Community 28 - "Sparkle: SUExport"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 30 - "Sparkle User Update State"
+### Community 29 - "Sparkle: SPUStandardUserDriver"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 31 - "Sparkle Update Delegate"
+### Community 30 - "Sparkle: SPUUserUpdateState"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 32 - "Sparkle User Driver Protocol"
+### Community 31 - "Sparkle: SUUpdaterDelegate"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 33 - "Sparkle Errors"
+### Community 32 - "Sparkle: SPUUserDriver"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 34 - "Sparkle Appcast Item Type"
+### Community 33 - "Sparkle: SUErrors"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 35 - "Sparkle Driver Delegate"
+### Community 34 - "Sparkle: SUAppcastItem"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 36 - "Sparkle Version Comparator"
+### Community 35 - "Sparkle: StandardUserDriverDelegate"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 37 - "Sparkle Update Check"
+### Community 36 - "Sparkle: StandardVersionComparator"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 38 - "Sparkle Updater Core"
+### Community 37 - "Sparkle: SPUUpdateCheck"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 39 - "Sparkle Updater Interface"
+### Community 38 - "Sparkle: SPUUpdater"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 40 - "Sparkle Controller"
+### Community 39 - "Sparkle: SUUpdater"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 41 - "Sparkle Permission Request"
+### Community 40 - "Sparkle: StandardUpdaterController"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 42 - "Sparkle Version Comparison"
+### Community 41 - "Sparkle: UpdatePermissionRequest"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 43 - "Sparkle Permission Response"
+### Community 42 - "Sparkle: VersionComparisonProtocol"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 43 - "Sparkle: UpdatePermissionResponse"
 Cohesion: 1.0
 Nodes (0): 
 
@@ -234,84 +228,76 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 47 - "Package Config"
+### Community 47 - "Swift Package Manifest"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 48 - "Gemini Support Milestone"
-Cohesion: 1.0
-Nodes (1): Gemini Provider Support (Unreleased)
-
-### Community 49 - "Codex Support Milestone"
-Cohesion: 1.0
-Nodes (1): Codex Provider Support (v1.8.121)
-
 ## Knowledge Gaps
-- **43 isolated node(s):** `Timing`, `Notification.Name`, `AppPreferences`, `Config`, `Timing` (+38 more)
+- **36 isolated node(s):** `Timing`, `Notification.Name`, `AppPreferences`, `Config`, `Timing` (+31 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Notification Names`** (2 nodes): `NotificationNames.swift`, `Notification.Name`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `App Preferences`** (2 nodes): `AppPreferences.swift`, `AppPreferences`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Changelog Metadata`** (2 nodes): `DroidProxy Changelog`, `Semantic Versioning`
+- **Thin community `xhigh Default Rationale`** (2 nodes): `AppPreferences.defaultOpus47ThinkingEffort (xhigh)`, `Rationale: xhigh default per Anthropic's recommendation for coding/agentic workloads`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `SEO & Robots Config`** (2 nodes): `Robots.txt Configuration`, `droidproxy.app Sitemap`
+- **Thin community `Amp CLI Routing`** (2 nodes): `Amp CLI routing rewrites`, `ThinkingProxy.forwardToAmp`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Install Types`** (1 nodes): `SPUInstallationType.h`
+- **Thin community `Sparkle: SPUInstallationType`** (1 nodes): `SPUInstallationType.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Installer Launcher`** (1 nodes): `SUInstallerLauncher+Private.h`
+- **Thin community `Sparkle: SUInstallerLauncher`** (1 nodes): `SUInstallerLauncher+Private.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle User Agent`** (1 nodes): `SPUUserAgent+Private.h`
+- **Thin community `Sparkle: SPUUserAgent`** (1 nodes): `SPUUserAgent+Private.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle User Driver`** (1 nodes): `SPUStandardUserDriver+Private.h`
+- **Thin community `Sparkle: SPUStandardUserDriver Private`** (1 nodes): `SPUStandardUserDriver+Private.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Appcast Item`** (1 nodes): `SUAppcastItem+Private.h`
+- **Thin community `Sparkle: SUAppcastItem Private`** (1 nodes): `SUAppcastItem+Private.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle State Resolver`** (1 nodes): `SPUAppcastItemStateResolver.h`
+- **Thin community `Sparkle: AppcastItemStateResolver`** (1 nodes): `SPUAppcastItemStateResolver.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Reminders`** (1 nodes): `SPUGentleUserDriverReminders.h`
+- **Thin community `Sparkle: GentleUserDriverReminders`** (1 nodes): `SPUGentleUserDriverReminders.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Download Data`** (1 nodes): `SPUDownloadData.h`
+- **Thin community `Sparkle: SPUDownloadData`** (1 nodes): `SPUDownloadData.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Updater Delegate`** (1 nodes): `SPUUpdaterDelegate.h`
+- **Thin community `Sparkle: SPUUpdaterDelegate`** (1 nodes): `SPUUpdaterDelegate.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Version Display`** (1 nodes): `SUVersionDisplayProtocol.h`
+- **Thin community `Sparkle: SUVersionDisplayProtocol`** (1 nodes): `SUVersionDisplayProtocol.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Appcast`** (1 nodes): `SUAppcast.h`
+- **Thin community `Sparkle: SUAppcast`** (1 nodes): `SUAppcast.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Updater Settings`** (1 nodes): `SPUUpdaterSettings.h`
+- **Thin community `Sparkle: SPUUpdaterSettings`** (1 nodes): `SPUUpdaterSettings.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Exports`** (1 nodes): `SUExport.h`
+- **Thin community `Sparkle: SUExport`** (1 nodes): `SUExport.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Standard Driver`** (1 nodes): `SPUStandardUserDriver.h`
+- **Thin community `Sparkle: SPUStandardUserDriver`** (1 nodes): `SPUStandardUserDriver.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle User Update State`** (1 nodes): `SPUUserUpdateState.h`
+- **Thin community `Sparkle: SPUUserUpdateState`** (1 nodes): `SPUUserUpdateState.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Update Delegate`** (1 nodes): `SUUpdaterDelegate.h`
+- **Thin community `Sparkle: SUUpdaterDelegate`** (1 nodes): `SUUpdaterDelegate.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle User Driver Protocol`** (1 nodes): `SPUUserDriver.h`
+- **Thin community `Sparkle: SPUUserDriver`** (1 nodes): `SPUUserDriver.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Errors`** (1 nodes): `SUErrors.h`
+- **Thin community `Sparkle: SUErrors`** (1 nodes): `SUErrors.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Appcast Item Type`** (1 nodes): `SUAppcastItem.h`
+- **Thin community `Sparkle: SUAppcastItem`** (1 nodes): `SUAppcastItem.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Driver Delegate`** (1 nodes): `SPUStandardUserDriverDelegate.h`
+- **Thin community `Sparkle: StandardUserDriverDelegate`** (1 nodes): `SPUStandardUserDriverDelegate.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Version Comparator`** (1 nodes): `SUStandardVersionComparator.h`
+- **Thin community `Sparkle: StandardVersionComparator`** (1 nodes): `SUStandardVersionComparator.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Update Check`** (1 nodes): `SPUUpdateCheck.h`
+- **Thin community `Sparkle: SPUUpdateCheck`** (1 nodes): `SPUUpdateCheck.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Updater Core`** (1 nodes): `SPUUpdater.h`
+- **Thin community `Sparkle: SPUUpdater`** (1 nodes): `SPUUpdater.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Updater Interface`** (1 nodes): `SUUpdater.h`
+- **Thin community `Sparkle: SUUpdater`** (1 nodes): `SUUpdater.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Controller`** (1 nodes): `SPUStandardUpdaterController.h`
+- **Thin community `Sparkle: StandardUpdaterController`** (1 nodes): `SPUStandardUpdaterController.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Permission Request`** (1 nodes): `SPUUpdatePermissionRequest.h`
+- **Thin community `Sparkle: UpdatePermissionRequest`** (1 nodes): `SPUUpdatePermissionRequest.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Version Comparison`** (1 nodes): `SUVersionComparisonProtocol.h`
+- **Thin community `Sparkle: VersionComparisonProtocol`** (1 nodes): `SUVersionComparisonProtocol.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Sparkle Permission Response`** (1 nodes): `SUUpdatePermissionResponse.h`
+- **Thin community `Sparkle: UpdatePermissionResponse`** (1 nodes): `SUUpdatePermissionResponse.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Tailwind Config`** (1 nodes): `tailwind.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -319,27 +305,23 @@ Nodes (1): Codex Provider Support (v1.8.121)
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `PostCSS Config`** (1 nodes): `postcss.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Package Config`** (1 nodes): `Package.swift`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Gemini Support Milestone`** (1 nodes): `Gemini Provider Support (Unreleased)`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Codex Support Milestone`** (1 nodes): `Codex Provider Support (v1.8.121)`
+- **Thin community `Swift Package Manifest`** (1 nodes): `Package.swift`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `DroidProxy Application` connect `Architecture Documentation` to `Provider Configuration`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `ServerManager` connect `Server Management` to `Auth Management`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+- **Why does `ThinkingProxy.processThinkingParameter` connect `Model Preference Keys` to `Max Budget Mode`?**
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `ServerManager` connect `Server Manager` to `Auth Management`?**
+  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+- **Are the 2 inferred relationships involving `ThinkingProxy.processThinkingParameter` (e.g. with `ThinkingProxy.appendAnthropicBetaFlags` and `Rationale: force streaming for Claude to satisfy adaptive/max-mode requirements`) actually correct?**
+  _`ThinkingProxy.processThinkingParameter` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Timing`, `Notification.Name`, `AppPreferences` to the rest of the system?**
-  _43 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `App Lifecycle & Delegates` be split into smaller, more focused modules?**
-  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
-- **Should `Architecture Documentation` be split into smaller, more focused modules?**
-  _Cohesion score 0.09 - nodes in this community are weakly interconnected._
-- **Should `Auth Management` be split into smaller, more focused modules?**
+  _36 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `ThinkingProxy Core` be split into smaller, more focused modules?**
   _Cohesion score 0.13 - nodes in this community are weakly interconnected._
+- **Should `App Lifecycle` be split into smaller, more focused modules?**
+  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
 - **Should `Settings UI` be split into smaller, more focused modules?**
-  _Cohesion score 0.12 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
