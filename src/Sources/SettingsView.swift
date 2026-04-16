@@ -1,6 +1,64 @@
 import SwiftUI
 import ServiceManagement
 
+// MARK: - Liquid Glass helpers (macOS 26+)
+// These wrap the new Liquid Glass APIs with availability fallbacks so the
+// settings UI keeps its current look on older macOS versions.
+
+extension View {
+    /// Applies a Liquid Glass card background on macOS 26+, falling back to a
+    /// flat rounded-rect fill on older systems.
+    @ViewBuilder
+    func droidGlassCard(cornerRadius: CGFloat = 14, tint: Color? = nil, fallback: Color = Color(red: 0x12/255, green: 0x12/255, blue: 0x12/255)) -> some View {
+        if #available(macOS 26.0, *) {
+            if let tint {
+                self.glassEffect(.regular.tint(tint), in: .rect(cornerRadius: cornerRadius))
+            } else {
+                self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+            }
+        } else {
+            self
+                .background(fallback)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        }
+    }
+
+    /// Applies an interactive Liquid Glass capsule on macOS 26+, else a rounded background.
+    @ViewBuilder
+    func droidGlassCapsule(tint: Color? = nil, interactive: Bool = false) -> some View {
+        if #available(macOS 26.0, *) {
+            switch (tint, interactive) {
+            case (let t?, true):  self.glassEffect(.regular.tint(t).interactive(), in: .capsule)
+            case (let t?, false): self.glassEffect(.regular.tint(t), in: .capsule)
+            case (nil, true):     self.glassEffect(.regular.interactive(), in: .capsule)
+            case (nil, false):    self.glassEffect(.regular, in: .capsule)
+            }
+        } else {
+            self
+                .background(Capsule().fill(Color.white.opacity(0.06)))
+        }
+    }
+
+    /// Applies a prominent Liquid Glass button style on macOS 26+, else plain.
+    @ViewBuilder
+    func droidGlassProminent() -> some View {
+        if #available(macOS 26.0, *) {
+            self.buttonStyle(.glassProminent)
+        } else {
+            self.buttonStyle(.borderedProminent)
+        }
+    }
+
+    @ViewBuilder
+    func droidGlassPlain() -> some View {
+        if #available(macOS 26.0, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.buttonStyle(.bordered)
+        }
+    }
+}
+
 struct HazardStripesView: View {
     let stripeColor: Color
     let backgroundColor: Color
@@ -182,6 +240,7 @@ struct MaxBudgetToggleView: View {
                     }
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 5))
+                .droidGlassCard(cornerRadius: 5, tint: dangerRed.opacity(0.25))
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
                         .stroke(dangerRed.opacity(0.3), lineWidth: 1)
@@ -327,6 +386,8 @@ struct ServiceRow<ExtraContent: View>: View {
                     Button("Add Account") {
                         onConnect()
                     }
+                    .droidGlassProminent()
+                    .tint(toggleTint)
                     .controlSize(.small)
                 }
             }
@@ -351,6 +412,9 @@ struct ServiceRow<ExtraContent: View>: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .droidGlassCapsule(tint: AccountRowView.accent.opacity(0.18), interactive: true)
                     .padding(.leading, 28)
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -486,7 +550,14 @@ struct SettingsView: View {
                                     .fill(serverManager.isRunning ? Color.green : Color.red)
                                     .frame(width: 8, height: 8)
                                 Text(serverManager.isRunning ? "Running" : "Stopped")
+                                    .font(.caption)
                             }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .droidGlassCapsule(
+                                tint: serverManager.isRunning ? Color.green.opacity(0.4) : Color.red.opacity(0.4),
+                                interactive: true
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -505,6 +576,8 @@ struct SettingsView: View {
                         Button("Open Folder") {
                             openAuthFolder()
                         }
+                        .droidGlassPlain()
+                        .controlSize(.small)
                     }
 
                     HStack {
@@ -523,6 +596,8 @@ struct SettingsView: View {
                         Button(factoryModelsInstalled ? "Re-apply" : "Apply") {
                             applyFactoryCustomModels()
                         }
+                        .droidGlassProminent()
+                        .controlSize(.small)
                     }
 
                     HStack {
@@ -548,6 +623,8 @@ struct SettingsView: View {
                         Button(challengerPluginInstalled ? "Re-apply" : "Apply") {
                             applyChallengerPlugin()
                         }
+                        .droidGlassProminent()
+                        .controlSize(.small)
                     }
                 }
                 .listRowBackground(oledSectionBackground)
@@ -813,7 +890,23 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .background(oledWindowBackground)
+            .background(
+                ZStack {
+                    oledWindowBackground
+                    if #available(macOS 26.0, *) {
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0x18/255, green: 0x10/255, blue: 0x0C/255),
+                                Color.black,
+                                Color(red: 0x0C/255, green: 0x0C/255, blue: 0x14/255)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .opacity(0.6)
+                    }
+                }
+            )
             .scrollDisabled(false)
 
             Spacer()
@@ -852,6 +945,9 @@ struct SettingsView: View {
                 Link("Report an issue", destination: URL(string: "https://github.com/anand-92/droidproxy/issues")!)
                     .font(.caption)
                     .foregroundColor(oledFooterText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .droidGlassCapsule(tint: Color.white.opacity(0.08), interactive: true)
                     .padding(.top, 6)
                     .onHover { inside in
                         if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
