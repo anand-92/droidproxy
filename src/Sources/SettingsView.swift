@@ -515,6 +515,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
     @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
     @AppStorage(AppPreferences.claudeMaxBudgetModeKey) private var claudeMaxBudgetMode = AppPreferences.defaultClaudeMaxBudgetMode
+    @AppStorage(AppPreferences.oledThemeKey) private var oledTheme = AppPreferences.defaultOledTheme
     @State private var authenticatingService: ServiceType? = nil
     @State private var showingAuthResult = false
     @State private var authResultMessage = ""
@@ -585,9 +586,36 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            LogoView()
-                .padding(.top, 36) // leave room for the transparent titlebar traffic-lights
-                .padding(.bottom, 4)
+            ZStack(alignment: .topTrailing) {
+                LogoView()
+                    .padding(.top, 36) // leave room for the transparent titlebar traffic-lights
+                    .padding(.bottom, 4)
+                    .frame(maxWidth: .infinity)
+                Button {
+                    oledTheme.toggle()
+                    NotificationCenter.default.post(name: .droidProxyThemeChanged, object: nil)
+                } label: {
+                    Image(systemName: oledTheme ? "sun.max.fill" : "moon.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(oledTheme ? Color.yellow.opacity(0.9) : Color.white.opacity(0.75))
+                        .frame(width: 26, height: 26)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(oledTheme ? 0.06 : 0.10))
+                        )
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 12)
+                .padding(.trailing, 12)
+                .help(oledTheme ? "Switch to Liquid Glass theme" : "Switch to OLED black theme")
+                .onHover { inside in
+                    if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
+            }
 
             Form {
                 Section {
@@ -996,6 +1024,9 @@ struct SettingsView: View {
         }
         .background(
             ZStack {
+                if oledTheme {
+                    Color.black.ignoresSafeArea()
+                } else {
                 // Layer 1: behind-window blur so the desktop refracts through the
                 // transparent titlebar + translucent rows.
                 VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
@@ -1034,6 +1065,7 @@ struct SettingsView: View {
                     endRadius: 320
                 )
                 .ignoresSafeArea()
+                } // end !oledTheme
             }
         )
         .accentColor(AccountRowView.accent)
