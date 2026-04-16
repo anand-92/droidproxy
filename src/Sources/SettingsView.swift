@@ -536,18 +536,37 @@ struct SettingsView: View {
     private let oledSectionBackground = Color(red: 0x12/255, green: 0x12/255, blue: 0x12/255)
     private let oledFooterText = Color(red: 0xA8/255, green: 0xA8/255, blue: 0xA8/255)
 
-    // Translucent row background that reveals the window backdrop + Liquid Glass
-    // refraction. The subtle white overlay + ultra-thin material reads as a frosted
-    // glass pane on every macOS version we support.
+    // Translucent row background that reveals the colourful window backdrop.
+    // We deliberately avoid .ultraThinMaterial here — on dark appearance it
+    // vibrancy-composites to an almost-opaque grey which fights the glass look.
+    // A white gradient at low alpha + a hairline inner/outer highlight reads as
+    // actual liquid glass against the multi-hue window gradient below.
     @ViewBuilder
     private var glassRowBackground: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.10),
+                            Color.white.opacity(0.02)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.03))
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.05)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         }
         .padding(.vertical, 2)
     }
@@ -977,33 +996,45 @@ struct SettingsView: View {
         }
         .background(
             ZStack {
-                // Layer 1: deep neutral base
-                Color.black
-                // Layer 2: multi-hue radial wash so Liquid Glass has color to refract
+                // Layer 1: behind-window blur so the desktop refracts through the
+                // transparent titlebar + translucent rows.
+                VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
+                    .ignoresSafeArea()
+                // Layer 2: dark tint so content stays readable over bright desktops.
+                Color.black.opacity(0.55)
+                    .ignoresSafeArea()
+                // Layer 3: colorful radial accents that the glass rows refract.
                 RadialGradient(
                     colors: [
-                        Color(red: 0.26, green: 0.12, blue: 0.05).opacity(0.75),
-                        Color(red: 0.05, green: 0.08, blue: 0.16).opacity(0.55),
-                        Color.black
-                    ],
-                    center: .topLeading,
-                    startRadius: 20,
-                    endRadius: 720
-                )
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.20, green: 0.05, blue: 0.08).opacity(0.55),
+                        Color(red: 0.95, green: 0.45, blue: 0.15).opacity(0.45),
                         Color.clear
                     ],
-                    center: .bottomTrailing,
-                    startRadius: 20,
-                    endRadius: 520
+                    center: .init(x: 0.15, y: 0.1),
+                    startRadius: 10,
+                    endRadius: 420
                 )
-                // Layer 3: system visual-effect material for live desktop refraction
-                VisualEffectBlur(material: .underWindowBackground, blendingMode: .behindWindow)
-                    .ignoresSafeArea()
+                .ignoresSafeArea()
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.30, green: 0.50, blue: 0.95).opacity(0.35),
+                        Color.clear
+                    ],
+                    center: .init(x: 0.85, y: 0.9),
+                    startRadius: 10,
+                    endRadius: 420
+                )
+                .ignoresSafeArea()
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.90, green: 0.25, blue: 0.35).opacity(0.25),
+                        Color.clear
+                    ],
+                    center: .init(x: 0.9, y: 0.2),
+                    startRadius: 10,
+                    endRadius: 320
+                )
+                .ignoresSafeArea()
             }
-            .ignoresSafeArea()
         )
         .accentColor(AccountRowView.accent)
         .preferredColorScheme(.dark)
