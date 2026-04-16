@@ -210,6 +210,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         window.backgroundColor = .clear
         window.isOpaque = false
         window.hasShadow = true
+        // Make the whole window 70% opaque (30% see-through to the desktop).
+        window.alphaValue = 0.7
 
         let contentView = SettingsView(serverManager: serverManager)
         window.contentView = NSHostingView(rootView: contentView)
