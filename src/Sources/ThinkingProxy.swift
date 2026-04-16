@@ -282,17 +282,6 @@ class ThinkingProxy {
             if let result = processOpenAIFastMode(jsonString: modifiedBody, path: rewrittenPath) {
                 modifiedBody = result
             }
-            // Merge any Claude-side beta flags required by body mutations into `anthropic-beta`.
-            // Read the model from the modified body so it reflects any rewrites (e.g. Gemini
-            // suffixing) applied earlier. Safe no-op when no extra flags are needed.
-            if let model = claudeModel(inJSON: modifiedBody) {
-                let betaFlags = requiredClaudeBetaFlags(forModel: model)
-                if !betaFlags.isEmpty {
-                    appendAnthropicBetaFlags(betaFlags, to: &headers)
-                    let flagList = betaFlags.sorted().joined(separator: ",")
-                    ThinkingProxy.fileLog("APPENDED anthropic-beta flags: \(flagList) for model \(model)")
-                }
-            }
         }
 
         // Rewrite /v1/responses to /v1/chat/completions for Gemini models since
@@ -347,54 +336,24 @@ class ThinkingProxy {
         result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "stream",
                                           fieldValue: "true", existsInJSON: json["stream"] != nil)
 
-        if AppPreferences.claudeMaxBudgetMode {
-            if model.contains("opus-4-7") {
-                // Opus 4.7: task_budget is the advisory upper bound across the full agentic loop.
-                // Gated behind the `task-budgets-2026-03-13` beta (header appended in processRequest).
-                // Minimum accepted value is 20k; we use the model's max_tokens (128k) so the model
-                // treats the budget as effectively unbounded. effort=max pins the thinking depth to
-                // the highest level Opus supports.
-                let taskBudgetTotal = 128000
-                result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "thinking",
-                                                  fieldValue: "{\"type\":\"adaptive\"}",
-                                                  existsInJSON: json["thinking"] != nil)
-                result = replaceOrInjectJSONField(
-                    in: result,
-                    afterKey: "thinking",
-                    fieldName: "output_config",
-                    fieldValue: "{\"effort\":\"max\",\"task_budget\":{\"type\":\"tokens\",\"total\":\(taskBudgetTotal)}}",
-                    existsInJSON: json["output_config"] != nil
-                )
-                NSLog("[ThinkingProxy] Injected task_budget max mode for '\(model)' total=\(taskBudgetTotal)")
-                ThinkingProxy.fileLog("INJECTED task_budget max mode: total=\(taskBudgetTotal) for model \(model)")
-            } else if model.contains("sonnet-4-6") {
-                // Sonnet 4.6: classic extended-thinking override. budget_tokens must be strictly less
-                // than max_tokens (min 1024). We mirror the pre-4.7 Max Mode behavior exactly —
-                // request body changes stay inside the adaptive-thinking window this path already controls.
-                let maxTokens = 64000
-                let budgetTokens = maxTokens - 1
-                result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "max_tokens",
-                                                  fieldValue: "\(maxTokens)",
-                                                  existsInJSON: json["max_tokens"] != nil)
-                result = replaceOrInjectJSONField(in: result, afterKey: "max_tokens",
-                                                  fieldName: "thinking",
-                                                  fieldValue: "{\"type\":\"enabled\",\"budget_tokens\":\(budgetTokens)}",
-                                                  existsInJSON: json["thinking"] != nil)
-                result = replaceOrInjectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
-                                                  fieldValue: "{\"effort\":\"max\"}",
-                                                  existsInJSON: json["output_config"] != nil)
-                NSLog("[ThinkingProxy] Injected classic budget_tokens max mode for '\(model)' budget=\(budgetTokens) max_tokens=\(maxTokens)")
-                ThinkingProxy.fileLog("INJECTED classic budget_tokens max mode: budget_tokens=\(budgetTokens) max_tokens=\(maxTokens) for model \(model)")
-            } else {
-                // Unknown Claude model — fall through to the adaptive path rather than inject something unsupported.
-                result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "thinking",
-                                                  fieldValue: "{\"type\":\"adaptive\"}",
-                                                  existsInJSON: json["thinking"] != nil)
-                result = replaceOrInjectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
-                                                  fieldValue: "{\"effort\":\"\(effort)\"}",
-                                                  existsInJSON: json["output_config"] != nil)
-                NSLog("[ThinkingProxy] claudeMaxBudgetMode ignored for unsupported Claude model '\(model)'; used adaptive effort=\(effort)")
-            }
+        if AppPreferences.claudeMaxBudgetMode && model.contains("sonnet-4-6") {
+            // Sonnet 4.6 classic extended-thinking override. budget_tokens must be strictly less
+            // than max_tokens (min 1024). Request body changes stay inside the adaptive-thinking
+            // window this path already controls.
+            let maxTokens = 64000
+            let budgetTokens = maxTokens - 1
+            result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "max_tokens",
+                                              fieldValue: "\(maxTokens)",
+                                              existsInJSON: json["max_tokens"] != nil)
+            result = replaceOrInjectJSONField(in: result, afterKey: "max_tokens",
+                                              fieldName: "thinking",
+                                              fieldValue: "{\"type\":\"enabled\",\"budget_tokens\":\(budgetTokens)}",
+                                              existsInJSON: json["thinking"] != nil)
+            result = replaceOrInjectJSONField(in: result, afterKey: "thinking", fieldName: "output_config",
+                                              fieldValue: "{\"effort\":\"max\"}",
+                                              existsInJSON: json["output_config"] != nil)
+            NSLog("[ThinkingProxy] Injected classic budget_tokens max mode for '\(model)' budget=\(budgetTokens) max_tokens=\(maxTokens)")
+            ThinkingProxy.fileLog("INJECTED classic budget_tokens max mode: budget_tokens=\(budgetTokens) max_tokens=\(maxTokens) for model \(model)")
         } else {
             result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "thinking",
                                               fieldValue: "{\"type\":\"adaptive\"}",
@@ -407,49 +366,6 @@ class ThinkingProxy {
         }
 
         return result
-    }
-
-    /// Beta flags that must be present on `anthropic-beta` for the transformed body to validate.
-    /// Currently only applies to Opus 4.7 in Max Budget Mode, which adds `task_budget` to
-    /// `output_config` and requires the task budgets beta.
-    private func requiredClaudeBetaFlags(forModel model: String) -> Set<String> {
-        guard AppPreferences.claudeMaxBudgetMode else { return [] }
-        if model.contains("opus-4-7") {
-            return ["task-budgets-2026-03-13"]
-        }
-        return []
-    }
-
-    /// Extracts the Anthropic model from a JSON body, if present. Used to decide whether to
-    /// inject beta headers alongside body mutations.
-    private func claudeModel(inJSON jsonString: String) -> String? {
-        guard let data = jsonString.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let model = json["model"] as? String else {
-            return nil
-        }
-        return model
-    }
-
-    /// Appends beta flags to an `anthropic-beta` header, merging with any existing value.
-    /// Comparison is case-insensitive for the header name; flag equality is case-sensitive
-    /// because Anthropic beta IDs are case-sensitive.
-    private func appendAnthropicBetaFlags(_ flags: Set<String>, to headers: inout [(String, String)]) {
-        guard !flags.isEmpty else { return }
-        if let idx = headers.firstIndex(where: { $0.0.lowercased() == "anthropic-beta" }) {
-            let existingName = headers[idx].0
-            let existingValue = headers[idx].1
-            let existingFlags = Set(
-                existingValue
-                    .split(separator: ",")
-                    .map { $0.trimmingCharacters(in: .whitespaces) }
-                    .filter { !$0.isEmpty }
-            )
-            let combined = existingFlags.union(flags).sorted()
-            headers[idx] = (existingName, combined.joined(separator: ","))
-        } else {
-            headers.append(("anthropic-beta", flags.sorted().joined(separator: ",")))
-        }
     }
 
     private func codexReasoningEffort(for model: String) -> String? {

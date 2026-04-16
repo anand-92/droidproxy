@@ -69,12 +69,13 @@ What it does today:
 - Reads level from `AppPreferences.gemini31ProThinkingLevel` or `AppPreferences.gemini3FlashThinkingLevel`
 - Optionally injects `"service_tier":"priority"` for `gpt-5.4` on Responses API paths (`/v1/responses`, `/api/v1/responses`) when `AppPreferences.gpt54FastMode` is enabled and the client did not already set `service_tier`
 - Preserves JSON key order by editing the raw JSON string instead of re-serializing
-- **Max Budget Mode**: When `AppPreferences.claudeMaxBudgetMode` is enabled, forces streaming and swaps per-model reasoning for a maximum-intensity override: Opus 4.7 gets `output_config.task_budget` (128k total) with `effort=max` plus the `task-budgets-2026-03-13` beta header appended to `anthropic-beta`; Sonnet 4.6 gets classic extended thinking with `budget_tokens=63999` / `max_tokens=64000` / `effort=max`.
+- **Max Budget Mode**: When `AppPreferences.claudeMaxBudgetMode` is enabled, forces streaming and applies a Sonnet-4.6-only override: classic extended thinking with `budget_tokens=63999` / `max_tokens=64000` / `effort=max`. Opus 4.7 is unaffected and continues to receive `thinking.type=adaptive` with `output_config.effort` from `AppPreferences.opus47ThinkingEffort`.
 
 What it does not do anymore:
 
 - It does not strip or normalize model suffixes
-- It does not send `thinking.budget_tokens` to Opus 4.7 (rejected with 400 — the Opus max path uses `task_budget` instead)
+- It does not send `thinking.budget_tokens` to Opus 4.7 (rejected with 400)
+- It does not inject `output_config.task_budget` or append the `task-budgets-2026-03-13` beta flag for any model
 - It does not add `anthropic-beta` interleaved-thinking headers (adaptive thinking enables interleaving automatically)
 - It does not implement the old `-thinking-N` / suffix-based branching documented in stale docs
 

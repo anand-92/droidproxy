@@ -22,7 +22,7 @@ All releases are code-signed and notarized by Apple. Existing installs auto-upda
 - **Codex reasoning controls** -- Injects `reasoning: {"effort":"..."}` for `gpt-5.3-codex` and `gpt-5.4` via the OpenAI-compatible `http://localhost:8317/v1` endpoint
 - **Gemini thinking levels** -- Injects per-model thinking levels for `gemini-3.1-pro-preview` (`low` / `medium` / `high`) and `gemini-3-flash-preview` (`minimal` / `low` / `medium` / `high`) via model name suffix rewriting
 - **Per-model effort controls** -- Configure Opus 4.7 (`low` / `medium` / `high` / `xhigh` / `max`), Sonnet 4.6 (`low` / `medium` / `high` / `max`), GPT 5.3 Codex (`low` / `medium` / `high` / `xhigh`), GPT 5.4 (`low` / `medium` / `high` / `xhigh`), Gemini 3.1 Pro (`low` / `medium` / `high`), and Gemini 3 Flash (`minimal` / `low` / `medium` / `high`) directly from the Settings window
-- **Max Budget Mode** -- Nuclear launch button that forces maximum reasoning on every Claude request. Opus 4.7 receives a 128k `task_budget` (advisory cap across the full agentic loop, beta) with `effort: max`. Sonnet 4.6 falls back to classic extended thinking with `budget_tokens: 63999`. Full thinking power, your quota's problem.
+- **Max Budget Mode** -- Nuclear launch button that forces maximum reasoning on Sonnet 4.6 requests: classic extended thinking with `budget_tokens: 63999`, `max_tokens: 64000`, and `effort: max`. Opus 4.7 is unaffected and continues to use its configured thinking effort slider. Full thinking power for Sonnet, your quota's problem.
 
 <p align="center">
   <img src="max-mode.png" alt="Max Budget Mode" width="420">

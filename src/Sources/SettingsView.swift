@@ -48,7 +48,7 @@ struct MaxBudgetToggleView: View {
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .tracking(0.8)
                         .foregroundColor(isOn ? dangerRed : .gray.opacity(0.6))
-                    Text("Opus 4.7: task_budget · Sonnet 4.6: thinking budget_tokens")
+                    Text("Sonnet 4.6 only · max budget_tokens + effort")
                         .font(.system(size: 9))
                         .foregroundColor(.gray.opacity(0.5))
                 }
@@ -196,7 +196,7 @@ struct MaxBudgetToggleView: View {
                 }
             }
         }
-        .help("Overrides per-model effort sliders. Opus 4.7 receives a 128k task_budget (beta) — an advisory cap across the full agentic loop — with effort=max. Sonnet 4.6 receives classic extended thinking with budget_tokens=63999 and effort=max. Either way: ignition is cheap, fuel is not.")
+        .help("Overrides the Sonnet 4.6 effort slider with classic extended thinking (budget_tokens=63999, effort=max). Opus 4.7 keeps its own slider setting — max mode does not affect it. Ignition is cheap, fuel is not.")
     }
 }
 
@@ -654,7 +654,6 @@ struct SettingsView: View {
                                     .onChange(of: claudeMaxBudgetMode) { enabled in
                                         if enabled {
                                             showingMaxBudgetWarning = true
-                                            opus47ThinkingEffort = "max"
                                             sonnet46ThinkingEffort = "max"
                                         }
                                     }
@@ -664,16 +663,15 @@ struct SettingsView: View {
                                     options: ["low", "medium", "high", "xhigh", "max"],
                                     tint: claudeEffortSelectionColor
                                 )
-                                .disabled(claudeMaxBudgetMode)
-                                .opacity(claudeMaxBudgetMode ? 0.4 : 1.0)
                                 effortPickerRow(
                                     "Sonnet 4.6 thinking effort",
                                     selection: $sonnet46ThinkingEffort,
                                     options: ["low", "medium", "high", "max"],
-                                    tint: claudeEffortSelectionColor
+                                    tint: claudeEffortSelectionColor,
+                                    overrideBadge: claudeMaxBudgetMode ? "MAX MODE" : nil
                                 )
                                 .disabled(claudeMaxBudgetMode)
-                                .opacity(claudeMaxBudgetMode ? 0.4 : 1.0)
+                                .opacity(claudeMaxBudgetMode ? 0.45 : 1.0)
                             }
                         }
                         .padding(.leading, 28)
@@ -883,18 +881,34 @@ struct SettingsView: View {
         .alert("⚠️ MAX BUDGET MODE", isPresented: $showingMaxBudgetWarning) {
             Button("Engage", role: .cancel) { }
         } message: {
-            Text("Claude requests will bypass your per-model effort sliders. Opus 4.7 sends a 128k task_budget (advisory cap across the full agentic loop, beta). Sonnet 4.6 reverts to classic extended thinking with maximum budget_tokens. Both will burn through your quota fast.")
+            Text("Sonnet 4.6 requests will bypass its effort slider and revert to classic extended thinking with maximum budget_tokens and effort=max. Opus 4.7 keeps its own slider — Max Budget Mode does not apply to it. Sonnet will burn through your quota fast.")
         }
     }
 
     // MARK: - Actions
 
     @ViewBuilder
-    private func effortPickerRow(_ title: String, selection: Binding<String>, options: [String], tint: Color = AccountRowView.accent) -> some View {
+    private func effortPickerRow(_ title: String, selection: Binding<String>, options: [String], tint: Color = AccountRowView.accent, overrideBadge: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                if let badge = overrideBadge {
+                    Text(badge)
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .tracking(0.8)
+                        .foregroundColor(Color(red: 0.9, green: 0.15, blue: 0.1))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(Color(red: 0.9, green: 0.15, blue: 0.1).opacity(0.5), lineWidth: 1)
+                        )
+                        .opacity(1.0)
+                }
+                Spacer()
+            }
             Picker("", selection: selection) {
                 ForEach(options, id: \.self) { option in
                     Text(option).tag(option)
