@@ -193,7 +193,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
     func createSettingsWindow() {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1000, height: 900),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -201,7 +201,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         window.center()
         window.delegate = self
         window.isReleasedWhenClosed = false
-        window.backgroundColor = .black
+
+        // Fully transparent titlebar so the traffic-light buttons float over the
+        // Liquid Glass content. Content extends edge-to-edge under the title bar.
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = true
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        window.hasShadow = true
 
         let contentView = SettingsView(serverManager: serverManager)
         window.contentView = NSHostingView(rootView: contentView)

@@ -1,5 +1,26 @@
 import SwiftUI
 import ServiceManagement
+import AppKit
+
+// MARK: - NSVisualEffectView bridge for live backdrop blur behind the window
+struct VisualEffectBlur: NSViewRepresentable {
+    var material: NSVisualEffectView.Material = .underWindowBackground
+    var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = true
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
+}
 
 // MARK: - Liquid Glass helpers (macOS 26+)
 // These wrap the new Liquid Glass APIs with availability fallbacks so the
@@ -514,6 +535,22 @@ struct SettingsView: View {
     private let oledWindowBackground = Color.black
     private let oledSectionBackground = Color(red: 0x12/255, green: 0x12/255, blue: 0x12/255)
     private let oledFooterText = Color(red: 0xA8/255, green: 0xA8/255, blue: 0xA8/255)
+
+    // Translucent row background that reveals the window backdrop + Liquid Glass
+    // refraction. The subtle white overlay + ultra-thin material reads as a frosted
+    // glass pane on every macOS version we support.
+    @ViewBuilder
+    private var glassRowBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.03))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        }
+        .padding(.vertical, 2)
+    }
     
     private enum Timing {
         static let serverRestartDelay: TimeInterval = 0.3
@@ -530,7 +567,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             LogoView()
-                .padding(.top, 16)
+                .padding(.top, 36) // leave room for the transparent titlebar traffic-lights
                 .padding(.bottom, 4)
 
             Form {
@@ -562,7 +599,7 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .listRowBackground(oledSectionBackground)
+                .listRowBackground(glassRowBackground)
 
                 Section {
                     Toggle("Launch at login", isOn: $launchAtLogin)
@@ -627,7 +664,7 @@ struct SettingsView: View {
                         .controlSize(.small)
                     }
                 }
-                .listRowBackground(oledSectionBackground)
+                .listRowBackground(glassRowBackground)
 
                 Section {
                     if remoteManagementExpanded {
@@ -690,7 +727,7 @@ struct SettingsView: View {
                     .accessibilityLabel("Remote Management")
                     .accessibilityValue(remoteManagementExpanded ? "Expanded" : "Collapsed")
                 }
-                .listRowBackground(oledSectionBackground)
+                .listRowBackground(glassRowBackground)
 
                 Section("Services") {
                     ServiceRow(
@@ -886,27 +923,10 @@ struct SettingsView: View {
                         .padding(.leading, 28)
                     }
                 }
-                .listRowBackground(oledSectionBackground)
+                .listRowBackground(glassRowBackground)
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .background(
-                ZStack {
-                    oledWindowBackground
-                    if #available(macOS 26.0, *) {
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0x18/255, green: 0x10/255, blue: 0x0C/255),
-                                Color.black,
-                                Color(red: 0x0C/255, green: 0x0C/255, blue: 0x14/255)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        .opacity(0.6)
-                    }
-                }
-            )
             .scrollDisabled(false)
 
             Spacer()
@@ -955,7 +975,36 @@ struct SettingsView: View {
             }
             .padding(.bottom, 12)
         }
-        .background(oledWindowBackground)
+        .background(
+            ZStack {
+                // Layer 1: deep neutral base
+                Color.black
+                // Layer 2: multi-hue radial wash so Liquid Glass has color to refract
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.26, green: 0.12, blue: 0.05).opacity(0.75),
+                        Color(red: 0.05, green: 0.08, blue: 0.16).opacity(0.55),
+                        Color.black
+                    ],
+                    center: .topLeading,
+                    startRadius: 20,
+                    endRadius: 720
+                )
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.20, green: 0.05, blue: 0.08).opacity(0.55),
+                        Color.clear
+                    ],
+                    center: .bottomTrailing,
+                    startRadius: 20,
+                    endRadius: 520
+                )
+                // Layer 3: system visual-effect material for live desktop refraction
+                VisualEffectBlur(material: .underWindowBackground, blendingMode: .behindWindow)
+                    .ignoresSafeArea()
+            }
+            .ignoresSafeArea()
+        )
         .accentColor(AccountRowView.accent)
         .preferredColorScheme(.dark)
         .frame(width: 480, height: 814)
