@@ -260,7 +260,6 @@ struct MaxBudgetToggleView: View {
                             .fill(Color.black.opacity(0.3))
                     }
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 5))
                 .droidGlassCard(cornerRadius: 5, tint: dangerRed.opacity(0.25))
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
@@ -418,31 +417,34 @@ struct ServiceRow<ExtraContent: View>: View {
                 let enabledCount = accounts.filter { !$0.isDisabled }.count
                 if !accounts.isEmpty {
                     // Collapsible summary
-                    HStack(spacing: 4) {
-                        Text("\(accounts.count) connected account\(accounts.count == 1 ? "" : "s")")
-                            .font(.caption)
-                            .foregroundColor(AccountRowView.accent)
-
-                        if enabledCount > 1 {
-                            Text("• Round-robin w/ auto-failover")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .droidGlassCapsule(tint: AccountRowView.accent.opacity(0.18), interactive: true)
-                    .padding(.leading, 28)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             isExpanded.toggle()
                         }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("\(accounts.count) connected account\(accounts.count == 1 ? "" : "s")")
+                                .font(.caption)
+                                .foregroundColor(AccountRowView.accent)
+
+                            if enabledCount > 1 {
+                                Text("• Round-robin w/ auto-failover")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .droidGlassCapsule(tint: AccountRowView.accent.opacity(0.18), interactive: true)
                     }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 28)
+                    .accessibilityLabel("\(accounts.count) connected \(accounts.count == 1 ? "account" : "accounts")")
+                    .accessibilityHint(isExpanded ? "Collapse account list" : "Expand account list")
 
                     // Expanded accounts list
                     if isExpanded {
