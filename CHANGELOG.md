@@ -10,7 +10,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 - **Claude Opus 4.7 migration** -- Opus 4.6 support replaced with Opus 4.7 throughout the app: model detection (`claude-opus-4-7`), Settings UI label, Factory custom models entry (`custom:droidproxy:opus-4-7`), and the bundled Challenger droid (`challenger-opus`) now target Opus 4.7. Effort options are `low` / `medium` / `high` / `xhigh` / `max`, with a default of `xhigh` per Anthropic's recommendation for coding and agentic workloads.
-- **Max Budget Mode scoped to Sonnet 4.6** -- The big red button now only overrides Sonnet 4.6, injecting `thinking: {type: enabled, budget_tokens: 63999}` with `max_tokens: 64000` and `effort: max`. Opus 4.7 is excluded: its requests follow the configured Opus 4.7 effort slider regardless of the toggle. The `task_budget` injection and `task-budgets-2026-03-13` beta header are removed, and the Settings UI reflects the Sonnet-only scope with a `MAX MODE` badge on the Sonnet effort picker and an untouched Opus 4.7 picker.
 - **Opus 4.6 Factory custom model** -- `custom:droidproxy:opus-4-6` is removed from `customModels` during Apply/Re-apply so users don't end up with stale entries alongside the new Opus 4.7 model.
 
 ### Added

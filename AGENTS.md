@@ -75,7 +75,6 @@ What it does not do anymore:
 
 - It does not strip or normalize model suffixes
 - It does not send `thinking.budget_tokens` to Opus 4.7 (rejected with 400)
-- It does not inject `output_config.task_budget` or append the `task-budgets-2026-03-13` beta flag for any model
 - It does not add `anthropic-beta` interleaved-thinking headers (adaptive thinking enables interleaving automatically)
 - It does not implement the old `-thinking-N` / suffix-based branching documented in stale docs
 
