@@ -18,7 +18,7 @@ DroidProxy is a free, open-source macOS menu bar application that proxies authen
 
 ## Supported Models
 
-- Claude Opus 4.6
+- Claude Opus 4.7
 - Claude Sonnet 4.6
 - GPT 5.3 Codex
 - GPT 5.4

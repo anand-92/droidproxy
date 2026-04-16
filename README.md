@@ -18,11 +18,11 @@ All releases are code-signed and notarized by Apple. Existing installs auto-upda
 ## Features
 
 - **One-click OAuth auth** -- Claude Code, Codex, and Gemini login from the menu bar, credential monitoring, auto-refresh
-- **Adaptive thinking proxy** -- Injects `thinking: {"type":"adaptive"}` and per-model `output_config.effort` for Claude Opus 4.6 and Claude Sonnet 4.6 requests sent through `http://localhost:8317`
+- **Adaptive thinking proxy** -- Injects `thinking: {"type":"adaptive"}` and per-model `output_config.effort` for Claude Opus 4.7 and Claude Sonnet 4.6 requests sent through `http://localhost:8317`
 - **Codex reasoning controls** -- Injects `reasoning: {"effort":"..."}` for `gpt-5.3-codex` and `gpt-5.4` via the OpenAI-compatible `http://localhost:8317/v1` endpoint
 - **Gemini thinking levels** -- Injects per-model thinking levels for `gemini-3.1-pro-preview` (`low` / `medium` / `high`) and `gemini-3-flash-preview` (`minimal` / `low` / `medium` / `high`) via model name suffix rewriting
-- **Per-model effort controls** -- Configure Opus 4.6 (`low` / `medium` / `high` / `max`), Sonnet 4.6 (`low` / `medium` / `high`), GPT 5.3 Codex (`low` / `medium` / `high` / `xhigh`), GPT 5.4 (`low` / `medium` / `high` / `xhigh`), Gemini 3.1 Pro (`low` / `medium` / `high`), and Gemini 3 Flash (`minimal` / `low` / `medium` / `high`) directly from the Settings window
-- **Max Budget Mode** -- Nuclear launch button that forces maximum `budget_tokens` on every Claude request. Engages full thinking power at the cost of burning through your API quota at warp speed. You've been warned.
+- **Per-model effort controls** -- Configure Opus 4.7 (`low` / `medium` / `high` / `xhigh` / `max`), Sonnet 4.6 (`low` / `medium` / `high` / `max`), GPT 5.3 Codex (`low` / `medium` / `high` / `xhigh`), GPT 5.4 (`low` / `medium` / `high` / `xhigh`), Gemini 3.1 Pro (`low` / `medium` / `high`), and Gemini 3 Flash (`minimal` / `low` / `medium` / `high`) directly from the Settings window
+- **Max Budget Mode** -- Nuclear launch button that forces maximum reasoning on every Claude request. Opus 4.7 receives a 128k `task_budget` (advisory cap across the full agentic loop, beta) with `effort: max`. Sonnet 4.6 falls back to classic extended thinking with `budget_tokens: 63999`. Full thinking power, your quota's problem.
 
 <p align="center">
   <img src="max-mode.png" alt="Max Budget Mode" width="420">
@@ -83,7 +83,7 @@ src/
 
 ## Challenger Droids
 
-DroidProxy ships with three devil's advocate code reviewer droids -- powered by Claude Opus 4.6, GPT 5.4, and Gemini 3.1 Pro. They challenge your code decisions, surface tradeoffs you may have missed, stress-test edge cases, and suggest concrete alternatives. Running multiple gives you a cross-model second opinion that catches blind spots a single reviewer might miss.
+DroidProxy ships with three devil's advocate code reviewer droids -- powered by Claude Opus 4.7, GPT 5.4, and Gemini 3.1 Pro. They challenge your code decisions, surface tradeoffs you may have missed, stress-test edge cases, and suggest concrete alternatives. Running multiple gives you a cross-model second opinion that catches blind spots a single reviewer might miss.
 
 ### Install
 
@@ -107,7 +107,7 @@ cp .factory/commands/challenge-gemini.md ~/.factory/commands/
 
 In any Droid session, use the slash commands:
 
-- `/challenge-opus` -- summon the Claude Opus 4.6 challenger
+- `/challenge-opus` -- summon the Claude Opus 4.7 challenger
 - `/challenge-gpt` -- summon the GPT 5.4 challenger
 - `/challenge-gemini` -- summon the Gemini 3.1 Pro challenger
 

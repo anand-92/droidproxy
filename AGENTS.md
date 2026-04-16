@@ -57,10 +57,10 @@ Typical request flow:
 What it does today:
 
 - Inspects `POST` JSON requests for supported Claude, Codex GPT, and Gemini models
-- Injects Claude adaptive thinking for models whose name contains `opus-4-6` or `sonnet-4-6`
-- Injects `"thinking":{"type":"adaptive"}`
+- Injects Claude adaptive thinking for models whose name contains `opus-4-7` or `sonnet-4-6`
+- Injects `"thinking":{"type":"adaptive"}` and forces `"stream":true` for Claude
 - Injects `"output_config":{"effort":"..."}`
-- Reads effort from `AppPreferences.opus46ThinkingEffort` or `AppPreferences.sonnet46ThinkingEffort`
+- Reads effort from `AppPreferences.opus47ThinkingEffort` or `AppPreferences.sonnet46ThinkingEffort`
 - Injects Codex reasoning for exact models `gpt-5.3-codex` and `gpt-5.4`
 - Injects `"reasoning":{"effort":"..."}`
 - Reads effort from `AppPreferences.gpt53CodexReasoningEffort` or `AppPreferences.gpt54ReasoningEffort`
@@ -69,14 +69,14 @@ What it does today:
 - Reads level from `AppPreferences.gemini31ProThinkingLevel` or `AppPreferences.gemini3FlashThinkingLevel`
 - Optionally injects `"service_tier":"priority"` for `gpt-5.4` on Responses API paths (`/v1/responses`, `/api/v1/responses`) when `AppPreferences.gpt54FastMode` is enabled and the client did not already set `service_tier`
 - Preserves JSON key order by editing the raw JSON string instead of re-serializing
-- **Max budget mode**: When `AppPreferences.claudeMaxBudgetMode` is enabled, forces streaming and injects max budget thinking for Claude models (128000/127999 tokens for Opus 4.6, 64000/63999 for Sonnet 4.6)
+- **Max Budget Mode**: When `AppPreferences.claudeMaxBudgetMode` is enabled, forces streaming and swaps per-model reasoning for a maximum-intensity override: Opus 4.7 gets `output_config.task_budget` (128k total) with `effort=max` plus the `task-budgets-2026-03-13` beta header appended to `anthropic-beta`; Sonnet 4.6 gets classic extended thinking with `budget_tokens=63999` / `max_tokens=64000` / `effort=max`.
 
 What it does not do anymore:
 
 - It does not strip or normalize model suffixes
-- ~~It does not add fixed-budget thinking via `budget_tokens`~~ (now supported via max budget mode)
-- It does not add `anthropic-beta` interleaved-thinking headers
-- It does not implement the old Opus 4.7 / Sonnet 4.7 branching documented in stale docs
+- It does not send `thinking.budget_tokens` to Opus 4.7 (rejected with 400 — the Opus max path uses `task_budget` instead)
+- It does not add `anthropic-beta` interleaved-thinking headers (adaptive thinking enables interleaving automatically)
+- It does not implement the old `-thinking-N` / suffix-based branching documented in stale docs
 
 ### Amp routing
 
@@ -122,7 +122,7 @@ Behavior to know:
 | `src/Sources/ThinkingProxy.swift` | Raw TCP HTTP proxy for thinking injection plus Amp request/response rewriting. |
 | `src/Sources/SettingsView.swift` | SwiftUI settings UI for server status, launch-at-login, provider toggles, auth flows, and per-model effort pickers. |
 | `src/Sources/AuthStatus.swift` | `AuthManager`, account parsing, expiry detection, file deletion, and per-account disabled-state updates. |
-| `src/Sources/AppPreferences.swift` | UserDefaults-backed effort preferences for Opus 4.6, Sonnet 4.6, GPT 5.3 Codex, GPT 5.4, Gemini 3.1 Pro, and Gemini 3 Flash, plus fast mode toggles and `claudeMaxBudgetMode`. |
+| `src/Sources/AppPreferences.swift` | UserDefaults-backed effort preferences for Opus 4.7, Sonnet 4.6, GPT 5.3 Codex, GPT 5.4, Gemini 3.1 Pro, and Gemini 3 Flash, plus fast mode toggles. |
 | `src/Sources/Resources/config.yaml` | Bundled CLIProxyAPIPlus config (`port: 8318`, localhost binding, Amp upstream settings, auth dir). |
 | `src/Info.plist` | Bundle metadata. Current source-of-truth values include app name `DroidProxy`, bundle ID `com.droidproxy.app`, and Sparkle feed URL on `anand-92/droidproxy`. |
 

@@ -1,7 +1,7 @@
 ---
 name: challenger-opus
 description: Devil's advocate code reviewer that challenges decisions, critiques patterns, and suggests better alternatives. Use when you want a tough second opinion on code, architecture, or design choices.
-model: custom:droidproxy:opus-4-6
+model: custom:droidproxy:opus-4-7
 tools: ["Read", "LS", "Grep", "Glob", "WebSearch", "FetchUrl"]
 ---
 

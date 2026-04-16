@@ -26,7 +26,7 @@ const features = [
       </svg>
     ),
     title: 'Per-Model Effort Controls',
-    description: 'Fine-tune response quality vs speed with model-specific effort settings. Opus 4.6, Sonnet 4.6, GPT 5.3 Codex, GPT 5.4, Gemini 3.1 Pro, and Gemini 3 Flash supported.'
+    description: 'Fine-tune response quality vs speed with model-specific effort settings. Opus 4.7, Sonnet 4.6, GPT 5.3 Codex, GPT 5.4, Gemini 3.1 Pro, and Gemini 3 Flash supported.'
   },
   {
     icon: (
@@ -94,12 +94,12 @@ export default function Features() {
               </p>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">Opus 4.6</span>
-                  <span className="text-apple-gray-400 ml-2">low / medium / high / max</span>
+                  <span className="font-medium">Opus 4.7</span>
+                  <span className="text-apple-gray-400 ml-2">low / medium / high / xhigh / max</span>
                 </div>
                 <div>
                   <span className="font-medium">Sonnet 4.6</span>
-                  <span className="text-apple-gray-400 ml-2">low / medium / high</span>
+                  <span className="text-apple-gray-400 ml-2">low / medium / high / max</span>
                 </div>
                 <div>
                   <span className="font-medium">GPT 5.3 Codex</span>

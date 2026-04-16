@@ -1,7 +1,7 @@
 import Foundation
 
 enum AppPreferences {
-    static let opus46ThinkingEffortKey = "opus46ThinkingEffort"
+    static let opus47ThinkingEffortKey = "opus47ThinkingEffort"
     static let sonnet46ThinkingEffortKey = "sonnet46ThinkingEffort"
     static let gpt53CodexReasoningEffortKey = "gpt53CodexReasoningEffort"
     static let gpt54ReasoningEffortKey = "gpt54ReasoningEffort"
@@ -12,7 +12,7 @@ enum AppPreferences {
     static let claudeMaxBudgetModeKey = "claudeMaxBudgetMode"
     static let allowRemoteKey = "allowRemote"
     static let secretKeyKey = "secretKey"
-    static let defaultOpus46ThinkingEffort = "max"
+    static let defaultOpus47ThinkingEffort = "xhigh"
     static let defaultSonnet46ThinkingEffort = "high"
     static let defaultGpt53CodexReasoningEffort = "high"
     static let defaultGpt54ReasoningEffort = "high"
@@ -24,12 +24,12 @@ enum AppPreferences {
     static let defaultAllowRemote = false
     static let defaultSecretKey = ""
 
-    static var opus46ThinkingEffort: String {
+    static var opus47ThinkingEffort: String {
         let defaults = UserDefaults.standard
-        guard defaults.object(forKey: opus46ThinkingEffortKey) != nil else {
-            return defaultOpus46ThinkingEffort
+        guard defaults.object(forKey: opus47ThinkingEffortKey) != nil else {
+            return defaultOpus47ThinkingEffort
         }
-        return defaults.string(forKey: opus46ThinkingEffortKey) ?? defaultOpus46ThinkingEffort
+        return defaults.string(forKey: opus47ThinkingEffortKey) ?? defaultOpus47ThinkingEffort
     }
 
     static var sonnet46ThinkingEffort: String {

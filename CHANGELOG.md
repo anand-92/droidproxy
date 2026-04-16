@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+- **Claude Opus 4.7 migration** -- Opus 4.6 support replaced with Opus 4.7 throughout the app: model detection (`claude-opus-4-7`), Settings UI label, Factory custom models entry (`custom:droidproxy:opus-4-7`), and the bundled Challenger droid (`challenger-opus`) now target Opus 4.7. Effort options are `low` / `medium` / `high` / `xhigh` / `max`, with a default of `xhigh` per Anthropic's recommendation for coding and agentic workloads.
+- **Max Budget Mode retooled** -- The big red button still fires, but its behavior is now model-aware. On Opus 4.7 it injects a 128k `task_budget` (advisory cap across the full agentic loop) with `effort: max`, and appends the required `task-budgets-2026-03-13` beta header to the outgoing request. On Sonnet 4.6 it keeps the legacy behavior: `thinking: {type: enabled, budget_tokens: 63999}` with `max_tokens: 64000` and `effort: max`. The `budget_tokens` path is no longer used for Opus requests (4.7 rejects it with 400).
+- **Opus 4.6 Factory custom model** -- `custom:droidproxy:opus-4-6` is removed from `customModels` during Apply/Re-apply so users don't end up with stale entries alongside the new Opus 4.7 model.
+
 ### Added
 - **Gemini provider support** -- OAuth login, credential monitoring, provider enable/disable, and service icon in Settings UI
 - **Gemini thinking level controls** -- Per-model thinking level pickers for Gemini 3.1 Pro (`low` / `medium` / `high`) and Gemini 3 Flash (`minimal` / `low` / `medium` / `high`)

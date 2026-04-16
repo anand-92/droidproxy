@@ -83,12 +83,12 @@ export default function Setup() {
               <div className="p-4 rounded-lg bg-apple-gray-100 dark:bg-apple-gray-900 code-block overflow-x-auto">
                 <pre className="text-xs leading-relaxed">{`"customModels": [
   {
-    "model": "claude-opus-4-6",
-    "id": "custom:droidproxy:opus-4-6",
+    "model": "claude-opus-4-7",
+    "id": "custom:droidproxy:opus-4-7",
     "index": 0,
     "baseUrl": "http://localhost:8317",
     "apiKey": "***",
-    "displayName": "DroidProxy: Opus 4.6",
+    "displayName": "DroidProxy: Opus 4.7",
     "maxOutputTokens": 128000,
     "provider": "anthropic"
   },

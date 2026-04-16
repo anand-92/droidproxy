@@ -44,11 +44,11 @@ struct MaxBudgetToggleView: View {
             // Button row: label + big red 3D button
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("MAX THINKING BUDGET")
+                    Text("MAX BUDGET MODE")
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .tracking(0.8)
                         .foregroundColor(isOn ? dangerRed : .gray.opacity(0.6))
-                    Text("Forces maximum budget_tokens on every request")
+                    Text("Opus 4.7: task_budget · Sonnet 4.6: thinking budget_tokens")
                         .font(.system(size: 9))
                         .foregroundColor(.gray.opacity(0.5))
                 }
@@ -196,7 +196,7 @@ struct MaxBudgetToggleView: View {
                 }
             }
         }
-        .help("Forces manual thinking with maximum budget_tokens instead of adaptive thinking. This will burn through your usage limits quickly.")
+        .help("Overrides per-model effort sliders. Opus 4.7 receives a 128k task_budget (beta) — an advisory cap across the full agentic loop — with effort=max. Sonnet 4.6 receives classic extended thinking with budget_tokens=63999 and effort=max. Either way: ignition is cheap, fuel is not.")
     }
 }
 
@@ -419,7 +419,7 @@ struct SettingsView: View {
     @ObservedObject var serverManager: ServerManager
     @StateObject private var authManager = AuthManager()
     @State private var launchAtLogin = false
-    @AppStorage(AppPreferences.opus46ThinkingEffortKey) private var opus46ThinkingEffort = AppPreferences.defaultOpus46ThinkingEffort
+    @AppStorage(AppPreferences.opus47ThinkingEffortKey) private var opus47ThinkingEffort = AppPreferences.defaultOpus47ThinkingEffort
     @AppStorage(AppPreferences.sonnet46ThinkingEffortKey) private var sonnet46ThinkingEffort = AppPreferences.defaultSonnet46ThinkingEffort
     @AppStorage(AppPreferences.gpt53CodexReasoningEffortKey) private var gpt53CodexReasoningEffort = AppPreferences.defaultGpt53CodexReasoningEffort
     @AppStorage(AppPreferences.gpt54ReasoningEffortKey) private var gpt54ReasoningEffort = AppPreferences.defaultGpt54ReasoningEffort
@@ -533,7 +533,7 @@ struct SettingsView: View {
                                 .font(.caption)
                         }
                         .buttonStyle(.plain)
-                        .help("Installs three devil's advocate code reviewer droids (Opus 4.6, GPT 5.4, Gemini 3.1 Pro) and their slash commands into your Factory config. Use /challenge-opus, /challenge-gpt, or /challenge-gemini in any Droid session for a cross-model second opinion on your code.")
+                        .help("Installs three devil's advocate code reviewer droids (Opus 4.7, GPT 5.4, Gemini 3.1 Pro) and their slash commands into your Factory config. Use /challenge-opus, /challenge-gpt, or /challenge-gemini in any Droid session for a cross-model second opinion on your code.")
                         Spacer()
                         if challengerPluginInstalled {
                             HStack(spacing: 4) {
@@ -654,14 +654,14 @@ struct SettingsView: View {
                                     .onChange(of: claudeMaxBudgetMode) { enabled in
                                         if enabled {
                                             showingMaxBudgetWarning = true
-                                            opus46ThinkingEffort = "max"
+                                            opus47ThinkingEffort = "max"
                                             sonnet46ThinkingEffort = "max"
                                         }
                                     }
                                 effortPickerRow(
-                                    "Opus 4.6 thinking effort",
-                                    selection: $opus46ThinkingEffort,
-                                    options: ["low", "medium", "high", "max"],
+                                    "Opus 4.7 thinking effort",
+                                    selection: $opus47ThinkingEffort,
+                                    options: ["low", "medium", "high", "xhigh", "max"],
                                     tint: claudeEffortSelectionColor
                                 )
                                 .disabled(claudeMaxBudgetMode)
@@ -883,7 +883,7 @@ struct SettingsView: View {
         .alert("⚠️ MAX BUDGET MODE", isPresented: $showingMaxBudgetWarning) {
             Button("Engage", role: .cancel) { }
         } message: {
-            Text("You are about to unlock maximum thinking power. Every request will use the highest possible budget_tokens, burning through your API quota at full speed. There is no throttle.")
+            Text("Claude requests will bypass your per-model effort sliders. Opus 4.7 sends a 128k task_budget (advisory cap across the full agentic loop, beta). Sonnet 4.6 reverts to classic extended thinking with maximum budget_tokens. Both will burn through your quota fast.")
         }
     }
 
@@ -1016,13 +1016,19 @@ struct SettingsView: View {
     
     // MARK: - Factory Custom Models
 
+    /// Ids retired by prior releases. Removed from `customModels` during Apply/Re-apply
+    /// so users don't end up with stale entries (e.g. `Opus 4.6`) next to the current ones.
+    private static let legacyDroidProxyModelIds: Set<String> = [
+        "custom:droidproxy:opus-4-6"
+    ]
+
     private static let droidProxyModels: [[String: Any]] = [
         [
-            "model": "claude-opus-4-6",
-            "id": "custom:droidproxy:opus-4-6",
+            "model": "claude-opus-4-7",
+            "id": "custom:droidproxy:opus-4-7",
             "baseUrl": "http://localhost:8317",
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: Opus 4.6",
+            "displayName": "DroidProxy: Opus 4.7",
             "maxOutputTokens": 128000,
             "noImageSupport": false,
             "provider": "anthropic"
@@ -1126,7 +1132,7 @@ struct SettingsView: View {
         let droidIds = Set(Self.droidProxyModels.compactMap { $0["id"] as? String })
         models.removeAll { item in
             guard let id = item["id"] as? String else { return false }
-            return droidIds.contains(id) || id.hasPrefix("custom:CC:")
+            return droidIds.contains(id) || Self.legacyDroidProxyModelIds.contains(id) || id.hasPrefix("custom:CC:")
         }
 
         let enabledModels = Self.droidProxyModels.filter { model in
@@ -1168,7 +1174,7 @@ struct SettingsView: View {
         ---
         name: challenger-opus
         description: Devil's advocate code reviewer that challenges decisions, critiques patterns, and suggests better alternatives. Use when you want a tough second opinion on code, architecture, or design choices.
-        model: custom:droidproxy:opus-4-6
+        model: custom:droidproxy:opus-4-7
         tools: ["Read", "LS", "Grep", "Glob", "WebSearch", "FetchUrl"]
         ---
 
