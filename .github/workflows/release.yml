@@ -25,7 +25,7 @@ concurrency:
 jobs:
   release:
     name: Build, Sign, Notarize & Release
-    runs-on: macos-14
+    runs-on: macos-26
 
     steps:
       - name: Checkout
@@ -33,10 +33,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: '5.9'
+      - name: Show toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcrun --show-sdk-version
+          swift --version
 
       - name: Import codesigning certificates
         uses: apple-actions/import-codesign-certs@v2
