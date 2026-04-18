@@ -393,13 +393,13 @@ class ThinkingProxy {
         let valuePattern = "(?:\"(?:[^\"\\\\]|\\\\.)*\"|\\-?\\d+(?:\\.\\d+)?|\\{[^}]*\\}|\\[[^\\]]*\\]|true|false|null)"
         let pattern = "(\"\(escapedKey)\"\\s*:\\s*)\(valuePattern)"
         guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)) else {
+              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)),
+              let matchRange = Range(match.range, in: json),
+              let prefixRange = Range(match.range(at: 1), in: json) else {
             NSLog("[ThinkingProxy] Warning: Could not find key '\(fieldName)' for value replacement")
             return json
         }
         var result = json
-        let matchRange = Range(match.range, in: json)!
-        let prefixRange = Range(match.range(at: 1), in: json)!
         let prefix = String(json[prefixRange])
         result.replaceSubrange(matchRange, with: "\(prefix)\(newValue)")
         return result
@@ -453,12 +453,12 @@ class ThinkingProxy {
         let escaped = NSRegularExpression.escapedPattern(for: oldModel)
         let pattern = "(\"model\"\\s*:\\s*\")\(escaped)(\")"
         guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)) else {
+              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)),
+              let matchRange = Range(match.range, in: json) else {
             NSLog("[ThinkingProxy] Warning: Could not find model value '\(oldModel)' for rewrite")
             return json
         }
         var result = json
-        let matchRange = Range(match.range, in: json)!
         let replacement = "\"model\":\"\(newModel)\""
         result.replaceSubrange(matchRange, with: replacement)
         return result
@@ -470,19 +470,21 @@ class ThinkingProxy {
     // alphabetically, which breaks Anthropic's prompt cache matching.
 
     /// Injects a new JSON field after a given key's value in the JSON string.
+    /// Uses `Range(_:in:)` to convert the NSRegularExpression UTF-16 range into a
+    /// `String.Index`. Mixing UTF-16 offsets with `String.index(_:offsetBy:)`
+    /// (which walks Characters) traps on any body containing non-ASCII graphemes.
     private func injectJSONField(in json: String, afterKey: String, fieldName: String, fieldValue: String) -> String {
         let escapedKey = NSRegularExpression.escapedPattern(for: afterKey)
         let valuePattern = "(?:\"(?:[^\"\\\\]|\\\\.)*\"|\\-?\\d+(?:\\.\\d+)?|\\{[^}]*\\}|\\[[^\\]]*\\]|true|false|null)"
         let pattern = "\"\(escapedKey)\"\\s*:\\s*\(valuePattern)"
         guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)) else {
+              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)),
+              let matchRange = Range(match.range, in: json) else {
             NSLog("[ThinkingProxy] Warning: Could not find key '\(afterKey)' for field injection")
             return json
         }
-        let insertOffset = match.range.location + match.range.length
-        let insertIndex = json.index(json.startIndex, offsetBy: insertOffset)
         var result = json
-        result.insert(contentsOf: ",\"\(fieldName)\":\(fieldValue)", at: insertIndex)
+        result.insert(contentsOf: ",\"\(fieldName)\":\(fieldValue)", at: matchRange.upperBound)
         return result
     }
 
