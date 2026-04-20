@@ -1,6 +1,108 @@
+import { useEffect, useRef } from 'react'
+
+const steps = [
+  {
+    color: 'blue',
+    bgDark: 'bg-blue-900/30',
+    textDark: 'text-blue-400',
+    borderDark: 'border-blue-600',
+    bgLight: 'bg-blue-100',
+    textLight: 'text-blue-600',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+    title: '1. AI Coding Tool',
+    description: 'Your AI coding tool (Factory.ai Droid, Claude Code, etc.) sends requests configured to use localhost:8317'
+  },
+  {
+    color: 'purple',
+    bgDark: 'bg-purple-900/30',
+    textDark: 'text-purple-400',
+    borderDark: 'border-purple-600',
+    bgLight: 'bg-purple-100',
+    textLight: 'text-purple-600',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+    title: '2. ThinkingProxy (localhost:8317)',
+    description: 'User-facing TCP proxy that injects adaptive thinking parameters and routes requests intelligently'
+  },
+  {
+    color: 'green',
+    bgDark: 'bg-green-900/30',
+    textDark: 'text-green-400',
+    borderDark: 'border-green-600',
+    bgLight: 'bg-green-100',
+    textLight: 'text-green-600',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+      </svg>
+    ),
+    title: '3. CLIProxyAPIPlus (127.0.0.1:8318)',
+    description: 'Child process managed by ServerManager. Handles OAuth authentication and API communication with upstream providers'
+  },
+  {
+    color: 'orange',
+    bgDark: 'bg-orange-900/30',
+    textDark: 'text-orange-400',
+    borderDark: 'border-orange-600',
+    bgLight: 'bg-orange-100',
+    textLight: 'text-orange-600',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+      </svg>
+    ),
+    title: '4. Upstream Providers',
+    description: 'Claude Code (api.anthropic.com), Codex (api.openai.com), and other supported AI providers'
+  }
+]
+
 export default function Architecture() {
+  const sectionRef = useRef<HTMLElement>(null)
+  const stepRefs = useRef<HTMLDivElement[]>([])
+
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.15,
+      rootMargin: '0px 0px -40px 0px'
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+        }
+      })
+    }, observerOptions)
+
+    // Observe each step with stagger
+    stepRefs.current.forEach((step, index) => {
+      if (step) {
+        step.style.opacity = '0'
+        step.style.transform = 'translateX(-16px)'
+        step.style.transition = `opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 120}ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 120}ms`
+        observer.observe(step)
+
+        requestAnimationFrame(() => {
+          if (step) {
+            step.style.opacity = '1'
+            step.style.transform = 'translateX(0)'
+          }
+        })
+      }
+    })
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <section id="architecture" className="py-20 px-6">
+    <section ref={sectionRef} id="architecture" className="py-20 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">How It Works</h2>
@@ -13,64 +115,34 @@ export default function Architecture() {
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
             <div className="flex-1 w-full">
               <div className="relative">
-                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-apple-gray-200 dark:bg-apple-gray-600 hidden lg:block"></div>
+                {/* Vertical timeline line */}
+                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-apple-gray-200 dark:bg-apple-gray-600 hidden lg:block timeline-line"></div>
 
                 <div className="space-y-8">
-                  <div className="relative flex items-start gap-6">
-                    <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center z-10">
-                      <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 pt-2">
-                      <h4 className="text-lg font-semibold mb-1">1. AI Coding Tool</h4>
-                      <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400">
-                        Your AI coding tool (Factory.ai Droid, Claude Code, etc.) sends requests configured to use localhost:8317
-                      </p>
-                    </div>
-                  </div>
+                  {steps.map((step, index) => (
+                    <div
+                      key={index}
+                      ref={(el) => {
+                        if (el) stepRefs.current[index] = el
+                      }}
+                      className="relative flex items-start gap-6"
+                    >
+                      {/* Icon circle */}
+                      <div className={`flex-shrink-0 w-16 h-16 rounded-2xl ${step.bgLight} dark:${step.bgDark} flex items-center justify-center z-10 border-2 ${step.borderDark}`}>
+                        <span className={`${step.textLight} dark:${step.textDark}`}>
+                          {step.icon}
+                        </span>
+                      </div>
 
-                  <div className="relative flex items-start gap-6">
-                    <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center z-10">
-                      <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
+                      {/* Text content */}
+                      <div className="flex-1 pt-2">
+                        <h4 className="text-lg font-semibold mb-1">{step.title}</h4>
+                        <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400">
+                          {step.description}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 pt-2">
-                      <h4 className="text-lg font-semibold mb-1">2. ThinkingProxy (localhost:8317)</h4>
-                      <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400">
-                        User-facing TCP proxy that injects adaptive thinking parameters and routes requests intelligently
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start gap-6">
-                    <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center z-10">
-                      <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 pt-2">
-                      <h4 className="text-lg font-semibold mb-1">3. CLIProxyAPIPlus (127.0.0.1:8318)</h4>
-                      <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400">
-                        Child process managed by ServerManager. Handles OAuth authentication and API communication with upstream providers
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start gap-6">
-                    <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center z-10">
-                      <svg className="w-8 h-8 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 pt-2">
-                      <h4 className="text-lg font-semibold mb-1">4. Upstream Providers</h4>
-                      <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400">
-                        Claude Code (api.anthropic.com), Codex (api.openai.com), and other supported AI providers
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>

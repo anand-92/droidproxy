@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import ProviderIcons from './ProviderIcons'
 
 const features = [
@@ -58,9 +59,79 @@ const features = [
 ]
 
 export default function Features() {
+  const sectionRef = useRef<HTMLElement>(null)
+  const cardsRef = useRef<HTMLDivElement[]>([])
+  const perModelRef = useRef<HTMLDivElement>(null)
+  const providersRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -60px 0px'
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+        }
+      })
+    }, observerOptions)
+
+    // Observe cards with stagger
+    cardsRef.current.forEach((card, index) => {
+      if (card) {
+        card.style.opacity = '0'
+        card.style.transform = 'translateY(20px)'
+        card.style.transition = `opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 80}ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 80}ms`
+        observer.observe(card)
+
+        requestAnimationFrame(() => {
+          if (card) {
+            card.style.opacity = '1'
+            card.style.transform = 'translateY(0)'
+          }
+        })
+      }
+    })
+
+    // Observe per-model section
+    if (perModelRef.current) {
+      perModelRef.current.style.opacity = '0'
+      perModelRef.current.style.transform = 'translateY(24px)'
+      perModelRef.current.style.transition = 'opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)'
+      observer.observe(perModelRef.current)
+
+      requestAnimationFrame(() => {
+        if (perModelRef.current) {
+          perModelRef.current.style.opacity = '1'
+          perModelRef.current.style.transform = 'translateY(0)'
+        }
+      })
+    }
+
+    // Observe providers section
+    if (providersRef.current) {
+      providersRef.current.style.opacity = '0'
+      providersRef.current.style.transform = 'translateY(16px)'
+      providersRef.current.style.transition = 'opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) 200ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) 200ms'
+      observer.observe(providersRef.current)
+
+      requestAnimationFrame(() => {
+        if (providersRef.current) {
+          providersRef.current.style.opacity = '1'
+          providersRef.current.style.transform = 'translateY(0)'
+        }
+      })
+    }
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <section id="features" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
+    <section ref={sectionRef} id="features" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
       <div className="max-w-6xl mx-auto">
+        {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">Powerful Features</h2>
           <p className="text-apple-gray-500 dark:text-apple-gray-400 max-w-2xl mx-auto">
@@ -68,13 +139,17 @@ export default function Features() {
           </p>
         </div>
 
+        {/* Feature cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+              ref={(el) => {
+                if (el) cardsRef.current[index] = el
+              }}
+              className="card-hover p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 hover:border-blue-300 dark:hover:border-blue-600"
             >
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
+              <div className="icon-hover w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
                 {feature.icon}
               </div>
               <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
@@ -85,7 +160,11 @@ export default function Features() {
           ))}
         </div>
 
-        <div className="mt-16 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-apple-gray-200 dark:border-apple-gray-700">
+        {/* Per-Model Effort Controls section */}
+        <div
+          ref={perModelRef}
+          className="mt-16 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-apple-gray-200 dark:border-apple-gray-700"
+        >
           <div className="flex flex-col lg:flex-row items-center gap-6">
             <div className="flex-1">
               <h3 className="text-lg font-semibold mb-2">Per-Model Effort Controls</h3>
@@ -123,13 +202,14 @@ export default function Features() {
               <img
                 src="/settings-screenshot.png"
                 alt="DroidProxy Settings"
-                className="rounded-xl shadow-lg"
+                className="rounded-xl shadow-lg img-hover"
               />
             </div>
           </div>
         </div>
 
-        <div className="mt-16 text-center">
+        {/* Supported Providers */}
+        <div ref={providersRef} className="mt-16 text-center">
           <h3 className="text-lg font-semibold mb-6">Supported Providers</h3>
           <div className="flex flex-wrap items-center justify-center gap-8">
             <ProviderIcons />

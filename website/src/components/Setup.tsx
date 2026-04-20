@@ -1,6 +1,61 @@
+import { useEffect, useRef } from 'react'
+
 export default function Setup() {
+  const sectionRef = useRef<HTMLElement>(null)
+  const stepsRef = useRef<HTMLDivElement[]>([])
+  const codeRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -40px 0px'
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+        }
+      })
+    }, observerOptions)
+
+    // Observe steps with stagger
+    stepsRef.current.forEach((step, index) => {
+      if (step) {
+        step.style.opacity = '0'
+        step.style.transform = 'translateY(16px)'
+        step.style.transition = `opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1) ${index * 100}ms, transform 0.45s cubic-bezier(0.25, 1, 0.5, 1) ${index * 100}ms`
+        observer.observe(step)
+
+        requestAnimationFrame(() => {
+          if (step) {
+            step.style.opacity = '1'
+            step.style.transform = 'translateY(0)'
+          }
+        })
+      }
+    })
+
+    // Observe code reference section
+    if (codeRef.current) {
+      codeRef.current.style.opacity = '0'
+      codeRef.current.style.transform = 'translateY(20px)'
+      codeRef.current.style.transition = 'opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) 300ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) 300ms'
+      observer.observe(codeRef.current)
+
+      requestAnimationFrame(() => {
+        if (codeRef.current) {
+          codeRef.current.style.opacity = '1'
+          codeRef.current.style.transform = 'translateY(0)'
+        }
+      })
+    }
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <section id="setup" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
+    <section ref={sectionRef} id="setup" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">Get Started</h2>
@@ -10,12 +65,19 @@ export default function Setup() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left column: Steps */}
           <div>
             <h3 className="text-xl font-semibold mb-6">Get Started</h3>
             <div className="space-y-6">
-              <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+              {/* Step 1 */}
+              <div
+                ref={(el) => { if (el) stepsRef.current[0] = el }}
+                className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
+              >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">1</div>
+                  <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                    1
+                  </div>
                   <div>
                     <h4 className="font-medium mb-2">Download the Latest Release</h4>
                     <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-3">
@@ -25,7 +87,7 @@ export default function Setup() {
                       href="https://github.com/anand-92/droidproxy/releases"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
+                      className="btn-press inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -36,9 +98,15 @@ export default function Setup() {
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+              {/* Step 2 */}
+              <div
+                ref={(el) => { if (el) stepsRef.current[1] = el }}
+                className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
+              >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">2</div>
+                  <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                    2
+                  </div>
                   <div>
                     <h4 className="font-medium mb-2">Open Menu Bar Settings</h4>
                     <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-3">
@@ -48,9 +116,15 @@ export default function Setup() {
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+              {/* Step 3 */}
+              <div
+                ref={(el) => { if (el) stepsRef.current[2] = el }}
+                className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
+              >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">3</div>
+                  <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                    3
+                  </div>
                   <div>
                     <h4 className="font-medium mb-2">Sign into Your Providers</h4>
                     <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-3">
@@ -60,9 +134,15 @@ export default function Setup() {
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+              {/* Step 4 */}
+              <div
+                ref={(el) => { if (el) stepsRef.current[3] = el }}
+                className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
+              >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">4</div>
+                  <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                    4
+                  </div>
                   <div>
                     <h4 className="font-medium mb-2">Apply Factory Custom Models</h4>
                     <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-3">
@@ -74,9 +154,13 @@ export default function Setup() {
             </div>
           </div>
 
+          {/* Right column: Code reference */}
           <div>
             <h3 className="text-xl font-semibold mb-6">Factory Custom Models Reference</h3>
-            <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+            <div
+              ref={codeRef}
+              className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700"
+            >
               <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-4">
                 When you click Apply, DroidProxy registers these pre-configured custom models with your AI client, routing all requests through the local proxy at <code className="px-1.5 py-0.5 rounded bg-apple-gray-200 dark:bg-apple-gray-700 text-xs">localhost:8317</code>.
               </p>
@@ -146,6 +230,7 @@ export default function Setup() {
               </div>
             </div>
 
+            {/* Factory logo */}
             <div className="mt-6 flex items-center justify-center gap-4">
               <img src="/factory-logo.svg" alt="Factory.ai" className="h-8 opacity-60" />
               <span className="text-sm text-apple-gray-400">Compatible with Factory.ai Droids</span>

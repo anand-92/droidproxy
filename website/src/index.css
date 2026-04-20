@@ -16,3 +16,315 @@ body {
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
   font-size: 0.875rem;
 }
+
+/* ============================================
+   ANIMATION KEYFRAMES & UTILITIES
+   ============================================ */
+
+/* Reduced motion: disable everything */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Easing curves — natural deceleration only */
+:root {
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Fade + slide up entrance */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade + slide in from left */
+@keyframes fadeSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Fade + slide in from right */
+@keyframes fadeSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Scale in (for logo/hero image) */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Staggered card reveal */
+@keyframes cardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Timeline step reveal */
+@keyframes stepReveal {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Gentle float for ambient elements */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Pulse ring for the live indicator */
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Shake for validation/error */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* Scroll-triggered animation classes */
+.animate-on-scroll {
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out-quart), transform 0.5s var(--ease-out-quart);
+}
+
+.animate-on-scroll.is-visible {
+  opacity: 1;
+}
+
+.fade-up {
+  transform: translateY(20px);
+}
+
+.fade-up.is-visible {
+  transform: translateY(0);
+}
+
+.fade-left {
+  transform: translateX(-20px);
+}
+
+.fade-left.is-visible {
+  transform: translateX(0);
+}
+
+.fade-right {
+  transform: translateX(20px);
+}
+
+.fade-right.is-visible {
+  transform: translateX(0);
+}
+
+/* ============================================
+   MICRO-INTERACTIONS
+   ============================================ */
+
+/* Button press feedback */
+.btn-press {
+  transition: transform 100ms var(--ease-out-quart), background-color 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart);
+}
+
+.btn-press:active {
+  transform: scale(0.96);
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 250ms var(--ease-out-quart), border-color 250ms var(--ease-out-quart), box-shadow 250ms var(--ease-out-quart);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.12);
+}
+
+/* Link underline slide */
+.link-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 200ms var(--ease-out-quart);
+}
+
+.link-underline:hover::after {
+  width: 100%;
+}
+
+/* Navbar link hover */
+.nav-link {
+  position: relative;
+  transition: color 150ms var(--ease-out-quart);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 1.5px;
+  background: currentColor;
+  transition: width 200ms var(--ease-out-quart);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 100%;
+}
+
+/* Dark mode toggle rotation */
+.toggle-icon {
+  transition: transform 300ms var(--ease-out-quart), opacity 200ms var(--ease-out-quart);
+}
+
+.toggle-icon-rotate {
+  transform: rotate(180deg);
+}
+
+/* Feature card icon hover */
+.icon-hover {
+  transition: transform 200ms var(--ease-out-quart), background-color 200ms var(--ease-out-quart);
+}
+
+.icon-hover:hover {
+  transform: scale(1.1);
+}
+
+/* Image hover zoom */
+.img-hover {
+  transition: transform 400ms var(--ease-out-quart);
+}
+
+.img-hover:hover {
+  transform: scale(1.04);
+}
+
+/* Pulse dot animation */
+.pulse-dot {
+  position: relative;
+}
+
+.pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulseRing 2s ease-out infinite;
+  opacity: 0.6;
+}
+
+/* Badge shimmer (already has animate-pulse, but let's enhance the badge) */
+.badge-shimmer {
+  transition: transform 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart);
+}
+
+.badge-shimmer:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px -4px rgba(59, 130, 246, 0.3);
+}
+
+/* Scroll progress bar */
+.scroll-progress {
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 50ms linear;
+}
+
+/* Logo float animation (hero) */
+.logo-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Setup step number hover */
+.step-number {
+  transition: transform 200ms var(--ease-out-quart), background-color 200ms var(--ease-out-quart);
+}
+
+.step-number:hover {
+  transform: scale(1.1);
+}
+
+/* CTA button glow on hover */
+.cta-glow {
+  position: relative;
+  overflow: visible;
+}
+
+.cta-glow::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.4));
+  filter: blur(12px);
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out-quart);
+  z-index: -1;
+}
+
+.cta-glow:hover::after {
+  opacity: 1;
+}
