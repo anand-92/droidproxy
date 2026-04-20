@@ -21,7 +21,7 @@ body {
    ANIMATION KEYFRAMES & UTILITIES
    ============================================ */
 
-/* Reduced motion: disable everything */
+/* Reduced motion: disable everything including smooth scroll */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -29,6 +29,9 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto !important;
   }
 }
 
@@ -40,7 +43,7 @@ body {
 }
 
 /* Fade + slide up entrance */
-@keyframes fadeSlideUp {
+@keyframes fade-slide-up {
   from {
     opacity: 0;
     transform: translateY(24px);
@@ -52,7 +55,7 @@ body {
 }
 
 /* Fade + slide in from left */
-@keyframes fadeSlideLeft {
+@keyframes fade-slide-left {
   from {
     opacity: 0;
     transform: translateX(24px);
@@ -64,7 +67,7 @@ body {
 }
 
 /* Fade + slide in from right */
-@keyframes fadeSlideRight {
+@keyframes fade-slide-right {
   from {
     opacity: 0;
     transform: translateX(-24px);
@@ -76,7 +79,7 @@ body {
 }
 
 /* Scale in (for logo/hero image) */
-@keyframes scaleIn {
+@keyframes scale-in {
   from {
     opacity: 0;
     transform: scale(0.88);
@@ -88,7 +91,7 @@ body {
 }
 
 /* Staggered card reveal */
-@keyframes cardReveal {
+@keyframes card-reveal {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -100,7 +103,7 @@ body {
 }
 
 /* Timeline step reveal */
-@keyframes stepReveal {
+@keyframes step-reveal {
   from {
     opacity: 0;
     transform: translateX(-16px);
@@ -112,13 +115,13 @@ body {
 }
 
 /* Gentle float for ambient elements */
-@keyframes float {
+@keyframes float-y {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }
 }
 
 /* Pulse ring for the live indicator */
-@keyframes pulseRing {
+@keyframes pulse-ring {
   0% { transform: scale(1); opacity: 0.8; }
   50% { transform: scale(1.5); opacity: 0; }
   100% { transform: scale(1); opacity: 0; }
@@ -203,7 +206,7 @@ body {
   left: 0;
   width: 0;
   height: 1px;
-  background: currentColor;
+  background: currentcolor;
   transition: width 200ms var(--ease-out-quart);
 }
 
@@ -225,7 +228,7 @@ body {
   transform: translateX(-50%);
   width: 0;
   height: 1.5px;
-  background: currentColor;
+  background: currentcolor;
   transition: width 200ms var(--ease-out-quart);
 }
 
@@ -271,12 +274,12 @@ body {
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  background: currentColor;
-  animation: pulseRing 2s ease-out infinite;
+  background: currentcolor;
+  animation: pulse-ring 2s ease-out infinite;
   opacity: 0.6;
 }
 
-/* Badge shimmer (already has animate-pulse, but let's enhance the badge) */
+/* Badge shimmer */
 .badge-shimmer {
   transition: transform 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart);
 }
@@ -295,7 +298,7 @@ body {
 
 /* Logo float animation (hero) */
 .logo-float {
-  animation: float 6s ease-in-out infinite;
+  animation: float-y 6s ease-in-out infinite;
 }
 
 /* Setup step number hover */

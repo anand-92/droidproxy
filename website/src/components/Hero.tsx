@@ -11,6 +11,7 @@ export default function Hero() {
 
   useEffect(() => {
     // Staggered entrance: badge -> title -> subtitle -> description -> CTA -> stats -> image
+    // imageRef delay (600ms) must be last so it animates after statsRef (500ms)
     const elements = [
       { ref: badgeRef, delay: 0 },
       { ref: titleRef, delay: 100 },
@@ -18,7 +19,7 @@ export default function Hero() {
       { ref: descriptionRef, delay: 300 },
       { ref: ctaRef, delay: 400 },
       { ref: statsRef, delay: 500 },
-      { ref: imageRef, delay: 200 },
+      { ref: imageRef, delay: 600 },
     ]
 
     elements.forEach(({ ref, delay }) => {
@@ -113,7 +114,7 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Hero image */}
+          {/* Hero image — delay 600ms so it animates after stats at 500ms */}
           <div ref={imageRef} className="flex-1 flex justify-center">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur-3xl opacity-20 dark:opacity-30"></div>

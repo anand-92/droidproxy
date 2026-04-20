@@ -19,20 +19,13 @@ export default function Setup() {
       })
     }, observerOptions)
 
-    // Observe steps with stagger
+    // Observe steps with stagger — initial state only, observer toggles is-visible
     stepsRef.current.forEach((step, index) => {
       if (step) {
         step.style.opacity = '0'
         step.style.transform = 'translateY(16px)'
         step.style.transition = `opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1) ${index * 100}ms, transform 0.45s cubic-bezier(0.25, 1, 0.5, 1) ${index * 100}ms`
         observer.observe(step)
-
-        requestAnimationFrame(() => {
-          if (step) {
-            step.style.opacity = '1'
-            step.style.transform = 'translateY(0)'
-          }
-        })
       }
     })
 
@@ -42,13 +35,6 @@ export default function Setup() {
       codeRef.current.style.transform = 'translateY(20px)'
       codeRef.current.style.transition = 'opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) 300ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) 300ms'
       observer.observe(codeRef.current)
-
-      requestAnimationFrame(() => {
-        if (codeRef.current) {
-          codeRef.current.style.opacity = '1'
-          codeRef.current.style.transform = 'translateY(0)'
-        }
-      })
     }
 
     return () => observer.disconnect()

@@ -78,20 +78,13 @@ export default function Features() {
       })
     }, observerOptions)
 
-    // Observe cards with stagger
+    // Observe cards with stagger — initial state only, observer toggles visibility
     cardsRef.current.forEach((card, index) => {
       if (card) {
         card.style.opacity = '0'
         card.style.transform = 'translateY(20px)'
         card.style.transition = `opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 80}ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 80}ms`
         observer.observe(card)
-
-        requestAnimationFrame(() => {
-          if (card) {
-            card.style.opacity = '1'
-            card.style.transform = 'translateY(0)'
-          }
-        })
       }
     })
 
@@ -101,13 +94,6 @@ export default function Features() {
       perModelRef.current.style.transform = 'translateY(24px)'
       perModelRef.current.style.transition = 'opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)'
       observer.observe(perModelRef.current)
-
-      requestAnimationFrame(() => {
-        if (perModelRef.current) {
-          perModelRef.current.style.opacity = '1'
-          perModelRef.current.style.transform = 'translateY(0)'
-        }
-      })
     }
 
     // Observe providers section
@@ -116,13 +102,6 @@ export default function Features() {
       providersRef.current.style.transform = 'translateY(16px)'
       providersRef.current.style.transition = 'opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) 200ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) 200ms'
       observer.observe(providersRef.current)
-
-      requestAnimationFrame(() => {
-        if (providersRef.current) {
-          providersRef.current.style.opacity = '1'
-          providersRef.current.style.transform = 'translateY(0)'
-        }
-      })
     }
 
     return () => observer.disconnect()
