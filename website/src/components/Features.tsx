@@ -81,26 +81,19 @@ export default function Features() {
     // Observe cards with stagger — initial state only, observer toggles visibility
     cardsRef.current.forEach((card, index) => {
       if (card) {
-        card.style.opacity = '0'
-        card.style.transform = 'translateY(20px)'
-        card.style.transition = `opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 80}ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 80}ms`
+        card.style.transitionDelay = `${index * 80}ms`
         observer.observe(card)
       }
     })
 
     // Observe per-model section
     if (perModelRef.current) {
-      perModelRef.current.style.opacity = '0'
-      perModelRef.current.style.transform = 'translateY(24px)'
-      perModelRef.current.style.transition = 'opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)'
       observer.observe(perModelRef.current)
     }
 
     // Observe providers section
     if (providersRef.current) {
-      providersRef.current.style.opacity = '0'
-      providersRef.current.style.transform = 'translateY(16px)'
-      providersRef.current.style.transition = 'opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) 200ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) 200ms'
+      providersRef.current.style.transitionDelay = '200ms'
       observer.observe(providersRef.current)
     }
 
@@ -126,7 +119,7 @@ export default function Features() {
               ref={(el) => {
                 if (el) cardsRef.current[index] = el
               }}
-              className="card-hover p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 hover:border-blue-300 dark:hover:border-blue-600"
+              className="animate-on-scroll fade-up card-hover p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 hover:border-blue-300 dark:hover:border-blue-600"
             >
               <div className="icon-hover w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
                 {feature.icon}
@@ -142,7 +135,7 @@ export default function Features() {
         {/* Per-Model Effort Controls section */}
         <div
           ref={perModelRef}
-          className="mt-16 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-apple-gray-200 dark:border-apple-gray-700"
+          className="animate-on-scroll fade-up mt-16 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-apple-gray-200 dark:border-apple-gray-700"
         >
           <div className="flex flex-col lg:flex-row items-center gap-6">
             <div className="flex-1">
@@ -188,7 +181,7 @@ export default function Features() {
         </div>
 
         {/* Supported Providers */}
-        <div ref={providersRef} className="mt-16 text-center">
+        <div ref={providersRef} className="animate-on-scroll fade-up mt-16 text-center">
           <h3 className="text-lg font-semibold mb-6">Supported Providers</h3>
           <div className="flex flex-wrap items-center justify-center gap-8">
             <ProviderIcons />

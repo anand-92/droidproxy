@@ -22,18 +22,14 @@ export default function Setup() {
     // Observe steps with stagger — initial state only, observer toggles is-visible
     stepsRef.current.forEach((step, index) => {
       if (step) {
-        step.style.opacity = '0'
-        step.style.transform = 'translateY(16px)'
-        step.style.transition = `opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1) ${index * 100}ms, transform 0.45s cubic-bezier(0.25, 1, 0.5, 1) ${index * 100}ms`
+        step.style.transitionDelay = `${index * 100}ms`
         observer.observe(step)
       }
     })
 
     // Observe code reference section
     if (codeRef.current) {
-      codeRef.current.style.opacity = '0'
-      codeRef.current.style.transform = 'translateY(20px)'
-      codeRef.current.style.transition = 'opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) 300ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) 300ms'
+      codeRef.current.style.transitionDelay = '300ms'
       observer.observe(codeRef.current)
     }
 
@@ -58,7 +54,7 @@ export default function Setup() {
               {/* Step 1 */}
               <div
                 ref={(el) => { if (el) stepsRef.current[0] = el }}
-                className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
+                className="animate-on-scroll fade-up p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
               >
                 <div className="flex items-start gap-4">
                   <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
@@ -87,7 +83,7 @@ export default function Setup() {
               {/* Step 2 */}
               <div
                 ref={(el) => { if (el) stepsRef.current[1] = el }}
-                className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
+                className="animate-on-scroll fade-up p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
               >
                 <div className="flex items-start gap-4">
                   <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
@@ -105,7 +101,7 @@ export default function Setup() {
               {/* Step 3 */}
               <div
                 ref={(el) => { if (el) stepsRef.current[2] = el }}
-                className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
+                className="animate-on-scroll fade-up p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
               >
                 <div className="flex items-start gap-4">
                   <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
@@ -123,7 +119,7 @@ export default function Setup() {
               {/* Step 4 */}
               <div
                 ref={(el) => { if (el) stepsRef.current[3] = el }}
-                className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
+                className="animate-on-scroll fade-up p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover"
               >
                 <div className="flex items-start gap-4">
                   <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
@@ -145,7 +141,7 @@ export default function Setup() {
             <h3 className="text-xl font-semibold mb-6">Factory Custom Models Reference</h3>
             <div
               ref={codeRef}
-              className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700"
+              className="animate-on-scroll fade-up p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700"
             >
               <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-4">
                 When you click Apply, DroidProxy registers these pre-configured custom models with your AI client, routing all requests through the local proxy at <code className="px-1.5 py-0.5 rounded bg-apple-gray-200 dark:bg-apple-gray-700 text-xs">localhost:8317</code>.
