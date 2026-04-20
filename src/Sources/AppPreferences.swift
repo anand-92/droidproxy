@@ -39,19 +39,11 @@ enum AppPreferences {
     }
 
     static var opus46ThinkingEffort: String {
-        let defaults = UserDefaults.standard
-        guard defaults.object(forKey: opus46ThinkingEffortKey) != nil else {
-            return defaultOpus46ThinkingEffort
-        }
-        return defaults.string(forKey: opus46ThinkingEffortKey) ?? defaultOpus46ThinkingEffort
+        UserDefaults.standard.string(forKey: opus46ThinkingEffortKey) ?? defaultOpus46ThinkingEffort
     }
 
     static var opus45ThinkingEffort: String {
-        let defaults = UserDefaults.standard
-        guard defaults.object(forKey: opus45ThinkingEffortKey) != nil else {
-            return defaultOpus45ThinkingEffort
-        }
-        return defaults.string(forKey: opus45ThinkingEffortKey) ?? defaultOpus45ThinkingEffort
+        UserDefaults.standard.string(forKey: opus45ThinkingEffortKey) ?? defaultOpus45ThinkingEffort
     }
 
     static var sonnet46ThinkingEffort: String {

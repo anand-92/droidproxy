@@ -433,12 +433,17 @@ class ThinkingProxy {
     }
 
     /// Matches Opus 4.5 (`claude-opus-4-5`, `gemini-claude-opus-4-5`, date-suffixed variants)
-    /// without also matching Opus 4.5x variants that do not exist today.
+    /// without also matching Opus 4.5x variants like `opus-4-50` or `opus-4-5x`.
+    /// The `opus-4-5` token must be at the end of the string or followed by a `-` delimiter.
     private func isOpus45Model(_ model: String) -> Bool {
         guard model.starts(with: "claude-") || model.starts(with: "gemini-claude-") else {
             return false
         }
-        return model.contains("opus-4-5")
+        guard let range = model.range(of: "opus-4-5") else {
+            return false
+        }
+        let suffix = model[range.upperBound...]
+        return suffix.isEmpty || suffix.hasPrefix("-")
     }
 
     /// Opus 4.5 does not accept adaptive thinking. It requires the legacy
