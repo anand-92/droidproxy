@@ -7,6 +7,11 @@ import Network
  Current behavior:
  - Requests whose `model` contains `opus-4-7` receive `thinking: {"type":"adaptive"}`
    plus `output_config.effort` from `AppPreferences.opus47ThinkingEffort`
+ - Requests whose `model` contains `opus-4-6` receive `thinking: {"type":"adaptive"}`
+   plus `output_config.effort` from `AppPreferences.opus46ThinkingEffort`
+ - Requests whose `model` contains `opus-4-5` receive classic
+   `thinking: {"type":"enabled","budget_tokens":N}` mapped from
+   `AppPreferences.opus45ThinkingEffort` (Opus 4.5 does not support adaptive thinking).
  - Requests whose `model` contains `sonnet-4-6` receive `thinking: {"type":"adaptive"}`
    plus `output_config.effort` from `AppPreferences.sonnet46ThinkingEffort`
  - Requests whose `model` is exactly `gpt-5.3-codex` receive `reasoning: {"effort":"..."}`
@@ -327,6 +332,11 @@ class ThinkingProxy {
             return result
         }
 
+        // Opus 4.5 uses classic extended thinking (budget_tokens) — it does not support adaptive.
+        if isOpus45Model(model) {
+            return processOpus45ClassicThinking(jsonString: jsonString, json: json, model: model)
+        }
+
         guard let effort = claudeAdaptiveThinkingEffort(for: model) else {
             return nil
         }
@@ -413,10 +423,63 @@ class ThinkingProxy {
         if model.contains("opus-4-7") {
             return AppPreferences.opus47ThinkingEffort
         }
+        if model.contains("opus-4-6") {
+            return AppPreferences.opus46ThinkingEffort
+        }
         if model.contains("sonnet-4-6") {
             return AppPreferences.sonnet46ThinkingEffort
         }
         return nil
+    }
+
+    /// Matches Opus 4.5 (`claude-opus-4-5`, `gemini-claude-opus-4-5`, date-suffixed variants)
+    /// without also matching Opus 4.5x variants that do not exist today.
+    private func isOpus45Model(_ model: String) -> Bool {
+        guard model.starts(with: "claude-") || model.starts(with: "gemini-claude-") else {
+            return false
+        }
+        return model.contains("opus-4-5")
+    }
+
+    /// Opus 4.5 does not accept adaptive thinking. It requires the legacy
+    /// `thinking: {type: "enabled", budget_tokens: N}` shape, where
+    /// `budget_tokens < max_tokens` (min 1024).
+    private func processOpus45ClassicThinking(jsonString: String, json: [String: Any], model: String) -> String? {
+        let effort = AppPreferences.opus45ThinkingEffort
+        let (budgetTokens, maxTokens) = opus45ClassicBudget(for: effort)
+
+        var result = jsonString
+
+        result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "stream",
+                                          fieldValue: "true", existsInJSON: json["stream"] != nil)
+        result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "max_tokens",
+                                          fieldValue: "\(maxTokens)",
+                                          existsInJSON: json["max_tokens"] != nil)
+        result = replaceOrInjectJSONField(in: result, afterKey: "max_tokens",
+                                          fieldName: "thinking",
+                                          fieldValue: "{\"type\":\"enabled\",\"budget_tokens\":\(budgetTokens)}",
+                                          existsInJSON: json["thinking"] != nil)
+
+        NSLog("[ThinkingProxy] Injected Opus 4.5 classic thinking for '\(model)' effort=\(effort) budget_tokens=\(budgetTokens) max_tokens=\(maxTokens)")
+        ThinkingProxy.fileLog("INJECTED Opus 4.5 classic thinking: effort=\(effort) budget_tokens=\(budgetTokens) max_tokens=\(maxTokens) for model \(model)")
+        return result
+    }
+
+    /// Maps effort levels to (budget_tokens, max_tokens) pairs for Opus 4.5.
+    /// Opus 4.5 supports `max_tokens` up to 64000 and requires budget_tokens < max_tokens.
+    private func opus45ClassicBudget(for effort: String) -> (Int, Int) {
+        switch effort {
+        case "low":
+            return (4000, 16000)
+        case "medium":
+            return (16000, 32000)
+        case "high":
+            return (32000, 48000)
+        case "max":
+            return (48000, 64000)
+        default:
+            return (32000, 48000)
+        }
     }
 
     private func geminiThinkingLevel(for model: String) -> String? {
