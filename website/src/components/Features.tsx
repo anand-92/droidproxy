@@ -1,3 +1,4 @@
+import { useInViewOnce } from '../hooks/useInViewOnce'
 import ProviderIcons from './ProviderIcons'
 
 const features = [
@@ -58,9 +59,12 @@ const features = [
 ]
 
 export default function Features() {
+  const { ref: sectionRef, isVisible } = useInViewOnce({ threshold: 0.1, rootMargin: '0px 0px -60px 0px' })
+
   return (
-    <section id="features" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
+    <section ref={sectionRef} id="features" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
       <div className="max-w-6xl mx-auto">
+        {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">Powerful Features</h2>
           <p className="text-apple-gray-500 dark:text-apple-gray-400 max-w-2xl mx-auto">
@@ -68,13 +72,15 @@ export default function Features() {
           </p>
         </div>
 
+        {/* Feature cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+              className={`card-hover p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
+              style={{ transitionDelay: `${index * 80}ms` }}
             >
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
+              <div className="icon-hover w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
                 {feature.icon}
               </div>
               <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
@@ -85,7 +91,11 @@ export default function Features() {
           ))}
         </div>
 
-        <div className="mt-16 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-apple-gray-200 dark:border-apple-gray-700">
+        {/* Per-Model Effort Controls section */}
+        <div
+          className={`mt-16 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-apple-gray-200 dark:border-apple-gray-700 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+          style={{ transitionDelay: '300ms' }}
+        >
           <div className="flex flex-col lg:flex-row items-center gap-6">
             <div className="flex-1">
               <h3 className="text-lg font-semibold mb-2">Per-Model Effort Controls</h3>
@@ -123,13 +133,14 @@ export default function Features() {
               <img
                 src="/settings-screenshot.png"
                 alt="DroidProxy Settings"
-                className="rounded-xl shadow-lg"
+                className="rounded-xl shadow-lg img-hover"
               />
             </div>
           </div>
         </div>
 
-        <div className="mt-16 text-center">
+        {/* Supported Providers */}
+        <div className={`mt-16 text-center transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '400ms' }}>
           <h3 className="text-lg font-semibold mb-6">Supported Providers</h3>
           <div className="flex flex-wrap items-center justify-center gap-8">
             <ProviderIcons />

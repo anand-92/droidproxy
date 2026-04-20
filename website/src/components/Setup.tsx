@@ -1,6 +1,10 @@
+import { useInViewOnce } from '../hooks/useInViewOnce'
+
 export default function Setup() {
+  const { ref: sectionRef, isVisible } = useInViewOnce({ threshold: 0.1, rootMargin: '0px 0px -40px 0px' })
+
   return (
-    <section id="setup" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
+    <section ref={sectionRef} id="setup" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">Get Started</h2>
@@ -10,12 +14,19 @@ export default function Setup() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left column: Steps */}
           <div>
             <h3 className="text-xl font-semibold mb-6">Get Started</h3>
             <div className="space-y-6">
-              <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+              {/* Step 1 */}
+              <div
+                className={`p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                style={{ transitionDelay: '0ms' }}
+              >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">1</div>
+                  <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                    1
+                  </div>
                   <div>
                     <h4 className="font-medium mb-2">Download the Latest Release</h4>
                     <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-3">
@@ -25,7 +36,7 @@ export default function Setup() {
                       href="https://github.com/anand-92/droidproxy/releases"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
+                      className="btn-press inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -36,9 +47,15 @@ export default function Setup() {
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+              {/* Step 2 */}
+              <div
+                className={`p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                style={{ transitionDelay: '100ms' }}
+              >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">2</div>
+                  <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                    2
+                  </div>
                   <div>
                     <h4 className="font-medium mb-2">Open Menu Bar Settings</h4>
                     <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-3">
@@ -48,9 +65,15 @@ export default function Setup() {
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+              {/* Step 3 */}
+              <div
+                className={`p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                style={{ transitionDelay: '200ms' }}
+              >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">3</div>
+                  <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                    3
+                  </div>
                   <div>
                     <h4 className="font-medium mb-2">Sign into Your Providers</h4>
                     <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-3">
@@ -60,9 +83,15 @@ export default function Setup() {
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+              {/* Step 4 */}
+              <div
+                className={`p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 card-hover transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                style={{ transitionDelay: '300ms' }}
+              >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">4</div>
+                  <div className="step-number flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                    4
+                  </div>
                   <div>
                     <h4 className="font-medium mb-2">Apply Factory Custom Models</h4>
                     <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-3">
@@ -74,9 +103,13 @@ export default function Setup() {
             </div>
           </div>
 
+          {/* Right column: Code reference */}
           <div>
             <h3 className="text-xl font-semibold mb-6">Factory Custom Models Reference</h3>
-            <div className="p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700">
+            <div
+              className={`p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
+              style={{ transitionDelay: '400ms' }}
+            >
               <p className="text-sm text-apple-gray-500 dark:text-apple-gray-400 mb-4">
                 When you click Apply, DroidProxy registers these pre-configured custom models with your AI client, routing all requests through the local proxy at <code className="px-1.5 py-0.5 rounded bg-apple-gray-200 dark:bg-apple-gray-700 text-xs">localhost:8317</code>.
               </p>
@@ -146,6 +179,7 @@ export default function Setup() {
               </div>
             </div>
 
+            {/* Factory logo */}
             <div className="mt-6 flex items-center justify-center gap-4">
               <img src="/factory-logo.svg" alt="Factory.ai" className="h-8 opacity-60" />
               <span className="text-sm text-apple-gray-400">Compatible with Factory.ai Droids</span>

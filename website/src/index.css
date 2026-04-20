@@ -16,3 +16,203 @@ body {
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
   font-size: 0.875rem;
 }
+
+/* ============================================
+   ANIMATION KEYFRAMES & UTILITIES
+   ============================================ */
+
+/* Reduced motion: disable everything including smooth scroll */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Easing curves — natural deceleration only */
+:root {
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Fade + slide up entrance */
+/* Gentle float for ambient elements */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Pulse ring for the live indicator */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Shake for validation/error */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* ============================================
+   MICRO-INTERACTIONS
+   ============================================ */
+
+/* Button press feedback */
+.btn-press {
+  transition: transform 100ms var(--ease-out-quart), background-color 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart);
+}
+
+.btn-press:active {
+  transform: scale(0.96);
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 250ms var(--ease-out-quart), border-color 250ms var(--ease-out-quart), box-shadow 250ms var(--ease-out-quart);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.12);
+}
+
+/* Navbar link hover */
+.nav-link {
+  position: relative;
+  transition: color 150ms var(--ease-out-quart);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 1.5px;
+  background: currentcolor;
+  transition: width 200ms var(--ease-out-quart);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 100%;
+}
+
+/* Dark mode toggle rotation */
+.toggle-icon {
+  transition: transform 300ms var(--ease-out-quart), opacity 200ms var(--ease-out-quart);
+}
+
+.toggle-icon-rotate {
+  transform: rotate(180deg);
+}
+
+/* Feature card icon hover */
+.icon-hover {
+  transition: transform 200ms var(--ease-out-quart), background-color 200ms var(--ease-out-quart);
+}
+
+.icon-hover:hover {
+  transform: scale(1.1);
+}
+
+/* Image hover zoom */
+.img-hover {
+  transition: transform 400ms var(--ease-out-quart);
+}
+
+.img-hover:hover {
+  transform: scale(1.04);
+}
+
+/* Pulse dot animation */
+.pulse-dot {
+  position: relative;
+}
+
+.pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: currentcolor;
+  animation: pulse-ring 2s ease-out infinite;
+  opacity: 0.6;
+}
+
+/* Badge shimmer */
+.badge-shimmer {
+  transition: transform 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart);
+}
+
+.badge-shimmer:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px -4px rgba(59, 130, 246, 0.3);
+}
+
+/* Logo float animation (hero) */
+.logo-float {
+  animation: float-y 6s ease-in-out infinite;
+}
+
+/* Setup step number hover */
+.step-number {
+  transition: transform 200ms var(--ease-out-quart), background-color 200ms var(--ease-out-quart);
+}
+
+.step-number:hover {
+  transform: scale(1.1);
+}
+
+/* CTA button glow on hover */
+.cta-glow {
+  position: relative;
+  overflow: visible;
+}
+
+.cta-glow::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.4));
+  filter: blur(12px);
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out-quart);
+  z-index: -1;
+}
+
+.cta-glow:hover::after {
+  opacity: 1;
+}
+
+/* Tailwind base layer for animations */
+@layer utilities {
+  .animate-fade-up {
+    animation: fade-slide-up 0.5s var(--ease-out-quart) both;
+  }
+}
+
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
