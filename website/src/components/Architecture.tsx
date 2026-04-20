@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useInViewOnce } from '../hooks/useInViewOnce'
 
 interface Step {
   iconBg: string
@@ -76,35 +76,7 @@ const steps: Step[] = [
 ]
 
 export default function Architecture() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const stepRefs = useRef<HTMLDivElement[]>([])
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.15,
-      rootMargin: '0px 0px -40px 0px'
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible')
-        }
-      })
-    }, observerOptions)
-
-    // Observe each step with stagger — initial state set once, observer toggles is-visible
-    stepRefs.current.forEach((step, index) => {
-      if (step) {
-        step.style.opacity = '0'
-        step.style.transform = 'translateX(-16px)'
-        step.style.transition = `opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 120}ms, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1) ${index * 120}ms`
-        observer.observe(step)
-      }
-    })
-
-    return () => observer.disconnect()
-  }, [])
+  const { ref: sectionRef, isVisible } = useInViewOnce({ threshold: 0.15, rootMargin: '0px 0px -40px 0px' })
 
   return (
     <section ref={sectionRef} id="architecture" className="py-20 px-6">
@@ -127,8 +99,8 @@ export default function Architecture() {
                   {steps.map((step, index) => (
                     <div
                       key={index}
-                      ref={(el) => { if (el) stepRefs.current[index] = el }}
-                      className="relative flex items-start gap-6"
+                      className={`relative flex items-start gap-6 transition-all duration-500 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}
+                      style={{ transitionDelay: `${index * 120}ms` }}
                     >
                       {/* Icon circle — static classes, no runtime dark: concatenation */}
                       <div className={`flex-shrink-0 w-16 h-16 rounded-2xl ${step.iconBg} ${step.iconBgDark} flex items-center justify-center z-10 border-2 ${step.iconBorder} ${step.iconBorderDark}`}>

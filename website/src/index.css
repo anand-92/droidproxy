@@ -28,9 +28,7 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
-    transition-delay: 0s !important;
   }
   html {
     scroll-behavior: auto !important;
@@ -45,77 +43,6 @@ body {
 }
 
 /* Fade + slide up entrance */
-@keyframes fade-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Fade + slide in from left */
-@keyframes fade-slide-left {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Fade + slide in from right */
-@keyframes fade-slide-right {
-  from {
-    opacity: 0;
-    transform: translateX(-24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Scale in (for logo/hero image) */
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.88);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Staggered card reveal */
-@keyframes card-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Timeline step reveal */
-@keyframes step-reveal {
-  from {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 /* Gentle float for ambient elements */
 @keyframes float-y {
   0%, 100% { transform: translateY(0px); }
@@ -136,40 +63,6 @@ body {
   40% { transform: translateX(6px); }
   60% { transform: translateX(-4px); }
   80% { transform: translateX(4px); }
-}
-
-/* Scroll-triggered animation classes */
-.animate-on-scroll {
-  opacity: 0;
-  transition: opacity 0.5s var(--ease-out-quart), transform 0.5s var(--ease-out-quart);
-}
-
-.animate-on-scroll.is-visible {
-  opacity: 1;
-}
-
-.fade-up {
-  transform: translateY(20px);
-}
-
-.fade-up.is-visible {
-  transform: translateY(0);
-}
-
-.fade-left {
-  transform: translateX(-20px);
-}
-
-.fade-left.is-visible {
-  transform: translateX(0);
-}
-
-.fade-right {
-  transform: translateX(20px);
-}
-
-.fade-right.is-visible {
-  transform: translateX(0);
 }
 
 /* ============================================
@@ -193,27 +86,6 @@ body {
 .card-hover:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.12);
-}
-
-/* Link underline slide */
-.link-underline {
-  position: relative;
-  text-decoration: none;
-}
-
-.link-underline::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 1px;
-  background: currentcolor;
-  transition: width 200ms var(--ease-out-quart);
-}
-
-.link-underline:hover::after {
-  width: 100%;
 }
 
 /* Navbar link hover */
@@ -291,13 +163,6 @@ body {
   box-shadow: 0 4px 16px -4px rgba(59, 130, 246, 0.3);
 }
 
-/* Scroll progress bar */
-.scroll-progress {
-  transform-origin: left;
-  transform: scaleX(0);
-  transition: transform 50ms linear;
-}
-
 /* Logo float animation (hero) */
 .logo-float {
   animation: float-y 6s ease-in-out infinite;
@@ -332,4 +197,22 @@ body {
 
 .cta-glow:hover::after {
   opacity: 1;
+}
+
+/* Tailwind base layer for animations */
+@layer utilities {
+  .animate-fade-up {
+    animation: fade-slide-up 0.5s var(--ease-out-quart) both;
+  }
+}
+
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

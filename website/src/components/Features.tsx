@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useInViewOnce } from '../hooks/useInViewOnce'
 import ProviderIcons from './ProviderIcons'
 
 const features = [
@@ -59,46 +59,7 @@ const features = [
 ]
 
 export default function Features() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const cardsRef = useRef<HTMLDivElement[]>([])
-  const perModelRef = useRef<HTMLDivElement>(null)
-  const providersRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -60px 0px'
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible')
-        }
-      })
-    }, observerOptions)
-
-    // Observe cards with stagger — initial state only, observer toggles visibility
-    cardsRef.current.forEach((card, index) => {
-      if (card) {
-        card.style.transitionDelay = `${index * 80}ms`
-        observer.observe(card)
-      }
-    })
-
-    // Observe per-model section
-    if (perModelRef.current) {
-      observer.observe(perModelRef.current)
-    }
-
-    // Observe providers section
-    if (providersRef.current) {
-      providersRef.current.style.transitionDelay = '200ms'
-      observer.observe(providersRef.current)
-    }
-
-    return () => observer.disconnect()
-  }, [])
+  const { ref: sectionRef, isVisible } = useInViewOnce({ threshold: 0.1, rootMargin: '0px 0px -60px 0px' })
 
   return (
     <section ref={sectionRef} id="features" className="py-20 px-6 bg-white dark:bg-apple-gray-700/30">
@@ -116,10 +77,8 @@ export default function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              ref={(el) => {
-                if (el) cardsRef.current[index] = el
-              }}
-              className="animate-on-scroll fade-up card-hover p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 hover:border-blue-300 dark:hover:border-blue-600"
+              className={`card-hover p-6 rounded-2xl bg-apple-gray-50 dark:bg-apple-gray-800/50 border border-apple-gray-200 dark:border-apple-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
+              style={{ transitionDelay: `${index * 80}ms` }}
             >
               <div className="icon-hover w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
                 {feature.icon}
@@ -134,8 +93,8 @@ export default function Features() {
 
         {/* Per-Model Effort Controls section */}
         <div
-          ref={perModelRef}
-          className="animate-on-scroll fade-up mt-16 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-apple-gray-200 dark:border-apple-gray-700"
+          className={`mt-16 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-apple-gray-200 dark:border-apple-gray-700 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+          style={{ transitionDelay: '300ms' }}
         >
           <div className="flex flex-col lg:flex-row items-center gap-6">
             <div className="flex-1">
@@ -181,7 +140,7 @@ export default function Features() {
         </div>
 
         {/* Supported Providers */}
-        <div ref={providersRef} className="animate-on-scroll fade-up mt-16 text-center">
+        <div className={`mt-16 text-center transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ transitionDelay: '400ms' }}>
           <h3 className="text-lg font-semibold mb-6">Supported Providers</h3>
           <div className="flex flex-wrap items-center justify-center gap-8">
             <ProviderIcons />

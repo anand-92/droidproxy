@@ -45,7 +45,7 @@ export default function Hero() {
           {/* Text content */}
           <div className="flex-1 text-center lg:text-left">
             {/* Badge */}
-            <div ref={badgeRef}>
+            <div className="animate-fade-up" style={{ animationDelay: '0ms' }}>
               <div className="badge-shimmer inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium mb-6">
                 <span className="w-2 h-2 rounded-full bg-blue-500 pulse-dot"></span>
                 Open Source
@@ -54,30 +54,30 @@ export default function Hero() {
 
             {/* Title */}
             <h1
-              ref={titleRef}
-              className="text-5xl lg:text-6xl font-bold tracking-tight mb-6 bg-gradient-to-r from-apple-gray-800 dark:from-white to-apple-gray-500 dark:to-apple-gray-400 bg-clip-text text-transparent"
+              className="animate-fade-up text-5xl lg:text-6xl font-bold tracking-tight mb-6 bg-gradient-to-r from-apple-gray-800 dark:from-white to-apple-gray-500 dark:to-apple-gray-400 bg-clip-text text-transparent"
+              style={{ animationDelay: '100ms' }}
             >
               DroidProxy
             </h1>
 
             {/* Subtitle */}
             <p
-              ref={subtitleRef}
-              className="text-xl lg:text-2xl text-apple-gray-500 dark:text-apple-gray-400 mb-4 leading-relaxed"
+              className="animate-fade-up text-xl lg:text-2xl text-apple-gray-500 dark:text-apple-gray-400 mb-4 leading-relaxed"
+              style={{ animationDelay: '200ms' }}
             >
               One-click OAuth proxy for Claude Code, Codex &amp; Gemini
             </p>
 
             {/* Description */}
             <p
-              ref={descriptionRef}
-              className="text-base text-apple-gray-400 dark:text-apple-gray-500 mb-8 max-w-lg mx-auto lg:mx-0"
+              className="animate-fade-up text-base text-apple-gray-400 dark:text-apple-gray-500 mb-8 max-w-lg mx-auto lg:mx-0"
+              style={{ animationDelay: '300ms' }}
             >
               A native macOS menu bar app that proxies authentication for AI coding tools. Built on CLIProxyAPIPlus with adaptive thinking, per-model effort controls, and Sparkle auto-updates.
             </p>
 
             {/* CTA Buttons */}
-            <div ref={ctaRef} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <div className="animate-fade-up flex flex-col sm:flex-row gap-4 justify-center lg:justify-start" style={{ animationDelay: '400ms' }}>
               <a
                 href="#setup"
                 className="cta-glow btn-press px-8 py-3 bg-apple-gray-800 dark:bg-white text-white dark:text-apple-gray-800 rounded-lg font-medium hover:bg-apple-gray-700 dark:hover:bg-apple-gray-100 transition-colors text-center"
@@ -98,7 +98,7 @@ export default function Hero() {
             </div>
 
             {/* Stats */}
-            <div ref={statsRef} className="mt-10 flex flex-wrap gap-6 justify-center lg:justify-start text-sm text-apple-gray-400 dark:text-apple-gray-500">
+            <div className="animate-fade-up mt-10 flex flex-wrap gap-6 justify-center lg:justify-start text-sm text-apple-gray-400 dark:text-apple-gray-500" style={{ animationDelay: '500ms' }}>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                 macOS 13.0+
@@ -115,7 +115,7 @@ export default function Hero() {
           </div>
 
           {/* Hero image — delay 600ms so it animates after stats at 500ms */}
-          <div ref={imageRef} className="flex-1 flex justify-center">
+          <div className="animate-fade-up flex-1 flex justify-center" style={{ animationDelay: '600ms' }}>
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur-3xl opacity-20 dark:opacity-30"></div>
               <img
