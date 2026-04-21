@@ -346,8 +346,9 @@ class ThinkingProxy {
         result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "stream",
                                           fieldValue: "true", existsInJSON: json["stream"] != nil)
 
-        if AppPreferences.claudeMaxBudgetMode && model.contains("sonnet-4-6") {
-            // Sonnet 4.6 classic extended-thinking override. budget_tokens must be strictly less
+        if AppPreferences.claudeMaxBudgetMode &&
+            (model.contains("sonnet-4-6") || model.contains("opus-4-6")) {
+            // Sonnet 4.6 / Opus 4.6 classic extended-thinking override. budget_tokens must be strictly less
             // than max_tokens (min 1024). Request body changes stay inside the adaptive-thinking
             // window this path already controls.
             let maxTokens = 64000
@@ -397,21 +398,15 @@ class ThinkingProxy {
         return injectJSONField(in: json, afterKey: afterKey, fieldName: fieldName, fieldValue: fieldValue)
     }
 
-    /// Replaces the value of an existing JSON field using regex.
+    /// Replaces the value of an existing top-level JSON field.
     private func replaceJSONFieldValue(in json: String, fieldName: String, newValue: String) -> String {
-        let escapedKey = NSRegularExpression.escapedPattern(for: fieldName)
-        let valuePattern = "(?:\"(?:[^\"\\\\]|\\\\.)*\"|\\-?\\d+(?:\\.\\d+)?|\\{[^}]*\\}|\\[[^\\]]*\\]|true|false|null)"
-        let pattern = "(\"\(escapedKey)\"\\s*:\\s*)\(valuePattern)"
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)),
-              let matchRange = Range(match.range, in: json),
-              let prefixRange = Range(match.range(at: 1), in: json) else {
+        guard let location = findTopLevelFieldLocation(in: json, key: fieldName) else {
             NSLog("[ThinkingProxy] Warning: Could not find key '\(fieldName)' for value replacement")
             return json
         }
+
         var result = json
-        let prefix = String(json[prefixRange])
-        result.replaceSubrange(matchRange, with: "\(prefix)\(newValue)")
+        result.replaceSubrange(location.valueRange, with: newValue)
         return result
     }
 
@@ -533,33 +528,246 @@ class ThinkingProxy {
     }
 
     // MARK: - Surgical JSON string helpers
-    // These use regex to modify specific fields in-place, preserving the original JSON structure
-    // and key ordering. This is critical because JSONSerialization.data() reorders keys
-    // alphabetically, which breaks Anthropic's prompt cache matching.
+    // These scan the top-level JSON object and modify specific fields in-place, preserving
+    // the original JSON structure and key ordering. This is critical because
+    // JSONSerialization.data() reorders keys alphabetically, which breaks Anthropic's
+    // prompt cache matching.
 
     /// Injects a new JSON field after a given key's value in the JSON string.
-    /// Uses `Range(_:in:)` to convert the NSRegularExpression UTF-16 range into a
-    /// `String.Index`. Mixing UTF-16 offsets with `String.index(_:offsetBy:)`
-    /// (which walks Characters) traps on any body containing non-ASCII graphemes.
+    /// Only matches keys at the top-level request object so nested assistant content
+    /// blocks remain unchanged.
     private func injectJSONField(in json: String, afterKey: String, fieldName: String, fieldValue: String) -> String {
-        let escapedKey = NSRegularExpression.escapedPattern(for: afterKey)
-        let valuePattern = "(?:\"(?:[^\"\\\\]|\\\\.)*\"|\\-?\\d+(?:\\.\\d+)?|\\{[^}]*\\}|\\[[^\\]]*\\]|true|false|null)"
-        let pattern = "\"\(escapedKey)\"\\s*:\\s*\(valuePattern)"
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)),
-              let matchRange = Range(match.range, in: json) else {
+        guard let location = findTopLevelFieldLocation(in: json, key: afterKey) else {
             NSLog("[ThinkingProxy] Warning: Could not find key '\(afterKey)' for field injection")
             return json
         }
+
         var result = json
-        result.insert(contentsOf: ",\"\(fieldName)\":\(fieldValue)", at: matchRange.upperBound)
+        result.insert(contentsOf: ",\"\(fieldName)\":\(fieldValue)", at: location.pairRange.upperBound)
         return result
+    }
+
+    private struct TopLevelFieldLocation {
+        let pairRange: Range<String.Index>
+        let valueRange: Range<String.Index>
+    }
+
+    private func findTopLevelFieldLocation(in json: String, key targetKey: String) -> TopLevelFieldLocation? {
+        guard var index = firstNonWhitespaceIndex(in: json, from: json.startIndex),
+              json[index] == "{" else {
+            return nil
+        }
+
+        index = json.index(after: index)
+
+        while true {
+            guard let keyStart = firstNonWhitespaceIndex(in: json, from: index) else {
+                return nil
+            }
+
+            let token = json[keyStart]
+            if token == "}" {
+                return nil
+            }
+            guard token == "\"" else {
+                return nil
+            }
+
+            guard let (key, keyEnd) = parseJSONStringToken(in: json, startingAt: keyStart),
+                  let colonIndex = firstNonWhitespaceIndex(in: json, from: keyEnd),
+                  json[colonIndex] == ":" else {
+                return nil
+            }
+
+            let afterColon = json.index(after: colonIndex)
+            guard let valueStart = firstNonWhitespaceIndex(in: json, from: afterColon),
+                  let valueEnd = consumeJSONValue(in: json, startingAt: valueStart) else {
+                return nil
+            }
+
+            if key == targetKey {
+                return TopLevelFieldLocation(pairRange: keyStart..<valueEnd,
+                                             valueRange: valueStart..<valueEnd)
+            }
+
+            guard let delimiterIndex = firstNonWhitespaceIndex(in: json, from: valueEnd) else {
+                return nil
+            }
+
+            let delimiter = json[delimiterIndex]
+            if delimiter == "," {
+                index = json.index(after: delimiterIndex)
+                continue
+            }
+            if delimiter == "}" {
+                return nil
+            }
+            return nil
+        }
+    }
+
+    private func firstNonWhitespaceIndex(in json: String, from start: String.Index) -> String.Index? {
+        var index = start
+        while index < json.endIndex, json[index].isWhitespace {
+            index = json.index(after: index)
+        }
+        return index < json.endIndex ? index : nil
+    }
+
+    private func parseJSONStringToken(in json: String, startingAt startQuote: String.Index) -> (String, String.Index)? {
+        guard json[startQuote] == "\"" else {
+            return nil
+        }
+
+        var index = json.index(after: startQuote)
+        var escaped = false
+
+        while index < json.endIndex {
+            let char = json[index]
+            if escaped {
+                escaped = false
+            } else if char == "\\" {
+                escaped = true
+            } else if char == "\"" {
+                let value = String(json[json.index(after: startQuote)..<index])
+                return (value, json.index(after: index))
+            }
+            index = json.index(after: index)
+        }
+
+        return nil
+    }
+
+    private func consumeJSONValue(in json: String, startingAt start: String.Index) -> String.Index? {
+        guard start < json.endIndex else {
+            return nil
+        }
+
+        let first = json[start]
+        if first == "\"" {
+            return parseJSONStringToken(in: json, startingAt: start)?.1
+        }
+
+        if first == "{" || first == "[" {
+            return consumeCompositeJSONValue(in: json, startingAt: start)
+        }
+
+        var index = start
+        while index < json.endIndex {
+            let char = json[index]
+            if char == "," || char == "}" || char == "]" || char.isWhitespace {
+                break
+            }
+            index = json.index(after: index)
+        }
+
+        return index > start ? index : nil
+    }
+
+    private func consumeCompositeJSONValue(in json: String, startingAt start: String.Index) -> String.Index? {
+        var index = start
+        var depth = 0
+        var inString = false
+        var escaped = false
+
+        while index < json.endIndex {
+            let char = json[index]
+
+            if inString {
+                if escaped {
+                    escaped = false
+                } else if char == "\\" {
+                    escaped = true
+                } else if char == "\"" {
+                    inString = false
+                }
+            } else {
+                if char == "\"" {
+                    inString = true
+                } else if char == "{" || char == "[" {
+                    depth += 1
+                } else if char == "}" || char == "]" {
+                    depth -= 1
+                    if depth == 0 {
+                        return json.index(after: index)
+                    }
+                    if depth < 0 {
+                        return nil
+                    }
+                }
+            }
+
+            index = json.index(after: index)
+        }
+
+        return nil
     }
 
     private static let fastTierEligibleResponsePaths: Set<String> = [
         "/v1/responses",
         "/api/v1/responses"
     ]
+
+    private static let ampProviderToolRewritePattern = "\"name\"\\s*:\\s*\"bash\""
+    private static let ampProviderRewriteCarryLength = 31
+
+    private final class AmpProviderRewriteState {
+        var carry = ""
+    }
+
+    private func shouldNormalizeAmpProviderResponse(for path: String) -> Bool {
+        let normalizedPath = path.split(separator: "?").first.map(String.init) ?? path
+        return normalizedPath.starts(with: "/api/provider/")
+    }
+
+    private func normalizeAmpProviderResponseChunk(_ data: Data,
+                                                   rewriteState: AmpProviderRewriteState,
+                                                   isComplete: Bool) -> Data {
+        let carryPrefix = rewriteState.carry
+        rewriteState.carry = ""
+
+        guard let chunk = String(data: data, encoding: .utf8) else {
+            if carryPrefix.isEmpty {
+                return data
+            }
+            var passthrough = Data(carryPrefix.utf8)
+            passthrough.append(data)
+            return passthrough
+        }
+
+        var combined = carryPrefix + chunk
+        let beforeRewrite = combined
+        combined = combined.replacingOccurrences(of: Self.ampProviderToolRewritePattern,
+                                                 with: "\"name\":\"Bash\"",
+                                                 options: .regularExpression)
+        if combined != beforeRewrite {
+            NSLog("[ThinkingProxy] Normalized Amp provider tool name(s) in response chunk")
+        }
+
+        guard !isComplete else {
+            return Data(combined.utf8)
+        }
+
+        let carryLength = min(Self.ampProviderRewriteCarryLength, combined.count)
+        if carryLength == combined.count {
+            rewriteState.carry = combined
+            return Data()
+        }
+
+        let carryStart = combined.index(combined.endIndex, offsetBy: -carryLength)
+        let output = String(combined[..<carryStart])
+        rewriteState.carry = String(combined[carryStart...])
+        return Data(output.utf8)
+    }
+
+    private func flushNormalizedResponseCarry(_ rewriteState: AmpProviderRewriteState?) -> Data? {
+        guard let rewriteState, !rewriteState.carry.isEmpty else {
+            return nil
+        }
+        let carry = rewriteState.carry
+        rewriteState.carry = ""
+        return Data(carry.utf8)
+    }
 
     private func processOpenAIFastMode(jsonString: String, path: String) -> String? {
         let normalizedPath = path.split(separator: "?").first.map(String.init) ?? path
@@ -794,12 +1002,16 @@ class ThinkingProxy {
                             originalConnection.cancel()
                         } else {
                             // Receive response from CLIProxyAPI (with 404 retry capability)
+                            let normalizeAmpProviderResponse = self.shouldNormalizeAmpProviderResponse(for: path)
                             if retryWithApiPrefix {
                                 self.receiveResponseWith404Retry(from: targetConnection, originalConnection: originalConnection, 
                                                                  method: method, path: path, version: version, 
-                                                                 headers: headers, body: body)
+                                                                 headers: headers, body: body,
+                                                                 normalizeAmpProviderResponse: normalizeAmpProviderResponse)
                             } else {
-                                self.receiveResponse(from: targetConnection, originalConnection: originalConnection)
+                                self.receiveResponse(from: targetConnection,
+                                                     originalConnection: originalConnection,
+                                                     normalizeAmpProviderResponse: normalizeAmpProviderResponse)
                             }
                         }
                     }))
@@ -823,7 +1035,9 @@ class ThinkingProxy {
      */
     private func receiveResponseWith404Retry(from targetConnection: NWConnection, originalConnection: NWConnection, 
                                              method: String, path: String, version: String, 
-                                             headers: [(String, String)], body: String) {
+                                             headers: [(String, String)], body: String,
+                                             normalizeAmpProviderResponse: Bool) {
+        let rewriteState = normalizeAmpProviderResponse ? AmpProviderRewriteState() : nil
         targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
             
@@ -862,7 +1076,17 @@ class ThinkingProxy {
                 }
                 
                 // Not a 404 or already has /api/, forward response as-is
-                originalConnection.send(content: data, completion: .contentProcessed({ sendError in
+                var outboundData = data
+                if let rewriteState {
+                    outboundData = self.normalizeAmpProviderResponseChunk(data, rewriteState: rewriteState, isComplete: isComplete)
+                }
+
+                if outboundData.isEmpty && !isComplete {
+                    self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
+                    return
+                }
+
+                originalConnection.send(content: outboundData, completion: .contentProcessed({ sendError in
                     if let sendError = sendError {
                         NSLog("[ThinkingProxy] Send error: \(sendError)")
                     }
@@ -874,14 +1098,22 @@ class ThinkingProxy {
                         }))
                     } else {
                         // Continue streaming
-                        self.streamNextChunk(from: targetConnection, to: originalConnection)
+                        self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
                     }
                 }))
             } else if isComplete {
                 targetConnection.cancel()
-                originalConnection.send(content: nil, isComplete: true, completion: .contentProcessed({ _ in
-                    originalConnection.cancel()
-                }))
+                if let carryData = self.flushNormalizedResponseCarry(rewriteState), !carryData.isEmpty {
+                    originalConnection.send(content: carryData, completion: .contentProcessed({ _ in
+                        originalConnection.send(content: nil, isComplete: true, completion: .contentProcessed({ _ in
+                            originalConnection.cancel()
+                        }))
+                    }))
+                } else {
+                    originalConnection.send(content: nil, isComplete: true, completion: .contentProcessed({ _ in
+                        originalConnection.cancel()
+                    }))
+                }
             }
         }
     }
@@ -890,15 +1122,20 @@ class ThinkingProxy {
      Receives response from CLIProxyAPI
      Starts the streaming loop for response data
      */
-    private func receiveResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
+    private func receiveResponse(from targetConnection: NWConnection,
+                                 originalConnection: NWConnection,
+                                 normalizeAmpProviderResponse: Bool = false) {
+        let rewriteState = normalizeAmpProviderResponse ? AmpProviderRewriteState() : nil
         // Start the streaming loop
-        streamNextChunk(from: targetConnection, to: originalConnection)
+        streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
     }
     
     /**
      Streams response chunks iteratively (uses async scheduling instead of recursion to avoid stack buildup)
      */
-    private func streamNextChunk(from targetConnection: NWConnection, to originalConnection: NWConnection) {
+    private func streamNextChunk(from targetConnection: NWConnection,
+                                 to originalConnection: NWConnection,
+                                 rewriteState: AmpProviderRewriteState? = nil) {
         targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
             
@@ -910,8 +1147,18 @@ class ThinkingProxy {
             }
             
             if let data = data, !data.isEmpty {
+                var outboundData = data
+                if let rewriteState {
+                    outboundData = self.normalizeAmpProviderResponseChunk(data, rewriteState: rewriteState, isComplete: isComplete)
+                }
+
+                if outboundData.isEmpty && !isComplete {
+                    self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
+                    return
+                }
+
                 // Forward response chunk to original client
-                originalConnection.send(content: data, completion: .contentProcessed({ sendError in
+                originalConnection.send(content: outboundData, completion: .contentProcessed({ sendError in
                     if let sendError = sendError {
                         NSLog("[ThinkingProxy] Send response error: \(sendError)")
                     }
@@ -924,15 +1171,24 @@ class ThinkingProxy {
                         }))
                     } else {
                         // Schedule next iteration of the streaming loop
-                        self.streamNextChunk(from: targetConnection, to: originalConnection)
+                        self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
                     }
                 }))
             } else if isComplete {
                 targetConnection.cancel()
-                // Always close client connection - no keep-alive/pipelining support
-                originalConnection.send(content: nil, isComplete: true, completion: .contentProcessed({ _ in
-                    originalConnection.cancel()
-                }))
+                if let carryData = self.flushNormalizedResponseCarry(rewriteState), !carryData.isEmpty {
+                    originalConnection.send(content: carryData, completion: .contentProcessed({ _ in
+                        // Always close client connection - no keep-alive/pipelining support
+                        originalConnection.send(content: nil, isComplete: true, completion: .contentProcessed({ _ in
+                            originalConnection.cancel()
+                        }))
+                    }))
+                } else {
+                    // Always close client connection - no keep-alive/pipelining support
+                    originalConnection.send(content: nil, isComplete: true, completion: .contentProcessed({ _ in
+                        originalConnection.cancel()
+                    }))
+                }
             }
         }
     }

@@ -127,7 +127,7 @@ struct MaxBudgetToggleView: View {
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .tracking(0.8)
                         .foregroundColor(isOn ? dangerRed : .gray.opacity(0.6))
-                    Text("Sonnet 4.6 only · max budget_tokens + effort")
+                    Text("Opus 4.6 + Sonnet 4.6 · max budget_tokens + effort")
                         .font(.system(size: 9))
                         .foregroundColor(.gray.opacity(0.5))
                 }
@@ -275,7 +275,7 @@ struct MaxBudgetToggleView: View {
                 }
             }
         }
-        .help("Overrides the Sonnet 4.6 effort slider with classic extended thinking (budget_tokens=63999, effort=max). Opus 4.7 keeps its own slider setting — max mode does not affect it. Ignition is cheap, fuel is not.")
+        .help("Overrides Opus 4.6 and Sonnet 4.6 effort sliders with classic extended thinking (budget_tokens=63999, effort=max). Opus 4.7 keeps its own slider setting — max mode does not affect it. Ignition is cheap, fuel is not.")
     }
 }
 
@@ -823,6 +823,7 @@ struct SettingsView: View {
                                     .onChange(of: claudeMaxBudgetMode) { enabled in
                                         if enabled {
                                             showingMaxBudgetWarning = true
+                                            opus46ThinkingEffort = "max"
                                             sonnet46ThinkingEffort = "max"
                                         }
                                     }
@@ -838,8 +839,11 @@ struct SettingsView: View {
                                     selection: $opus46ThinkingEffort,
                                     options: ["low", "medium", "high", "max"],
                                     tint: claudeEffortSelectionColor,
-                                    isExpanded: $opus46EffortExpanded
+                                    isExpanded: $opus46EffortExpanded,
+                                    overrideBadge: claudeMaxBudgetMode ? "MAX MODE" : nil
                                 )
+                                .disabled(claudeMaxBudgetMode)
+                                .opacity(claudeMaxBudgetMode ? 0.45 : 1.0)
                                 collapsibleEffortPickerRow(
                                     "Opus 4.5 thinking effort",
                                     selection: $opus45ThinkingEffort,
@@ -1113,7 +1117,7 @@ struct SettingsView: View {
         .alert("⚠️ MAX BUDGET MODE", isPresented: $showingMaxBudgetWarning) {
             Button("Engage", role: .cancel) { }
         } message: {
-            Text("Sonnet 4.6 requests will bypass its effort slider and revert to classic extended thinking with maximum budget_tokens and effort=max. Opus 4.7 keeps its own slider — Max Budget Mode does not apply to it. Sonnet will burn through your quota fast.")
+            Text("Opus 4.6 and Sonnet 4.6 requests will bypass their effort sliders and revert to classic extended thinking with maximum budget_tokens and effort=max. Opus 4.7 keeps its own slider — Max Budget Mode does not apply to it. These requests will burn through your quota fast.")
         }
     }
 
