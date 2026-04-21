@@ -516,6 +516,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gpt54FastModeKey) private var gpt54FastMode = AppPreferences.defaultGpt54FastMode
     @AppStorage(AppPreferences.gemini31ProThinkingLevelKey) private var gemini31ProThinkingLevel = AppPreferences.defaultGemini31ProThinkingLevel
     @AppStorage(AppPreferences.gemini3FlashThinkingLevelKey) private var gemini3FlashThinkingLevel = AppPreferences.defaultGemini3FlashThinkingLevel
+    @AppStorage(AppPreferences.geminiV1PathFixKey) private var geminiV1PathFix = AppPreferences.defaultGeminiV1PathFix
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
     @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
     @AppStorage(AppPreferences.claudeMaxBudgetModeKey) private var claudeMaxBudgetMode = AppPreferences.defaultClaudeMaxBudgetMode
@@ -993,6 +994,12 @@ struct SettingsView: View {
                                     options: ["minimal", "low", "medium", "high"],
                                     tint: geminiEffortSelectionColor
                                 )
+                                Toggle("Fix factory-cli /v1/v1 path bug", isOn: $geminiV1PathFix)
+                                    .toggleStyle(.checkbox)
+                                    .font(.caption)
+                                    .tint(geminiEffortSelectionColor)
+                                    .help("factory-cli 0.105.1 sends POST /v1/v1/messages for custom Gemini models under provider=anthropic, causing first-turn tool calls to fail with 404. When enabled, DroidProxy rewrites /v1/v1/... back to /v1/... before forwarding.")
+                                    .padding(.vertical, 2)
                             }
                         }
                         .padding(.leading, 28)
@@ -1407,7 +1414,7 @@ struct SettingsView: View {
             "displayName": "DroidProxy: Gemini 3.1 Pro",
             "maxOutputTokens": 65536,
             "noImageSupport": false,
-            "provider": "google"
+            "provider": "anthropic"
         ],
         [
             "model": "gemini-3-flash-preview",
@@ -1417,7 +1424,7 @@ struct SettingsView: View {
             "displayName": "DroidProxy: Gemini 3 Flash",
             "maxOutputTokens": 65536,
             "noImageSupport": false,
-            "provider": "google"
+            "provider": "anthropic"
         ]
     ]
 
