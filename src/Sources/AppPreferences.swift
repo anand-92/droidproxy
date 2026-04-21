@@ -2,6 +2,8 @@ import Foundation
 
 enum AppPreferences {
     static let opus47ThinkingEffortKey = "opus47ThinkingEffort"
+    static let opus46ThinkingEffortKey = "opus46ThinkingEffort"
+    static let opus45ThinkingEffortKey = "opus45ThinkingEffort"
     static let sonnet46ThinkingEffortKey = "sonnet46ThinkingEffort"
     static let gpt53CodexReasoningEffortKey = "gpt53CodexReasoningEffort"
     static let gpt54ReasoningEffortKey = "gpt54ReasoningEffort"
@@ -15,6 +17,8 @@ enum AppPreferences {
     static let oledThemeKey = "oledTheme"
     static let defaultOledTheme = false
     static let defaultOpus47ThinkingEffort = "xhigh"
+    static let defaultOpus46ThinkingEffort = "max"
+    static let defaultOpus45ThinkingEffort = "high"
     static let defaultSonnet46ThinkingEffort = "high"
     static let defaultGpt53CodexReasoningEffort = "high"
     static let defaultGpt54ReasoningEffort = "high"
@@ -32,6 +36,14 @@ enum AppPreferences {
             return defaultOpus47ThinkingEffort
         }
         return defaults.string(forKey: opus47ThinkingEffortKey) ?? defaultOpus47ThinkingEffort
+    }
+
+    static var opus46ThinkingEffort: String {
+        UserDefaults.standard.string(forKey: opus46ThinkingEffortKey) ?? defaultOpus46ThinkingEffort
+    }
+
+    static var opus45ThinkingEffort: String {
+        UserDefaults.standard.string(forKey: opus45ThinkingEffortKey) ?? defaultOpus45ThinkingEffort
     }
 
     static var sonnet46ThinkingEffort: String {

@@ -127,7 +127,7 @@ struct MaxBudgetToggleView: View {
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .tracking(0.8)
                         .foregroundColor(isOn ? dangerRed : .gray.opacity(0.6))
-                    Text("Sonnet 4.6 only · max budget_tokens + effort")
+                    Text("Opus 4.6 + Sonnet 4.6 · max budget_tokens + effort")
                         .font(.system(size: 9))
                         .foregroundColor(.gray.opacity(0.5))
                 }
@@ -275,7 +275,7 @@ struct MaxBudgetToggleView: View {
                 }
             }
         }
-        .help("Overrides the Sonnet 4.6 effort slider with classic extended thinking (budget_tokens=63999, effort=max). Opus 4.7 keeps its own slider setting — max mode does not affect it. Ignition is cheap, fuel is not.")
+        .help("Overrides Opus 4.6 and Sonnet 4.6 effort sliders with classic extended thinking (budget_tokens=63999, effort=max). Opus 4.7 keeps its own slider setting — max mode does not affect it. Ignition is cheap, fuel is not.")
     }
 }
 
@@ -507,6 +507,8 @@ struct SettingsView: View {
     @StateObject private var authManager = AuthManager()
     @State private var launchAtLogin = false
     @AppStorage(AppPreferences.opus47ThinkingEffortKey) private var opus47ThinkingEffort = AppPreferences.defaultOpus47ThinkingEffort
+    @AppStorage(AppPreferences.opus46ThinkingEffortKey) private var opus46ThinkingEffort = AppPreferences.defaultOpus46ThinkingEffort
+    @AppStorage(AppPreferences.opus45ThinkingEffortKey) private var opus45ThinkingEffort = AppPreferences.defaultOpus45ThinkingEffort
     @AppStorage(AppPreferences.sonnet46ThinkingEffortKey) private var sonnet46ThinkingEffort = AppPreferences.defaultSonnet46ThinkingEffort
     @AppStorage(AppPreferences.gpt53CodexReasoningEffortKey) private var gpt53CodexReasoningEffort = AppPreferences.defaultGpt53CodexReasoningEffort
     @AppStorage(AppPreferences.gpt54ReasoningEffortKey) private var gpt54ReasoningEffort = AppPreferences.defaultGpt54ReasoningEffort
@@ -532,6 +534,10 @@ struct SettingsView: View {
     @State private var claudeModelsExpanded = true
     @State private var codexModelsExpanded = true
     @State private var geminiModelsExpanded = true
+    @State private var opus47EffortExpanded = false
+    @State private var opus46EffortExpanded = false
+    @State private var opus45EffortExpanded = false
+    @State private var sonnet46EffortExpanded = false
     private let claudeEffortSelectionColor = Color(red: 0xD9/255, green: 0x77/255, blue: 0x57/255)
     private let codexEffortSelectionColor = Color(red: 0x74/255, green: 0xAA/255, blue: 0x9C/255)
     private let geminiEffortSelectionColor = Color(red: 0x42/255, green: 0x85/255, blue: 0xF4/255)
@@ -817,20 +823,40 @@ struct SettingsView: View {
                                     .onChange(of: claudeMaxBudgetMode) { enabled in
                                         if enabled {
                                             showingMaxBudgetWarning = true
+                                            opus46ThinkingEffort = "max"
                                             sonnet46ThinkingEffort = "max"
                                         }
                                     }
-                                effortPickerRow(
+                                collapsibleEffortPickerRow(
                                     "Opus 4.7 thinking effort",
                                     selection: $opus47ThinkingEffort,
                                     options: ["low", "medium", "high", "xhigh", "max"],
-                                    tint: claudeEffortSelectionColor
+                                    tint: claudeEffortSelectionColor,
+                                    isExpanded: $opus47EffortExpanded
                                 )
-                                effortPickerRow(
+                                collapsibleEffortPickerRow(
+                                    "Opus 4.6 thinking effort",
+                                    selection: $opus46ThinkingEffort,
+                                    options: ["low", "medium", "high", "max"],
+                                    tint: claudeEffortSelectionColor,
+                                    isExpanded: $opus46EffortExpanded,
+                                    overrideBadge: claudeMaxBudgetMode ? "MAX MODE" : nil
+                                )
+                                .disabled(claudeMaxBudgetMode)
+                                .opacity(claudeMaxBudgetMode ? 0.45 : 1.0)
+                                collapsibleEffortPickerRow(
+                                    "Opus 4.5 thinking effort",
+                                    selection: $opus45ThinkingEffort,
+                                    options: ["low", "medium", "high", "max"],
+                                    tint: claudeEffortSelectionColor,
+                                    isExpanded: $opus45EffortExpanded
+                                )
+                                collapsibleEffortPickerRow(
                                     "Sonnet 4.6 thinking effort",
                                     selection: $sonnet46ThinkingEffort,
                                     options: ["low", "medium", "high", "max"],
                                     tint: claudeEffortSelectionColor,
+                                    isExpanded: $sonnet46EffortExpanded,
                                     overrideBadge: claudeMaxBudgetMode ? "MAX MODE" : nil
                                 )
                                 .disabled(claudeMaxBudgetMode)
@@ -1091,7 +1117,7 @@ struct SettingsView: View {
         .alert("⚠️ MAX BUDGET MODE", isPresented: $showingMaxBudgetWarning) {
             Button("Engage", role: .cancel) { }
         } message: {
-            Text("Sonnet 4.6 requests will bypass its effort slider and revert to classic extended thinking with maximum budget_tokens and effort=max. Opus 4.7 keeps its own slider — Max Budget Mode does not apply to it. Sonnet will burn through your quota fast.")
+            Text("Opus 4.6 and Sonnet 4.6 requests will bypass their effort sliders and revert to classic extended thinking with maximum budget_tokens and effort=max. Opus 4.7 keeps its own slider — Max Budget Mode does not apply to it. These requests will burn through your quota fast.")
         }
     }
 
@@ -1127,6 +1153,74 @@ struct SettingsView: View {
             .pickerStyle(.segmented)
             .tint(tint)
             .labelsHidden()
+        }
+        .padding(.vertical, 2)
+    }
+
+    /// A collapsible variant of `effortPickerRow` that shows only the title + current
+    /// selection badge when collapsed. Tapping the header toggles the picker visibility.
+    @ViewBuilder
+    private func collapsibleEffortPickerRow(
+        _ title: String,
+        selection: Binding<String>,
+        options: [String],
+        tint: Color,
+        isExpanded: Binding<Bool>,
+        overrideBadge: String? = nil
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.wrappedValue.toggle()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: isExpanded.wrappedValue ? "chevron.down" : "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text(title)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if let badge = overrideBadge {
+                        Text(badge)
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .tracking(0.8)
+                            .foregroundColor(Color(red: 0.9, green: 0.15, blue: 0.1))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3)
+                                    .stroke(Color(red: 0.9, green: 0.15, blue: 0.1).opacity(0.5), lineWidth: 1)
+                            )
+                    }
+                    Spacer()
+                    Text(selection.wrappedValue)
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundColor(tint)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(tint.opacity(0.4), lineWidth: 1)
+                        )
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(title)
+            .accessibilityValue(selection.wrappedValue)
+            .accessibilityHint(isExpanded.wrappedValue ? "Collapse effort picker" : "Expand effort picker")
+
+            if isExpanded.wrappedValue {
+                Picker("", selection: selection) {
+                    ForEach(options, id: \.self) { option in
+                        Text(option).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .tint(tint)
+                .labelsHidden()
+            }
         }
         .padding(.vertical, 2)
     }
@@ -1241,10 +1335,8 @@ struct SettingsView: View {
     // MARK: - Factory Custom Models
 
     /// Ids retired by prior releases. Removed from `customModels` during Apply/Re-apply
-    /// so users don't end up with stale entries (e.g. `Opus 4.6`) next to the current ones.
-    private static let legacyDroidProxyModelIds: Set<String> = [
-        "custom:droidproxy:opus-4-6"
-    ]
+    /// so users don't end up with stale entries next to the current ones.
+    private static let legacyDroidProxyModelIds: Set<String> = []
 
     private static let droidProxyModels: [[String: Any]] = [
         [
@@ -1254,6 +1346,26 @@ struct SettingsView: View {
             "apiKey": "dummy-not-used",
             "displayName": "DroidProxy: Opus 4.7",
             "maxOutputTokens": 128000,
+            "noImageSupport": false,
+            "provider": "anthropic"
+        ],
+        [
+            "model": "claude-opus-4-6",
+            "id": "custom:droidproxy:opus-4-6",
+            "baseUrl": "http://localhost:8317",
+            "apiKey": "dummy-not-used",
+            "displayName": "DroidProxy: Opus 4.6",
+            "maxOutputTokens": 128000,
+            "noImageSupport": false,
+            "provider": "anthropic"
+        ],
+        [
+            "model": "claude-opus-4-5-20251101",
+            "id": "custom:droidproxy:opus-4-5",
+            "baseUrl": "http://localhost:8317",
+            "apiKey": "dummy-not-used",
+            "displayName": "DroidProxy: Opus 4.5",
+            "maxOutputTokens": 64000,
             "noImageSupport": false,
             "provider": "anthropic"
         ],
