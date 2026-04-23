@@ -61,13 +61,13 @@ What it does today:
 - Injects `"thinking":{"type":"adaptive"}` and forces `"stream":true` for Claude
 - Injects `"output_config":{"effort":"..."}`
 - Reads effort from `AppPreferences.opus47ThinkingEffort` or `AppPreferences.sonnet46ThinkingEffort`
-- Injects Codex reasoning for exact models `gpt-5.3-codex` and `gpt-5.4`
+- Injects Codex reasoning for exact models `gpt-5.3-codex`, `gpt-5.4`, and `gpt-5.5`
 - Injects `"reasoning":{"effort":"..."}`
-- Reads effort from `AppPreferences.gpt53CodexReasoningEffort` or `AppPreferences.gpt54ReasoningEffort`
+- Reads effort from `AppPreferences.gpt53CodexReasoningEffort`, `AppPreferences.gpt54ReasoningEffort`, or `AppPreferences.gpt55ReasoningEffort`
 - Injects Gemini thinking levels for `gemini-3.1-pro-preview` and `gemini-3-flash-preview`
 - Rewrites the model name to append a suffix (e.g. `gemini-3.1-pro-preview(high)`) which CLIProxyAPIPlus parses via its `ParseSuffix` logic
 - Reads level from `AppPreferences.gemini31ProThinkingLevel` or `AppPreferences.gemini3FlashThinkingLevel`
-- Optionally injects `"service_tier":"priority"` for `gpt-5.4` on Responses API paths (`/v1/responses`, `/api/v1/responses`) when `AppPreferences.gpt54FastMode` is enabled and the client did not already set `service_tier`
+- Optionally injects `"service_tier":"priority"` for `gpt-5.4` or `gpt-5.5` on Responses API paths (`/v1/responses`, `/api/v1/responses`) when `AppPreferences.gpt54FastMode` or `AppPreferences.gpt55FastMode` is enabled and the client did not already set `service_tier`
 - Preserves JSON key order by editing the raw JSON string instead of re-serializing
 - **Max Budget Mode**: When `AppPreferences.claudeMaxBudgetMode` is enabled, forces streaming and applies a Sonnet-4.6-only override: classic extended thinking with `budget_tokens=63999` / `max_tokens=64000` / `effort=max`. Opus 4.7 is unaffected and continues to receive `thinking.type=adaptive` with `output_config.effort` from `AppPreferences.opus47ThinkingEffort`.
 

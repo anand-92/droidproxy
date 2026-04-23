@@ -7,8 +7,10 @@ enum AppPreferences {
     static let sonnet46ThinkingEffortKey = "sonnet46ThinkingEffort"
     static let gpt53CodexReasoningEffortKey = "gpt53CodexReasoningEffort"
     static let gpt54ReasoningEffortKey = "gpt54ReasoningEffort"
+    static let gpt55ReasoningEffortKey = "gpt55ReasoningEffort"
     static let gpt53CodexFastModeKey = "gpt53CodexFastMode"
     static let gpt54FastModeKey = "gpt54FastMode"
+    static let gpt55FastModeKey = "gpt55FastMode"
     static let gemini31ProThinkingLevelKey = "gemini31ProThinkingLevel"
     static let gemini3FlashThinkingLevelKey = "gemini3FlashThinkingLevel"
     static let claudeMaxBudgetModeKey = "claudeMaxBudgetMode"
@@ -22,8 +24,10 @@ enum AppPreferences {
     static let defaultSonnet46ThinkingEffort = "high"
     static let defaultGpt53CodexReasoningEffort = "high"
     static let defaultGpt54ReasoningEffort = "high"
+    static let defaultGpt55ReasoningEffort = "high"
     static let defaultGpt53CodexFastMode = false
     static let defaultGpt54FastMode = false
+    static let defaultGpt55FastMode = false
     static let defaultGemini31ProThinkingLevel = "high"
     static let defaultGemini3FlashThinkingLevel = "high"
     static let defaultClaudeMaxBudgetMode = false
@@ -70,12 +74,24 @@ enum AppPreferences {
         return defaults.string(forKey: gpt54ReasoningEffortKey) ?? defaultGpt54ReasoningEffort
     }
 
+    static var gpt55ReasoningEffort: String {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: gpt55ReasoningEffortKey) != nil else {
+            return defaultGpt55ReasoningEffort
+        }
+        return defaults.string(forKey: gpt55ReasoningEffortKey) ?? defaultGpt55ReasoningEffort
+    }
+
     static var gpt53CodexFastMode: Bool {
         UserDefaults.standard.bool(forKey: gpt53CodexFastModeKey)
     }
 
     static var gpt54FastMode: Bool {
         UserDefaults.standard.bool(forKey: gpt54FastModeKey)
+    }
+
+    static var gpt55FastMode: Bool {
+        UserDefaults.standard.bool(forKey: gpt55FastModeKey)
     }
 
     static var gemini31ProThinkingLevel: String {
