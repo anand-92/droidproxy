@@ -512,8 +512,10 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.sonnet46ThinkingEffortKey) private var sonnet46ThinkingEffort = AppPreferences.defaultSonnet46ThinkingEffort
     @AppStorage(AppPreferences.gpt53CodexReasoningEffortKey) private var gpt53CodexReasoningEffort = AppPreferences.defaultGpt53CodexReasoningEffort
     @AppStorage(AppPreferences.gpt54ReasoningEffortKey) private var gpt54ReasoningEffort = AppPreferences.defaultGpt54ReasoningEffort
+    @AppStorage(AppPreferences.gpt55ReasoningEffortKey) private var gpt55ReasoningEffort = AppPreferences.defaultGpt55ReasoningEffort
     @AppStorage(AppPreferences.gpt53CodexFastModeKey) private var gpt53CodexFastMode = AppPreferences.defaultGpt53CodexFastMode
     @AppStorage(AppPreferences.gpt54FastModeKey) private var gpt54FastMode = AppPreferences.defaultGpt54FastMode
+    @AppStorage(AppPreferences.gpt55FastModeKey) private var gpt55FastMode = AppPreferences.defaultGpt55FastMode
     @AppStorage(AppPreferences.gemini31ProThinkingLevelKey) private var gemini31ProThinkingLevel = AppPreferences.defaultGemini31ProThinkingLevel
     @AppStorage(AppPreferences.gemini3FlashThinkingLevelKey) private var gemini3FlashThinkingLevel = AppPreferences.defaultGemini3FlashThinkingLevel
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
@@ -933,6 +935,27 @@ struct SettingsView: View {
                                             .help("Injects service_tier=priority for GPT 5.4 Responses API requests (Codex fast mode)")
                                     }
                                     Picker("", selection: $gpt54ReasoningEffort) {
+                                        ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
+                                            Text(option).tag(option)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .tint(codexEffortSelectionColor)
+                                    .labelsHidden()
+                                }
+                                .padding(.vertical, 2)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text("GPT 5.5 reasoning effort")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Toggle("Fast mode", isOn: $gpt55FastMode)
+                                            .toggleStyle(.checkbox)
+                                            .font(.caption)
+                                            .help("Injects service_tier=priority for GPT 5.5 Responses API requests (Codex fast mode)")
+                                    }
+                                    Picker("", selection: $gpt55ReasoningEffort) {
                                         ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
                                             Text(option).tag(option)
                                         }
@@ -1400,6 +1423,16 @@ struct SettingsView: View {
             "provider": "openai"
         ],
         [
+            "model": "gpt-5.5",
+            "id": "custom:droidproxy:gpt-5.5",
+            "baseUrl": "http://localhost:8317/v1",
+            "apiKey": "dummy-not-used",
+            "displayName": "DroidProxy: GPT 5.5",
+            "maxOutputTokens": 128000,
+            "noImageSupport": false,
+            "provider": "openai"
+        ],
+        [
             "model": "gemini-3.1-pro-preview",
             "id": "custom:droidproxy:gemini-3.1-pro",
             "baseUrl": "http://localhost:8317",
@@ -1545,7 +1578,7 @@ struct SettingsView: View {
         ---
         name: challenger-gpt
         description: Devil's advocate code reviewer that challenges decisions, critiques patterns, and suggests better alternatives. Use when you want a tough second opinion on code, architecture, or design choices.
-        model: custom:droidproxy:gpt-5.4
+        model: custom:droidproxy:gpt-5.5
         tools: ["Read", "LS", "Grep", "Glob", "WebSearch", "FetchUrl"]
         ---
 

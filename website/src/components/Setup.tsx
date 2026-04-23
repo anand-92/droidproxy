@@ -156,9 +156,19 @@ export default function Setup() {
     "provider": "openai"
   },
   {
+    "model": "gpt-5.5",
+    "id": "custom:droidproxy:gpt-5.5",
+    "index": 4,
+    "baseUrl": "http://localhost:8317/v1",
+    "apiKey": "***",
+    "displayName": "DroidProxy: GPT 5.5",
+    "maxOutputTokens": 128000,
+    "provider": "openai"
+  },
+  {
     "model": "gemini-3.1-pro-preview",
     "id": "custom:droidproxy:gemini-3.1-pro",
-    "index": 4,
+    "index": 5,
     "baseUrl": "http://localhost:8317/v1",
     "apiKey": "***",
     "displayName": "DroidProxy: Gemini 3.1 Pro",
@@ -168,7 +178,7 @@ export default function Setup() {
   {
     "model": "gemini-3-flash-preview",
     "id": "custom:droidproxy:gemini-3-flash",
-    "index": 5,
+    "index": 6,
     "baseUrl": "http://localhost:8317/v1",
     "apiKey": "***",
     "displayName": "DroidProxy: Gemini 3 Flash",

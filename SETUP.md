@@ -57,9 +57,20 @@ Open `~/.factory/settings.json` and add the following to the `customModels` arra
       "provider": "openai"
     },
     {
+      "model": "gpt-5.5",
+      "id": "custom:droidproxy:gpt-5.5",
+      "index": 4,
+      "baseUrl": "http://localhost:8317/v1",
+      "apiKey": "dummy-not-used",
+      "displayName": "DroidProxy: GPT 5.5",
+      "maxOutputTokens": 128000,
+      "noImageSupport": false,
+      "provider": "openai"
+    },
+    {
       "model": "gemini-3.1-pro-preview",
       "id": "custom:droidproxy:gemini-3.1-pro",
-      "index": 4,
+      "index": 5,
       "baseUrl": "http://localhost:8317",
       "apiKey": "dummy-not-used",
       "displayName": "DroidProxy: Gemini 3.1 Pro",
@@ -70,7 +81,7 @@ Open `~/.factory/settings.json` and add the following to the `customModels` arra
     {
       "model": "gemini-3-flash-preview",
       "id": "custom:droidproxy:gemini-3-flash",
-      "index": 5,
+      "index": 6,
       "baseUrl": "http://localhost:8317",
       "apiKey": "dummy-not-used",
       "displayName": "DroidProxy: Gemini 3 Flash",
@@ -91,6 +102,7 @@ Use the standard Claude and Codex model aliases in the `model` field. Claude ent
    - Sonnet 4.6: `low`, `medium`, `high`, or `max`
    - GPT 5.3 Codex: `low`, `medium`, `high`, or `xhigh`
    - GPT 5.4: `low`, `medium`, `high`, or `xhigh`
+   - GPT 5.5: `low`, `medium`, `high`, or `xhigh`
    - Gemini 3.1 Pro: `low`, `medium`, or `high`
    - Gemini 3 Flash: `minimal`, `low`, `medium`, or `high`
 

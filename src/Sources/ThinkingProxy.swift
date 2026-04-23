@@ -16,8 +16,8 @@ import Network
    plus `output_config.effort` from `AppPreferences.sonnet46ThinkingEffort`
  - Requests whose `model` is exactly `gpt-5.3-codex` receive `reasoning: {"effort":"..."}`
    from `AppPreferences.gpt53CodexReasoningEffort`
- - Requests whose `model` is exactly `gpt-5.4` receive `reasoning: {"effort":"..."}`
-   from `AppPreferences.gpt54ReasoningEffort`
+ - Requests whose `model` is exactly `gpt-5.4` or `gpt-5.5` receive `reasoning: {"effort":"..."}`
+   from `AppPreferences.gpt54ReasoningEffort` or `AppPreferences.gpt55ReasoningEffort`
  - Other models are forwarded unchanged
 
  The proxy edits the raw JSON string instead of re-serializing it so cache-sensitive key
@@ -385,6 +385,8 @@ class ThinkingProxy {
             return AppPreferences.gpt53CodexReasoningEffort
         case "gpt-5.4":
             return AppPreferences.gpt54ReasoningEffort
+        case "gpt-5.5":
+            return AppPreferences.gpt55ReasoningEffort
         default:
             return nil
         }
@@ -782,6 +784,8 @@ class ThinkingProxy {
         switch model {
         case "gpt-5.4":
             guard AppPreferences.gpt54FastMode else { return nil }
+        case "gpt-5.5":
+            guard AppPreferences.gpt55FastMode else { return nil }
         case "gpt-5.3-codex":
             guard AppPreferences.gpt53CodexFastMode else { return nil }
         default:
