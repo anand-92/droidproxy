@@ -66,12 +66,22 @@ jobs:
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
           echo "Releasing v${VERSION} (build ${BUILD_NUMBER})"
 
-      - name: Resolve CLIProxyAPIPlus version
+      - name: Verify bundled CLIProxyAPIPlus
         id: cliproxy
         run: |
           set -euo pipefail
 
-          OUTPUT=$(src/Sources/Resources/cli-proxy-api-plus 2>&1 || true)
+          # Upstream router-for-me/CLIProxyAPIPlus was removed, so we ship the
+          # binary that's already committed at src/Sources/Resources/cli-proxy-api-plus
+          # instead of re-downloading it during the release build.
+          BIN="src/Sources/Resources/cli-proxy-api-plus"
+          if [ ! -f "$BIN" ]; then
+            echo "::error::Bundled CLIProxyAPIPlus binary missing at $BIN"
+            exit 1
+          fi
+          chmod +x "$BIN"
+
+          OUTPUT=$("$BIN" 2>&1 || true)
           VERSION=$(printf '%s\n' "$OUTPUT" | sed -nE 's/.*CLIProxyAPI Version: ([0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?)-plus,.*/\1/p' | head -n 1)
 
           if [ -z "$VERSION" ]; then
@@ -82,34 +92,7 @@ jobs:
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Bundled CLIProxyAPIPlus: $VERSION"
-
-      - name: Download CLIProxyAPIPlus for arm64
-        run: |
-          set -euo pipefail
-
-          VERSION="${{ steps.cliproxy.outputs.version }}"
-          TAG="v${VERSION}"
-          FILENAME="CLIProxyAPIPlus_${VERSION}_darwin_arm64.tar.gz"
-          URL="https://github.com/router-for-me/CLIProxyAPIPlus/releases/download/${TAG}/${FILENAME}"
-
-          echo "Downloading: $URL"
-          curl -L -f --retry 3 --retry-delay 5 -o cliproxy.tar.gz "$URL"
-
-          TEMP_DIR=$(mktemp -d)
-          trap 'rm -rf "$TEMP_DIR" cliproxy.tar.gz' EXIT
-
-          tar -xzf cliproxy.tar.gz -C "$TEMP_DIR"
-
-          BINARY=$(find "$TEMP_DIR" -type f \( -name "CLIProxyAPIPlus" -o -name "cli-proxy-api-plus" \) | head -n 1)
-          if [ -z "$BINARY" ]; then
-            echo "::error::Could not find binary in tarball"
-            find "$TEMP_DIR" -maxdepth 2 -type f -print
-            exit 1
-          fi
-
-          cp "$BINARY" src/Sources/Resources/cli-proxy-api-plus
-          chmod +x src/Sources/Resources/cli-proxy-api-plus
-          file src/Sources/Resources/cli-proxy-api-plus
+          file "$BIN"
 
       - name: Build app bundle
         env:
