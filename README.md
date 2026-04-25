@@ -25,9 +25,6 @@ All releases are code-signed and notarized by Apple. Existing installs auto-upda
   <img src="settings-screenshot.png" alt="DroidProxy Settings" width="420">
 </p>
 
-- **Sparkle auto-updates** -- Checks daily, installs in the background
-- **Factory integration** -- Use Claude models against `http://localhost:8317`, Codex/OpenAI models against `http://localhost:8317/v1`, and Gemini models against `http://localhost:8317/v1`
-
 ## Setup
 
 See [SETUP.md](SETUP.md) for authentication and manaul Factory configuration instructions. **(OR use the 1-click options in the UI!)**
