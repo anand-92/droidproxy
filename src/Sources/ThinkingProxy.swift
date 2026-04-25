@@ -329,8 +329,7 @@ class ThinkingProxy {
 
         if let level = geminiThinkingLevel(for: model) {
             var result = jsonString
-            result = injectJSONField(in: result, afterKey: "model", fieldName: "generationConfig",
-                                     fieldValue: "{\"thinkingConfig\":{\"thinking_level\":\"\(level)\"}}")
+            result = injectGeminiThinkingLevel(in: result, level: level, generationConfigExists: json["generationConfig"] != nil)
             NSLog("[ThinkingProxy] Injected Gemini thinking for '\(model)' with level '\(level)'")
             ThinkingProxy.fileLog("INJECTED Gemini thinking: level=\(level) for model \(model)")
             return result
@@ -365,8 +364,7 @@ class ThinkingProxy {
 
         case .gemini:
             var result = rewrittenJSON
-            result = injectJSONField(in: result, afterKey: "model", fieldName: "generationConfig",
-                                     fieldValue: "{\"thinkingConfig\":{\"thinking_level\":\"\(level)\"}}")
+            result = injectGeminiThinkingLevel(in: result, level: level, generationConfigExists: json["generationConfig"] != nil)
             NSLog("[ThinkingProxy] Injected advanced Gemini thinking for '\(requestedModel)' as '\(baseModel)' with level '\(level)'")
             ThinkingProxy.fileLog("INJECTED advanced Gemini thinking: level=\(level) for model \(requestedModel) -> \(baseModel)")
             return result
@@ -437,6 +435,64 @@ class ThinkingProxy {
             return replaceJSONFieldValue(in: json, fieldName: fieldName, newValue: fieldValue)
         }
         return injectJSONField(in: json, afterKey: afterKey, fieldName: fieldName, fieldValue: fieldValue)
+    }
+
+    private func injectGeminiThinkingLevel(in json: String, level: String, generationConfigExists: Bool) -> String {
+        let generationConfigValue = "{\"thinkingConfig\":{\"thinking_level\":\"\(level)\"}}"
+        guard generationConfigExists else {
+            return injectJSONField(in: json, afterKey: "model", fieldName: "generationConfig", fieldValue: generationConfigValue)
+        }
+
+        guard let generationConfigLocation = findTopLevelFieldLocation(in: json, key: "generationConfig") else {
+            NSLog("[ThinkingProxy] Warning: Could not find generationConfig for Gemini thinking merge")
+            return json
+        }
+
+        let generationConfig = String(json[generationConfigLocation.valueRange])
+        guard let updatedGenerationConfig = upsertGeminiThinkingLevel(inGenerationConfig: generationConfig, level: level) else {
+            return replaceJSONFieldValue(in: json, fieldName: "generationConfig", newValue: generationConfigValue)
+        }
+
+        var result = json
+        result.replaceSubrange(generationConfigLocation.valueRange, with: updatedGenerationConfig)
+        return result
+    }
+
+    private func upsertGeminiThinkingLevel(inGenerationConfig generationConfig: String, level: String) -> String? {
+        let thinkingConfigValue = "{\"thinking_level\":\"\(level)\"}"
+        guard let thinkingConfigLocation = findTopLevelFieldLocation(in: generationConfig, key: "thinkingConfig") else {
+            return upsertJSONField(inObject: generationConfig, fieldName: "thinkingConfig", fieldValue: thinkingConfigValue)
+        }
+
+        let thinkingConfig = String(generationConfig[thinkingConfigLocation.valueRange])
+        let updatedThinkingConfig = upsertJSONField(inObject: thinkingConfig,
+                                                    fieldName: "thinking_level",
+                                                    fieldValue: "\"\(level)\"") ?? thinkingConfigValue
+
+        var result = generationConfig
+        result.replaceSubrange(thinkingConfigLocation.valueRange, with: updatedThinkingConfig)
+        return result
+    }
+
+    private func upsertJSONField(inObject object: String, fieldName: String, fieldValue: String) -> String? {
+        guard let objectStart = firstNonWhitespaceIndex(in: object, from: object.startIndex),
+              object[objectStart] == "{",
+              let objectEnd = lastNonWhitespaceIndex(in: object),
+              object[objectEnd] == "}" else {
+            return nil
+        }
+
+        if let location = findTopLevelFieldLocation(in: object, key: fieldName) {
+            var result = object
+            result.replaceSubrange(location.valueRange, with: fieldValue)
+            return result
+        }
+
+        var result = object
+        let contentStart = object.index(after: objectStart)
+        let isEmptyObject = firstNonWhitespaceIndex(in: object, from: contentStart) == objectEnd
+        result.insert(contentsOf: "\(isEmptyObject ? "" : ",")\"\(fieldName)\":\(fieldValue)", at: objectEnd)
+        return result
     }
 
     /// Replaces the value of an existing top-level JSON field.
@@ -652,6 +708,17 @@ class ThinkingProxy {
             index = json.index(after: index)
         }
         return index < json.endIndex ? index : nil
+    }
+
+    private func lastNonWhitespaceIndex(in json: String) -> String.Index? {
+        var index = json.endIndex
+        while index > json.startIndex {
+            index = json.index(before: index)
+            if !json[index].isWhitespace {
+                return index
+            }
+        }
+        return nil
     }
 
     private func parseJSONStringToken(in json: String, startingAt startQuote: String.Index) -> (String, String.Index)? {
