@@ -926,6 +926,21 @@ struct SettingsView: View {
                             if codexModelsExpanded {
                                 if factoryAdvancedModels {
                                     advancedFactoryModelsNotice("Codex")
+                                    codexFastModeToggleRow(
+                                        "GPT 5.3 Codex",
+                                        isOn: $gpt53CodexFastMode,
+                                        helpText: "Injects service_tier=priority for GPT 5.3 Codex Responses API requests (Codex fast mode)"
+                                    )
+                                    codexFastModeToggleRow(
+                                        "GPT 5.4",
+                                        isOn: $gpt54FastMode,
+                                        helpText: "Injects service_tier=priority for GPT 5.4 Responses API requests (Codex fast mode)"
+                                    )
+                                    codexFastModeToggleRow(
+                                        "GPT 5.5",
+                                        isOn: $gpt55FastMode,
+                                        helpText: "Injects service_tier=priority for GPT 5.5 Responses API requests (Codex fast mode)"
+                                    )
                                 } else {
                                     VStack(alignment: .leading, spacing: 6) {
                                         HStack {
@@ -1188,6 +1203,21 @@ struct SettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func codexFastModeToggleRow(_ title: String, isOn: Binding<Bool>, helpText: String) -> some View {
+        HStack {
+            Text("\(title) fast mode")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+            Toggle("Fast mode", isOn: isOn)
+                .toggleStyle(.checkbox)
+                .font(.caption)
+                .help(helpText)
+        }
+        .padding(.vertical, 2)
     }
 
     @ViewBuilder
