@@ -91,7 +91,7 @@ enum DroidProxyModelCatalog {
             providerKey: "claude",
             baseURL: "http://localhost:8317",
             kind: .claudeAdaptive,
-            levelLabel: "Thinking",
+            levelLabel: "Effort",
             levels: claudeAdvancedLevels
         ),
         DroidProxyModelDefinition(
@@ -103,7 +103,7 @@ enum DroidProxyModelCatalog {
             providerKey: "claude",
             baseURL: "http://localhost:8317",
             kind: .claudeAdaptive,
-            levelLabel: "Thinking",
+            levelLabel: "Effort",
             levels: claudeClassicLevels
         ),
         DroidProxyModelDefinition(
@@ -115,7 +115,7 @@ enum DroidProxyModelCatalog {
             providerKey: "claude",
             baseURL: "http://localhost:8317",
             kind: .claudeClassic,
-            levelLabel: "Thinking",
+            levelLabel: "Effort",
             levels: claudeClassicLevels
         ),
         DroidProxyModelDefinition(
@@ -127,7 +127,7 @@ enum DroidProxyModelCatalog {
             providerKey: "claude",
             baseURL: "http://localhost:8317",
             kind: .claudeAdaptive,
-            levelLabel: "Thinking",
+            levelLabel: "Effort",
             levels: claudeClassicLevels
         ),
         DroidProxyModelDefinition(
