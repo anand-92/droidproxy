@@ -13,6 +13,7 @@ enum AppPreferences {
     static let gpt55FastModeKey = "gpt55FastMode"
     static let gemini31ProThinkingLevelKey = "gemini31ProThinkingLevel"
     static let gemini3FlashThinkingLevelKey = "gemini3FlashThinkingLevel"
+    static let geminiV1PathFixKey = "geminiV1PathFix"
     static let claudeMaxBudgetModeKey = "claudeMaxBudgetMode"
     static let allowRemoteKey = "allowRemote"
     static let secretKeyKey = "secretKey"
@@ -30,6 +31,7 @@ enum AppPreferences {
     static let defaultGpt55FastMode = false
     static let defaultGemini31ProThinkingLevel = "high"
     static let defaultGemini3FlashThinkingLevel = "high"
+    static let defaultGeminiV1PathFix = true
     static let defaultClaudeMaxBudgetMode = false
     static let defaultAllowRemote = false
     static let defaultSecretKey = ""
@@ -108,6 +110,14 @@ enum AppPreferences {
             return defaultGemini3FlashThinkingLevel
         }
         return defaults.string(forKey: gemini3FlashThinkingLevelKey) ?? defaultGemini3FlashThinkingLevel
+    }
+
+    static var geminiV1PathFix: Bool {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: geminiV1PathFixKey) != nil else {
+            return defaultGeminiV1PathFix
+        }
+        return defaults.bool(forKey: geminiV1PathFixKey)
     }
 
     static var claudeMaxBudgetMode: Bool {

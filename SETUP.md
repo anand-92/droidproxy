@@ -76,7 +76,7 @@ Open `~/.factory/settings.json` and add the following to the `customModels` arra
       "displayName": "DroidProxy: Gemini 3.1 Pro",
       "maxOutputTokens": 65536,
       "noImageSupport": false,
-      "provider": "google"
+      "provider": "anthropic"
     },
     {
       "model": "gemini-3-flash-preview",
@@ -87,12 +87,12 @@ Open `~/.factory/settings.json` and add the following to the `customModels` arra
       "displayName": "DroidProxy: Gemini 3 Flash",
       "maxOutputTokens": 65536,
       "noImageSupport": false,
-      "provider": "google"
+      "provider": "anthropic"
     }
 ]
 ```
 
-Use the standard Claude and Codex model aliases in the `model` field. Claude entries use `provider: "anthropic"` with `http://localhost:8317`; GPT/Codex and Gemini entries use `provider: "openai"` with `http://localhost:8317/v1`. DroidProxy applies Claude adaptive thinking, Codex reasoning effort, and Gemini thinking levels based on the selected model and the effort/level setting in DroidProxy itself.
+Use the standard Claude and Codex model aliases in the `model` field. Claude and Gemini entries use `provider: "anthropic"` with `http://localhost:8317`; GPT/Codex entries use `provider: "openai"` with `http://localhost:8317/v1`. DroidProxy applies Claude adaptive thinking, Codex reasoning effort, and Gemini thinking levels based on the selected model and the effort/level setting in DroidProxy itself.
 
 ## 3. Configure Thinking Effort
 

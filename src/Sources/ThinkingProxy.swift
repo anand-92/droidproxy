@@ -261,6 +261,24 @@ class ThinkingProxy {
             rewrittenPath = "/api" + path
             NSLog("[ThinkingProxy] Rewriting Amp provider path: \(path) -> \(rewrittenPath)")
         }
+
+        // Strip the doubled /v1 prefix that factory-cli 0.105.1 emits for custom
+        // Gemini models under provider=anthropic (first-turn requests hit
+        // /v1/v1/messages and 404, triggering tool-call retry loops).
+        // Gated by AppPreferences.geminiV1PathFix so users can disable it.
+        if AppPreferences.geminiV1PathFix {
+            if rewrittenPath.hasPrefix("/v1/v1/") {
+                let fixed = String(rewrittenPath.dropFirst(3)) // /v1/v1/messages -> /v1/messages
+                NSLog("[ThinkingProxy] Stripping doubled /v1 prefix: \(rewrittenPath) -> \(fixed)")
+                ThinkingProxy.fileLog("REWRITE PATH: \(rewrittenPath) -> \(fixed) (factory-cli /v1/v1 fix)")
+                rewrittenPath = fixed
+            } else if rewrittenPath.hasPrefix("/api/v1/v1/") {
+                let fixed = "/api" + String(rewrittenPath.dropFirst(7)) // /api/v1/v1/... -> /api/v1/...
+                NSLog("[ThinkingProxy] Stripping doubled /v1 prefix: \(rewrittenPath) -> \(fixed)")
+                ThinkingProxy.fileLog("REWRITE PATH: \(rewrittenPath) -> \(fixed) (factory-cli /v1/v1 fix)")
+                rewrittenPath = fixed
+            }
+        }
         
         // Check if this is an Amp management request (anything not targeting provider or /v1)
         // Note: /provider/ paths are already rewritten to /api/provider/ above
