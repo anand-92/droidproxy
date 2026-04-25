@@ -314,6 +314,10 @@ class ThinkingProxy {
             return nil
         }
 
+        if let variant = DroidProxyModelCatalog.advancedVariant(for: model) {
+            return processAdvancedModelVariant(jsonString: jsonString, json: json, requestedModel: model, variant: variant)
+        }
+
         if let effort = codexReasoningEffort(for: model) {
             var result = jsonString
             result = injectJSONField(in: result, afterKey: "model", fieldName: "reasoning",
@@ -341,12 +345,47 @@ class ThinkingProxy {
             return nil
         }
 
+        return processClaudeAdaptiveThinking(jsonString: jsonString, json: json, model: model, effort: effort, allowMaxBudgetMode: true)
+    }
+
+    private func processAdvancedModelVariant(jsonString: String, json: [String: Any], requestedModel: String, variant: DroidProxyModelVariant) -> String? {
+        let baseModel = variant.definition.baseModel
+        let level = variant.level.value
+        let rewrittenJSON = rewriteModelValue(in: jsonString, from: requestedModel, to: baseModel)
+
+        switch variant.definition.kind {
+        case .codex:
+            var result = rewrittenJSON
+            result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "reasoning",
+                                              fieldValue: "{\"effort\":\"\(level)\"}",
+                                              existsInJSON: json["reasoning"] != nil)
+            NSLog("[ThinkingProxy] Injected advanced Codex reasoning for '\(requestedModel)' as '\(baseModel)' with effort '\(level)'")
+            ThinkingProxy.fileLog("INJECTED advanced Codex reasoning: effort=\(level) for model \(requestedModel) -> \(baseModel)")
+            return result
+
+        case .gemini:
+            var result = rewrittenJSON
+            result = injectJSONField(in: result, afterKey: "model", fieldName: "generationConfig",
+                                     fieldValue: "{\"thinkingConfig\":{\"thinking_level\":\"\(level)\"}}")
+            NSLog("[ThinkingProxy] Injected advanced Gemini thinking for '\(requestedModel)' as '\(baseModel)' with level '\(level)'")
+            ThinkingProxy.fileLog("INJECTED advanced Gemini thinking: level=\(level) for model \(requestedModel) -> \(baseModel)")
+            return result
+
+        case .claudeClassic:
+            return processOpus45ClassicThinking(jsonString: rewrittenJSON, json: json, model: baseModel, effort: level)
+
+        case .claudeAdaptive:
+            return processClaudeAdaptiveThinking(jsonString: rewrittenJSON, json: json, model: baseModel, effort: level, allowMaxBudgetMode: false)
+        }
+    }
+
+    private func processClaudeAdaptiveThinking(jsonString: String, json: [String: Any], model: String, effort: String, allowMaxBudgetMode: Bool) -> String {
         var result = jsonString
 
         result = replaceOrInjectJSONField(in: result, afterKey: "model", fieldName: "stream",
                                           fieldValue: "true", existsInJSON: json["stream"] != nil)
 
-        if AppPreferences.claudeMaxBudgetMode &&
+        if allowMaxBudgetMode && AppPreferences.claudeMaxBudgetMode &&
             (model.contains("sonnet-4-6") || model.contains("opus-4-6")) {
             // Sonnet 4.6 / Opus 4.6 classic extended-thinking override. budget_tokens must be strictly less
             // than max_tokens (min 1024). Request body changes stay inside the adaptive-thinking
@@ -446,8 +485,7 @@ class ThinkingProxy {
     /// Opus 4.5 does not accept adaptive thinking. It requires the legacy
     /// `thinking: {type: "enabled", budget_tokens: N}` shape, where
     /// `budget_tokens < max_tokens` (min 1024).
-    private func processOpus45ClassicThinking(jsonString: String, json: [String: Any], model: String) -> String? {
-        let effort = AppPreferences.opus45ThinkingEffort
+    private func processOpus45ClassicThinking(jsonString: String, json: [String: Any], model: String, effort: String = AppPreferences.opus45ThinkingEffort) -> String? {
         let (budgetTokens, maxTokens) = opus45ClassicBudget(for: effort)
 
         var result = jsonString

@@ -17,7 +17,9 @@ enum AppPreferences {
     static let allowRemoteKey = "allowRemote"
     static let secretKeyKey = "secretKey"
     static let oledThemeKey = "oledTheme"
+    static let factoryAdvancedModelsKey = "factoryAdvancedModels"
     static let defaultOledTheme = false
+    static let defaultFactoryAdvancedModels = false
     static let defaultOpus47ThinkingEffort = "xhigh"
     static let defaultOpus46ThinkingEffort = "max"
     static let defaultOpus45ThinkingEffort = "high"
