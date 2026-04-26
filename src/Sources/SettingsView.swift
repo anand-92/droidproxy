@@ -505,6 +505,8 @@ struct ServiceRow<ExtraContent: View>: View {
 struct SettingsView: View {
     @ObservedObject var serverManager: ServerManager
     @StateObject private var authManager = AuthManager()
+    @StateObject private var oauthUsageTracker = OAuthUsageTracker()
+    @StateObject private var usageTracker = UsageTracker.shared
     @State private var launchAtLogin = false
     @AppStorage(AppPreferences.opus47ThinkingEffortKey) private var opus47ThinkingEffort = AppPreferences.defaultOpus47ThinkingEffort
     @AppStorage(AppPreferences.opus46ThinkingEffortKey) private var opus46ThinkingEffort = AppPreferences.defaultOpus46ThinkingEffort
@@ -517,6 +519,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gpt54FastModeKey) private var gpt54FastMode = AppPreferences.defaultGpt54FastMode
     @AppStorage(AppPreferences.gpt55FastModeKey) private var gpt55FastMode = AppPreferences.defaultGpt55FastMode
     @AppStorage(AppPreferences.factoryNativeReasoningKey) private var factoryNativeReasoning = AppPreferences.defaultFactoryNativeReasoning
+    @AppStorage(AppPreferences.oauthUsageTrackingEnabledKey) private var oauthUsageTrackingEnabled = AppPreferences.defaultOAuthUsageTrackingEnabled
     @AppStorage(AppPreferences.gemini31ProThinkingLevelKey) private var gemini31ProThinkingLevel = AppPreferences.defaultGemini31ProThinkingLevel
     @AppStorage(AppPreferences.gemini3FlashThinkingLevelKey) private var gemini3FlashThinkingLevel = AppPreferences.defaultGemini3FlashThinkingLevel
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
@@ -547,6 +550,157 @@ struct SettingsView: View {
     private let oledWindowBackground = Color.black
     private let oledSectionBackground = Color(red: 0x12/255, green: 0x12/255, blue: 0x12/255)
     private let oledFooterText = Color(red: 0xA8/255, green: 0xA8/255, blue: 0xA8/255)
+
+    private var usageDashboard: some View {
+        let snapshot = usageTracker.snapshot
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Request Usage", systemImage: "chart.bar.xaxis")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("Reset") {
+                    usageTracker.reset()
+                }
+                .droidGlassPlain()
+                .controlSize(.small)
+            }
+
+            HStack(spacing: 8) {
+                usageMetric("Requests", value: "\(snapshot.requestCount)")
+                usageMetric("Input", value: tokenString(snapshot.inputTokens))
+                usageMetric("Output", value: tokenString(snapshot.outputTokens))
+                usageMetric("Reasoning", value: tokenString(snapshot.reasoningTokens + snapshot.thinkingTokens))
+            }
+
+            HStack(spacing: 8) {
+                usageMetric("Total", value: tokenString(snapshot.totalTokens))
+                usageMetric("Avg time", value: durationString(snapshot.averageElapsedMs))
+                usageMetric("Last", value: snapshot.lastModel)
+            }
+
+            Text("Last request: \(snapshot.lastReasoning) · \(snapshot.lastServiceTier) · \(snapshot.lastStatus) · \(durationString(snapshot.lastElapsedMs))")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+        }
+    }
+
+    private var oauthUsageDashboard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Connected account limits", systemImage: "gauge")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button(oauthUsageTracker.isRefreshing ? "Refreshing" : "Refresh") {
+                    refreshOAuthUsage()
+                }
+                .droidGlassPlain()
+                .controlSize(.small)
+                .disabled(oauthUsageTracker.isRefreshing)
+            }
+
+            if oauthUsageTracker.accounts.isEmpty {
+                Text("Connect Codex or Gemini OAuth accounts to show quota windows.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(oauthUsageTracker.accounts) { account in
+                    oauthUsageAccountRow(account)
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private func oauthUsageAccountRow(_ account: OAuthAccountUsage) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(account.provider.displayName)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                Text(account.email)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                Spacer()
+                if account.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.55)
+                }
+            }
+
+            if let error = account.error {
+                Text(error)
+                    .font(.caption2)
+                    .foregroundColor(.orange)
+            } else {
+                ForEach(account.windows) { window in
+                    usageWindowRow(window)
+                }
+            }
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.05)))
+    }
+
+    private func usageWindowRow(_ window: OAuthUsageWindow) -> some View {
+        let remaining = window.remainingPercent
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(window.title)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if let remaining {
+                    Text("\(Int(remaining.rounded()))% left")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            ProgressView(value: remaining ?? 0, total: 100)
+                .tint((remaining ?? 100) < 20 ? .orange : .green)
+            if let resetText = window.resetText {
+                Text(resetText)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private func usageMetric(_ title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.05)))
+    }
+
+    private func tokenString(_ value: Int) -> String {
+        if value >= 1_000_000 {
+            return String(format: "%.1fM", Double(value) / 1_000_000)
+        }
+        if value >= 1_000 {
+            return String(format: "%.1fK", Double(value) / 1_000)
+        }
+        return "\(value)"
+    }
+
+    private func durationString(_ ms: Int) -> String {
+        guard ms > 0 else { return "0ms" }
+        if ms >= 1000 {
+            return String(format: "%.1fs", Double(ms) / 1000)
+        }
+        return "\(ms)ms"
+    }
 
     // Translucent row background that reveals the colourful window backdrop.
     // We deliberately avoid .ultraThinMaterial here — on dark appearance it
@@ -660,6 +814,11 @@ struct SettingsView: View {
                 .listRowBackground(glassRowBackground)
 
                 Section {
+                    usageDashboard
+                }
+                .listRowBackground(glassRowBackground)
+
+                Section {
                     Toggle("Launch at login", isOn: $launchAtLogin)
                         .onChange(of: launchAtLogin) { newValue in
                             toggleLaunchAtLogin(newValue)
@@ -697,10 +856,23 @@ struct SettingsView: View {
 
                     Toggle("Native Factory reasoning", isOn: $factoryNativeReasoning)
                         .toggleStyle(.switch)
-                        .help("Uses Factory/Droid's native reasoning selector for custom GPT models. Current Factory/Droid builds expose low, medium, and high for custom models; extra high needs upstream selector support.")
+                        .help("Uses Factory/Droid's native reasoning selector for custom GPT models. Re-apply Factory custom models after changing this because it writes enableThinking, reasoningEffort, supportedReasoningEfforts, and fast-mode metadata. Current Factory/Droid builds expose low, medium, and high for custom models; extra high needs upstream selector support.")
                         .onChange(of: factoryNativeReasoning) { _ in
-                            factoryModelsInstalled = checkFactoryModelsInstalled()
+                            factoryModelsInstalled = false
                         }
+
+                    Toggle("OAuth usage tracker", isOn: $oauthUsageTrackingEnabled)
+                        .toggleStyle(.switch)
+                        .help("Uses the existing DroidProxy OAuth accounts to show Codex and Gemini quota windows. No separate login is needed.")
+                        .onChange(of: oauthUsageTrackingEnabled) { enabled in
+                            if enabled {
+                                refreshOAuthUsage()
+                            }
+                        }
+
+                    if oauthUsageTrackingEnabled {
+                        oauthUsageDashboard
+                    }
 
                     HStack {
                         Text("Challenger Plugin")
@@ -1148,6 +1320,9 @@ struct SettingsView: View {
             startMonitoringAuthDirectory()
             factoryModelsInstalled = checkFactoryModelsInstalled()
             challengerPluginInstalled = checkChallengerPluginInstalled()
+            if oauthUsageTrackingEnabled {
+                refreshOAuthUsage()
+            }
         }
         .onDisappear {
             stopMonitoringAuthDirectory()
@@ -1280,6 +1455,11 @@ struct SettingsView: View {
             authResultMessage = "Failed to update \(account.displayName). Please try again."
             showingAuthResult = true
         }
+    }
+
+    private func refreshOAuthUsage() {
+        let accounts = authManager.accounts(for: .codex) + authManager.accounts(for: .gemini)
+        oauthUsageTracker.refresh(accounts: accounts)
     }
     
     private func openAuthFolder() {
@@ -1512,8 +1692,7 @@ struct SettingsView: View {
     }
 
     private static func allFactoryModelIdsForRemoval() -> Set<String> {
-        Set(factoryModels(nativeReasoning: true).compactMap { $0["id"] as? String })
-            .union(droidProxyModels().compactMap { $0["id"] as? String })
+        Set(droidProxyModels().compactMap { $0["id"] as? String })
     }
 
     private func factorySettingsURL() -> URL {
@@ -1532,6 +1711,7 @@ struct SettingsView: View {
             }
         }
 
+        // Keep prefix fallback for legacy or externally supplied model dictionaries.
         guard let name = model["model"] as? String else { return nil }
         if name.hasPrefix("claude") { return "claude" }
         if name.hasPrefix("gpt") { return "codex" }

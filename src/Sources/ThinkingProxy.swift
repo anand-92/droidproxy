@@ -106,7 +106,20 @@ class ThinkingProxy {
             }
 
             let status = Self.httpStatus(from: responseText) ?? "unknown"
-            let usage = Self.usageSummary(from: responseText)
+            let usage = Self.usage(from: responseText)
+            UsageTracker.shared.record(UsageSample(
+                model: model,
+                reasoning: reasoning,
+                reasoningSource: reasoningSource,
+                serviceTier: serviceTier,
+                status: status,
+                elapsedMs: elapsedMs,
+                inputTokens: usage.inputTokens,
+                outputTokens: usage.outputTokens,
+                reasoningTokens: usage.reasoningTokens,
+                thinkingTokens: usage.thinkingTokens,
+                totalTokens: usage.totalTokens
+            ))
             ThinkingProxy.fileLog("REQUEST DIAGNOSTICS END id=\(requestId) model=\(model) reasoning=\(reasoning) source=\(reasoningSource) service_tier=\(serviceTier) status=\(status) elapsed_ms=\(elapsedMs)\(usage)")
         }
 
@@ -120,68 +133,120 @@ class ThinkingProxy {
             return String(parts[1])
         }
 
-        private static func usageSummary(from responseText: String) -> String {
+        private struct ParsedUsage: CustomStringConvertible {
+            var inputTokens = 0
+            var outputTokens = 0
+            var reasoningTokens = 0
+            var thinkingTokens = 0
+            var totalTokens = 0
+
+            var description: String {
+                var pairs: [String] = []
+                if inputTokens > 0 { pairs.append("input_tokens=\(inputTokens)") }
+                if outputTokens > 0 { pairs.append("output_tokens=\(outputTokens)") }
+                if reasoningTokens > 0 { pairs.append("reasoning_tokens=\(reasoningTokens)") }
+                if thinkingTokens > 0 { pairs.append("thinking_tokens=\(thinkingTokens)") }
+                if totalTokens > 0 { pairs.append("total_tokens=\(totalTokens)") }
+                guard !pairs.isEmpty else { return "" }
+                return " " + pairs.joined(separator: " ")
+            }
+        }
+
+        private static func usage(from responseText: String) -> ParsedUsage {
             let responseBody = httpBody(from: responseText)
-            let pairs = parsedUsagePairs(from: responseBody) ?? regexUsagePairs(from: responseText)
-            guard !pairs.isEmpty else { return "" }
-            return " " + pairs.joined(separator: " ")
+            return parsedUsage(from: responseBody) ?? regexUsage(from: responseText)
         }
 
         private static func httpBody(from responseText: String) -> String {
             if let range = responseText.range(of: "\r\n\r\n") {
-                return String(responseText[range.upperBound...])
+                let headers = String(responseText[..<range.lowerBound])
+                let body = String(responseText[range.upperBound...])
+                return headers.localizedCaseInsensitiveContains("transfer-encoding: chunked") ? dechunk(body) : body
             }
             if let range = responseText.range(of: "\n\n") {
-                return String(responseText[range.upperBound...])
+                let headers = String(responseText[..<range.lowerBound])
+                let body = String(responseText[range.upperBound...])
+                return headers.localizedCaseInsensitiveContains("transfer-encoding: chunked") ? dechunk(body) : body
             }
             return responseText
         }
 
-        private static func parsedUsagePairs(from responseBody: String) -> [String]? {
+        private static func dechunk(_ body: String) -> String {
+            var output = ""
+            var remaining = body[body.startIndex...]
+
+            while !remaining.isEmpty {
+                guard let lineEnd = remaining.range(of: "\r\n") ?? remaining.range(of: "\n") else {
+                    return body
+                }
+
+                let sizeLine = remaining[..<lineEnd.lowerBound]
+                    .split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false)
+                    .first
+                    .map(String.init) ?? ""
+                guard let size = Int(sizeLine.trimmingCharacters(in: .whitespacesAndNewlines), radix: 16) else {
+                    return body
+                }
+                guard size > 0 else { break }
+
+                let chunkStart = lineEnd.upperBound
+                guard let chunkEnd = remaining.index(chunkStart, offsetBy: size, limitedBy: remaining.endIndex) else {
+                    return body
+                }
+
+                output += String(remaining[chunkStart..<chunkEnd])
+                let nextStart = remaining.index(chunkEnd, offsetBy: 2, limitedBy: remaining.endIndex) ?? chunkEnd
+                remaining = remaining[nextStart...]
+            }
+
+            return output
+        }
+
+        private static func parsedUsage(from responseBody: String) -> ParsedUsage? {
             guard let data = responseBody.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let usage = json["usage"] as? [String: Any] else {
                 return nil
             }
 
-            var pairs: [String] = []
-            for key in ["input_tokens", "output_tokens", "prompt_tokens", "completion_tokens", "total_tokens"] {
-                if let value = usage[key] as? Int {
-                    pairs.append("\(key)=\(value)")
-                }
-            }
+            var parsed = ParsedUsage()
+            parsed.inputTokens = intValue(usage["input_tokens"]) ?? intValue(usage["prompt_tokens"]) ?? 0
+            parsed.outputTokens = intValue(usage["output_tokens"]) ?? intValue(usage["completion_tokens"]) ?? 0
+            parsed.totalTokens = intValue(usage["total_tokens"]) ?? (parsed.inputTokens + parsed.outputTokens)
 
             if let outputDetails = usage["output_tokens_details"] as? [String: Any],
-               let reasoningTokens = outputDetails["reasoning_tokens"] as? Int {
-                pairs.append("reasoning_tokens=\(reasoningTokens)")
-            } else if let reasoningTokens = usage["reasoning_tokens"] as? Int {
-                pairs.append("reasoning_tokens=\(reasoningTokens)")
+               let reasoningTokens = intValue(outputDetails["reasoning_tokens"]) {
+                parsed.reasoningTokens = reasoningTokens
+            } else if let reasoningTokens = intValue(usage["reasoning_tokens"]) {
+                parsed.reasoningTokens = reasoningTokens
             }
 
-            if let thinkingTokens = usage["thinking_tokens"] as? Int {
-                pairs.append("thinking_tokens=\(thinkingTokens)")
-            }
+            parsed.thinkingTokens = intValue(usage["thinking_tokens"]) ?? 0
 
-            return pairs
+            return parsed
         }
 
-        private static func regexUsagePairs(from responseText: String) -> [String] {
-            let keys = [
-                "input_tokens",
-                "output_tokens",
-                "prompt_tokens",
-                "completion_tokens",
-                "reasoning_tokens",
-                "thinking_tokens",
-                "total_tokens"
-            ]
-            return keys.compactMap { key -> String? in
-                guard let value = firstIntegerValue(for: key, in: responseText) else { return nil }
-                return "\(key)=\(value)"
-            }
+        private static func regexUsage(from responseText: String) -> ParsedUsage {
+            var parsed = ParsedUsage()
+            parsed.inputTokens = firstIntegerValue(for: "input_tokens", in: responseText) ??
+                firstIntegerValue(for: "prompt_tokens", in: responseText) ?? 0
+            parsed.outputTokens = firstIntegerValue(for: "output_tokens", in: responseText) ??
+                firstIntegerValue(for: "completion_tokens", in: responseText) ?? 0
+            parsed.reasoningTokens = firstIntegerValue(for: "reasoning_tokens", in: responseText) ?? 0
+            parsed.thinkingTokens = firstIntegerValue(for: "thinking_tokens", in: responseText) ?? 0
+            parsed.totalTokens = firstIntegerValue(for: "total_tokens", in: responseText) ??
+                (parsed.inputTokens + parsed.outputTokens)
+            return parsed
         }
 
-        private static func firstIntegerValue(for key: String, in text: String) -> String? {
+        private static func intValue(_ value: Any?) -> Int? {
+            if let value = value as? Int { return value }
+            if let value = value as? NSNumber { return value.intValue }
+            if let value = value as? String { return Int(value) }
+            return nil
+        }
+
+        private static func firstIntegerValue(for key: String, in text: String) -> Int? {
             let pattern = "\"\(NSRegularExpression.escapedPattern(for: key))\"\\s*:\\s*([0-9]+)"
             guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
             let range = NSRange(text.startIndex..., in: text)
@@ -190,7 +255,7 @@ class ThinkingProxy {
                   let valueRange = Range(match.range(at: 1), in: text) else {
                 return nil
             }
-            return String(text[valueRange])
+            return Int(text[valueRange])
         }
     }
     
@@ -1002,13 +1067,13 @@ class ThinkingProxy {
             return nil
         }
 
-        guard json["service_tier"] == nil else { return nil }
-
         if AppPreferences.factoryNativeReasoning {
             NSLog("[ThinkingProxy] Native Factory reasoning enabled; skipping GUI fast-mode injection for '\(model)'")
             ThinkingProxy.fileLog("SKIPPED GUI fast-mode injection in native Factory mode for model \(model)")
             return nil
         }
+
+        guard json["service_tier"] == nil else { return nil }
 
         switch model {
         case "gpt-5.4":
@@ -1211,7 +1276,7 @@ class ThinkingProxy {
             case .ready:
                 // Build the forwarded request
                 var forwardedRequest = "\(method) \(path) \(version)\r\n"
-                let excludedHeaders: Set<String> = ["content-length", "host", "transfer-encoding"]
+                let excludedHeaders: Set<String> = ["content-length", "host", "transfer-encoding", "accept-encoding"]
 
                 for (name, value) in headers {
                     let lowercasedName = name.lowercased()
@@ -1225,6 +1290,8 @@ class ThinkingProxy {
                 forwardedRequest += "Host: \(self.targetHost):\(self.targetPort)\r\n"
                 // Always close connections - this proxy doesn't support keep-alive/pipelining
                 forwardedRequest += "Connection: close\r\n"
+                // Keep usage diagnostics readable; compressed upstream bodies hide token counts.
+                forwardedRequest += "Accept-Encoding: identity\r\n"
                 
                 let contentLength = body.utf8.count
                 forwardedRequest += "Content-Length: \(contentLength)\r\n"
