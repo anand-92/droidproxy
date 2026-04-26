@@ -506,7 +506,6 @@ struct SettingsView: View {
     @ObservedObject var serverManager: ServerManager
     @StateObject private var authManager = AuthManager()
     @StateObject private var oauthUsageTracker = OAuthUsageTracker()
-    @StateObject private var usageTracker = UsageTracker.shared
     @State private var launchAtLogin = false
     @AppStorage(AppPreferences.opus47ThinkingEffortKey) private var opus47ThinkingEffort = AppPreferences.defaultOpus47ThinkingEffort
     @AppStorage(AppPreferences.opus46ThinkingEffortKey) private var opus46ThinkingEffort = AppPreferences.defaultOpus46ThinkingEffort
@@ -550,41 +549,6 @@ struct SettingsView: View {
     private let oledWindowBackground = Color.black
     private let oledSectionBackground = Color(red: 0x12/255, green: 0x12/255, blue: 0x12/255)
     private let oledFooterText = Color(red: 0xA8/255, green: 0xA8/255, blue: 0xA8/255)
-
-    private var usageDashboard: some View {
-        let snapshot = usageTracker.snapshot
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Request Usage", systemImage: "chart.bar.xaxis")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button("Reset") {
-                    usageTracker.reset()
-                }
-                .droidGlassPlain()
-                .controlSize(.small)
-            }
-
-            HStack(spacing: 8) {
-                usageMetric("Requests", value: "\(snapshot.requestCount)")
-                usageMetric("Input", value: tokenString(snapshot.inputTokens))
-                usageMetric("Output", value: tokenString(snapshot.outputTokens))
-                usageMetric("Reasoning", value: tokenString(snapshot.reasoningTokens + snapshot.thinkingTokens))
-            }
-
-            HStack(spacing: 8) {
-                usageMetric("Total", value: tokenString(snapshot.totalTokens))
-                usageMetric("Avg time", value: durationString(snapshot.averageElapsedMs))
-                usageMetric("Last", value: snapshot.lastModel)
-            }
-
-            Text("Last request: \(snapshot.lastReasoning) · \(snapshot.lastServiceTier) · \(snapshot.lastStatus) · \(durationString(snapshot.lastElapsedMs))")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-        }
-    }
 
     private var oauthUsageDashboard: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -667,39 +631,6 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
         }
-    }
-
-    private func usageMetric(_ title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            Text(value)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.05)))
-    }
-
-    private func tokenString(_ value: Int) -> String {
-        if value >= 1_000_000 {
-            return String(format: "%.1fM", Double(value) / 1_000_000)
-        }
-        if value >= 1_000 {
-            return String(format: "%.1fK", Double(value) / 1_000)
-        }
-        return "\(value)"
-    }
-
-    private func durationString(_ ms: Int) -> String {
-        guard ms > 0 else { return "0ms" }
-        if ms >= 1000 {
-            return String(format: "%.1fs", Double(ms) / 1000)
-        }
-        return "\(ms)ms"
     }
 
     // Translucent row background that reveals the colourful window backdrop.
@@ -814,11 +745,6 @@ struct SettingsView: View {
                 .listRowBackground(glassRowBackground)
 
                 Section {
-                    usageDashboard
-                }
-                .listRowBackground(glassRowBackground)
-
-                Section {
                     Toggle("Launch at login", isOn: $launchAtLogin)
                         .onChange(of: launchAtLogin) { newValue in
                             toggleLaunchAtLogin(newValue)
@@ -856,7 +782,7 @@ struct SettingsView: View {
 
                     Toggle("Native Factory reasoning", isOn: $factoryNativeReasoning)
                         .toggleStyle(.switch)
-                        .help("Uses Factory/Droid's native reasoning selector for custom GPT models. Re-apply Factory custom models after changing this because it writes enableThinking, reasoningEffort, supportedReasoningEfforts, and fast-mode metadata. Current Factory/Droid builds expose low, medium, and high for custom models; extra high needs upstream selector support.")
+                        .help("Uses Factory/Droid's native reasoning selector for custom GPT models. Re-apply Factory custom models after changing this. Current Factory/Droid builds expose low, medium, and high for custom models; extra high and fast mode are not exposed through this native custom-model selector yet.")
                         .onChange(of: factoryNativeReasoning) { _ in
                             factoryModelsInstalled = false
                         }
@@ -1083,7 +1009,7 @@ struct SettingsView: View {
                             }
                             if codexModelsExpanded {
                                 if factoryNativeReasoning {
-                                    Text("Native Factory reasoning is on. Current Factory/Droid custom models support low, medium, and high; extra high needs upstream selector support.")
+                                    Text("Native Factory reasoning is on. Factory controls Codex reasoning per role/session. Current Factory/Droid custom models expose low, medium, and high only; GUI fast mode is paused in this mode.")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -1684,8 +1610,6 @@ struct SettingsView: View {
             advancedModel["reasoningEffort"] = "high"
             advancedModel["supportedReasoningEfforts"] = codexReasoningEfforts
             advancedModel["defaultReasoningEffort"] = "medium"
-            advancedModel["supportsFastMode"] = true
-            advancedModel["fastModeServiceTier"] = "priority"
             return advancedModel
         }
     }
@@ -1725,13 +1649,51 @@ struct SettingsView: View {
               let models = json["customModels"] as? [[String: Any]] else {
             return false
         }
-        let existingIds = Set(models.compactMap { $0["id"] as? String })
+
+        let existingById = Dictionary(uniqueKeysWithValues: models.compactMap { model -> (String, [String: Any])? in
+            guard let id = model["id"] as? String else { return nil }
+            return (id, model)
+        })
         let enabledModels = Self.factoryModels(nativeReasoning: factoryNativeReasoning).filter { model in
             guard let key = Self.providerKey(for: model) else { return true }
             return serverManager.isProviderEnabled(key)
         }
-        let droidIds = Set(enabledModels.compactMap { $0["id"] as? String })
-        return !droidIds.isEmpty && droidIds.isSubset(of: existingIds)
+
+        guard !enabledModels.isEmpty else { return false }
+        return enabledModels.allSatisfy { expected in
+            guard let id = expected["id"] as? String,
+                  let existing = existingById[id] else {
+                return false
+            }
+            return Self.factoryModel(existing, matchesExpectedModel: expected)
+        }
+    }
+
+    private static func factoryModel(_ existing: [String: Any], matchesExpectedModel expected: [String: Any]) -> Bool {
+        for (key, expectedValue) in expected where key != "index" {
+            guard let existingValue = existing[key],
+                  jsonValuesEqual(existingValue, expectedValue) else {
+                return false
+            }
+        }
+        return true
+    }
+
+    private static func jsonValuesEqual(_ lhs: Any, _ rhs: Any) -> Bool {
+        switch (lhs, rhs) {
+        case let (left as String, right as String):
+            return left == right
+        case let (left as Bool, right as Bool):
+            return left == right
+        case let (left as Int, right as Int):
+            return left == right
+        case let (left as NSNumber, right as NSNumber):
+            return left == right
+        case let (left as [String], right as [String]):
+            return left == right
+        default:
+            return false
+        }
     }
 
     private func applyFactoryCustomModels() {

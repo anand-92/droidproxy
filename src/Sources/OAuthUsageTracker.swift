@@ -27,25 +27,28 @@ struct OAuthAccountUsage: Identifiable, Equatable {
 final class OAuthUsageTracker: ObservableObject {
     @Published private(set) var accounts: [OAuthAccountUsage] = []
     @Published private(set) var isRefreshing = false
+    private var refreshTask: Task<Void, Never>?
+
+    deinit {
+        refreshTask?.cancel()
+    }
 
     func refresh(codexAccounts authAccounts: [AuthAccount]) {
+        refreshTask?.cancel()
+
         let enabledAccounts = authAccounts.filter { !$0.isDisabled && !$0.isExpired && $0.type == .codex }
         guard !enabledAccounts.isEmpty else {
-            DispatchQueue.main.async {
-                self.accounts = []
-                self.isRefreshing = false
-            }
+            accounts = []
+            isRefreshing = false
             return
         }
 
-        DispatchQueue.main.async {
-            self.isRefreshing = true
-            self.accounts = enabledAccounts.map {
-                OAuthAccountUsage(id: $0.id, provider: $0.type, email: $0.displayName, isLoading: true)
-            }
+        isRefreshing = true
+        accounts = enabledAccounts.map {
+            OAuthAccountUsage(id: $0.id, provider: $0.type, email: $0.displayName, isLoading: true)
         }
 
-        Task { [enabledAccounts] in
+        refreshTask = Task { [enabledAccounts] in
             let results = await withTaskGroup(of: OAuthAccountUsage.self) { group in
                 for account in enabledAccounts {
                     group.addTask {
@@ -65,13 +68,15 @@ final class OAuthUsageTracker: ObservableObject {
                 }
             }
 
+            guard !Task.isCancelled else { return }
             self.accounts = results
             self.isRefreshing = false
         }
     }
 
     nonisolated private static func fetchCodexUsage(for account: AuthAccount) async -> OAuthAccountUsage {
-        guard let token = stringValue("access_token", from: account.filePath) else {
+        guard let auth = authValues(from: account.filePath),
+              let token = auth["access_token"] else {
             return failedAccount(account, "Missing access token")
         }
         guard let url = URL(string: "https://chatgpt.com/backend-api/wham/usage") else {
@@ -83,7 +88,7 @@ final class OAuthUsageTracker: ObservableObject {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("codex-cli", forHTTPHeaderField: "User-Agent")
-        if let accountId = stringValue("account_id", from: account.filePath) {
+        if let accountId = auth["account_id"] {
             request.setValue(accountId, forHTTPHeaderField: "ChatGPT-Account-Id")
         }
 
@@ -132,14 +137,15 @@ final class OAuthUsageTracker: ObservableObject {
         )
     }
 
-    nonisolated private static func stringValue(_ key: String, from url: URL) -> String? {
+    nonisolated private static func authValues(from url: URL) -> [String: String]? {
         guard let data = try? Data(contentsOf: url),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let value = json[key] as? String,
-              !value.isEmpty else {
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
-        return value
+        return json.compactMapValues { value in
+            guard let string = value as? String, !string.isEmpty else { return nil }
+            return string
+        }
     }
 
     nonisolated private static func parseCodexWindows(_ object: Any) -> [OAuthUsageWindow] {
