@@ -1650,10 +1650,11 @@ struct SettingsView: View {
             return false
         }
 
-        let existingById = Dictionary(uniqueKeysWithValues: models.compactMap { model -> (String, [String: Any])? in
-            guard let id = model["id"] as? String else { return nil }
-            return (id, model)
-        })
+        var existingById: [String: [String: Any]] = [:]
+        for model in models {
+            guard let id = model["id"] as? String else { continue }
+            existingById[id] = model
+        }
         let enabledModels = Self.factoryModels(nativeReasoning: factoryNativeReasoning).filter { model in
             guard let key = Self.providerKey(for: model) else { return true }
             return serverManager.isProviderEnabled(key)
