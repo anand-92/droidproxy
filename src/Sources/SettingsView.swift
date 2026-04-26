@@ -1265,11 +1265,10 @@ struct SettingsView: View {
         .alert("Enable Native Factory reasoning?", isPresented: $showingNativeFactoryReasoningWarning) {
             Button("Cancel", role: .cancel) { }
             Button("Enable") {
-                factoryNativeReasoning = true
-                factoryModelsInstalled = false
+                setNativeFactoryReasoning(true)
             }
         } message: {
-            Text("Factory/Droid currently exposes low, medium, and high for custom model reasoning. Extra high and fast mode are not available through the native custom-model selector yet. Keep this off if you need DroidProxy's GUI xhigh or fast-mode controls.")
+            Text("Factory/Droid currently exposes low, medium, and high for custom model reasoning. Extra high and fast mode are not available through the native custom-model selector yet. Restart Factory/Droid or open a new CLI session after enabling this.")
         }
     }
 
@@ -1407,8 +1406,7 @@ struct SettingsView: View {
                 if enabled {
                     showingNativeFactoryReasoningWarning = true
                 } else {
-                    factoryNativeReasoning = false
-                    factoryModelsInstalled = false
+                    setNativeFactoryReasoning(false)
                 }
             }
         )
@@ -1629,6 +1627,12 @@ struct SettingsView: View {
     }
 
     private static let codexReasoningEfforts = ["low", "medium", "high"]
+    private static let nativeReasoningModelKeys: Set<String> = [
+        "enableThinking",
+        "reasoningEffort",
+        "supportedReasoningEfforts",
+        "defaultReasoningEffort"
+    ]
 
     private static func factoryModels(nativeReasoning: Bool) -> [[String: Any]] {
         guard nativeReasoning else {
@@ -1712,6 +1716,11 @@ struct SettingsView: View {
                 return false
             }
         }
+
+        for nativeKey in nativeReasoningModelKeys where expected[nativeKey] == nil && existing[nativeKey] != nil {
+            return false
+        }
+
         return true
     }
 
@@ -1732,7 +1741,24 @@ struct SettingsView: View {
         }
     }
 
-    private func applyFactoryCustomModels() {
+    private func setNativeFactoryReasoning(_ enabled: Bool) {
+        let previousValue = factoryNativeReasoning
+        factoryNativeReasoning = enabled
+        let didApply = applyFactoryCustomModels(
+            nativeReasoning: enabled,
+            successMessage: enabled
+                ? "Native Factory reasoning enabled for DroidProxy Codex models.\n\nRestart Factory/Droid or open a new CLI session for the selector change to take effect."
+                : "Native Factory reasoning disabled. DroidProxy Codex models were restored to the normal GUI-controlled reasoning and fast-mode shape.\n\nRestart Factory/Droid or open a new CLI session for the change to take effect."
+        )
+        if !didApply {
+            factoryNativeReasoning = previousValue
+            factoryModelsInstalled = checkFactoryModelsInstalled()
+        }
+    }
+
+    @discardableResult
+    private func applyFactoryCustomModels(nativeReasoning: Bool? = nil, successMessage: String? = nil) -> Bool {
+        let nativeReasoning = nativeReasoning ?? factoryNativeReasoning
         let url = factorySettingsURL()
         let factoryDir = url.deletingLastPathComponent()
 
@@ -1752,7 +1778,7 @@ struct SettingsView: View {
             return droidIds.contains(id) || Self.legacyDroidProxyModelIds.contains(id) || id.hasPrefix("custom:CC:")
         }
 
-        let enabledModels = Self.factoryModels(nativeReasoning: factoryNativeReasoning).filter { model in
+        let enabledModels = Self.factoryModels(nativeReasoning: nativeReasoning).filter { model in
             guard let key = Self.providerKey(for: model) else { return true }
             return serverManager.isProviderEnabled(key)
         }
@@ -1773,14 +1799,16 @@ struct SettingsView: View {
             try data.write(to: url, options: .atomic)
             factoryModelsInstalled = true
             authResultSuccess = true
-            authResultMessage = "DroidProxy models added to Factory settings.\n\nRestart Factory (or open a new session) to see them in the model picker."
+            authResultMessage = successMessage ?? "DroidProxy models added to Factory settings.\n\nRestart Factory/Droid or open a new CLI session to see the updated model picker."
             showingAuthResult = true
             NSLog("[SettingsView] Factory custom models applied to %@", url.path)
+            return true
         } catch {
             authResultSuccess = false
             authResultMessage = "Failed to update Factory settings: \(error.localizedDescription)"
             showingAuthResult = true
             NSLog("[SettingsView] Failed to apply Factory custom models: %@", error.localizedDescription)
+            return false
         }
     }
 
