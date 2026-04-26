@@ -53,9 +53,149 @@ class ThinkingProxy {
     private enum Config {
         static let anthropicVersion = "2023-06-01"
     }
+
+    private final class ProxyRequestDiagnostics {
+        private static let maxCapturedResponseBytes = 512 * 1024
+
+        private let requestId = UUID().uuidString.prefix(8)
+        private let startedAt = Date()
+        private let method: String
+        private let path: String
+        private let model: String
+        private let reasoning: String
+        private let reasoningSource: String
+        private let serviceTier: String
+        private let nativeFactoryReasoning: Bool
+        private var responseData = Data()
+        private var didFinish = false
+
+        init(method: String,
+             path: String,
+             model: String,
+             reasoning: String,
+             reasoningSource: String,
+             serviceTier: String,
+             nativeFactoryReasoning: Bool) {
+            self.method = method
+            self.path = path
+            self.model = model
+            self.reasoning = reasoning
+            self.reasoningSource = reasoningSource
+            self.serviceTier = serviceTier
+            self.nativeFactoryReasoning = nativeFactoryReasoning
+        }
+
+        func logStart() {
+            ThinkingProxy.fileLog("REQUEST DIAGNOSTICS START id=\(requestId) method=\(method) path=\(path) model=\(model) reasoning=\(reasoning) source=\(reasoningSource) service_tier=\(serviceTier) native_factory_reasoning=\(nativeFactoryReasoning)")
+        }
+
+        func appendResponseData(_ data: Data) {
+            guard responseData.count < Self.maxCapturedResponseBytes else { return }
+            let remaining = Self.maxCapturedResponseBytes - responseData.count
+            responseData.append(data.prefix(remaining))
+        }
+
+        func finish() {
+            guard !didFinish else { return }
+            didFinish = true
+
+            let elapsedMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+            guard let responseText = String(data: responseData, encoding: .utf8) else {
+                ThinkingProxy.fileLog("REQUEST DIAGNOSTICS END id=\(requestId) model=\(model) reasoning=\(reasoning) elapsed_ms=\(elapsedMs) response=utf8-unavailable")
+                return
+            }
+
+            let status = Self.httpStatus(from: responseText) ?? "unknown"
+            let usage = Self.usageSummary(from: responseText)
+            ThinkingProxy.fileLog("REQUEST DIAGNOSTICS END id=\(requestId) model=\(model) reasoning=\(reasoning) source=\(reasoningSource) service_tier=\(serviceTier) status=\(status) elapsed_ms=\(elapsedMs)\(usage)")
+        }
+
+        private static func httpStatus(from responseText: String) -> String? {
+            guard let lineEnd = responseText.range(of: "\r\n") ?? responseText.range(of: "\n") else {
+                return nil
+            }
+            let statusLine = String(responseText[..<lineEnd.lowerBound])
+            let parts = statusLine.split(separator: " ")
+            guard parts.count >= 2 else { return nil }
+            return String(parts[1])
+        }
+
+        private static func usageSummary(from responseText: String) -> String {
+            let responseBody = httpBody(from: responseText)
+            let pairs = parsedUsagePairs(from: responseBody) ?? regexUsagePairs(from: responseText)
+            guard !pairs.isEmpty else { return "" }
+            return " " + pairs.joined(separator: " ")
+        }
+
+        private static func httpBody(from responseText: String) -> String {
+            if let range = responseText.range(of: "\r\n\r\n") {
+                return String(responseText[range.upperBound...])
+            }
+            if let range = responseText.range(of: "\n\n") {
+                return String(responseText[range.upperBound...])
+            }
+            return responseText
+        }
+
+        private static func parsedUsagePairs(from responseBody: String) -> [String]? {
+            guard let data = responseBody.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let usage = json["usage"] as? [String: Any] else {
+                return nil
+            }
+
+            var pairs: [String] = []
+            for key in ["input_tokens", "output_tokens", "prompt_tokens", "completion_tokens", "total_tokens"] {
+                if let value = usage[key] as? Int {
+                    pairs.append("\(key)=\(value)")
+                }
+            }
+
+            if let outputDetails = usage["output_tokens_details"] as? [String: Any],
+               let reasoningTokens = outputDetails["reasoning_tokens"] as? Int {
+                pairs.append("reasoning_tokens=\(reasoningTokens)")
+            } else if let reasoningTokens = usage["reasoning_tokens"] as? Int {
+                pairs.append("reasoning_tokens=\(reasoningTokens)")
+            }
+
+            if let thinkingTokens = usage["thinking_tokens"] as? Int {
+                pairs.append("thinking_tokens=\(thinkingTokens)")
+            }
+
+            return pairs
+        }
+
+        private static func regexUsagePairs(from responseText: String) -> [String] {
+            let keys = [
+                "input_tokens",
+                "output_tokens",
+                "prompt_tokens",
+                "completion_tokens",
+                "reasoning_tokens",
+                "thinking_tokens",
+                "total_tokens"
+            ]
+            return keys.compactMap { key -> String? in
+                guard let value = firstIntegerValue(for: key, in: responseText) else { return nil }
+                return "\(key)=\(value)"
+            }
+        }
+
+        private static func firstIntegerValue(for key: String, in text: String) -> String? {
+            let pattern = "\"\(NSRegularExpression.escapedPattern(for: key))\"\\s*:\\s*([0-9]+)"
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+            let range = NSRange(text.startIndex..., in: text)
+            guard let match = regex.matches(in: text, range: range).last,
+                  match.numberOfRanges > 1,
+                  let valueRange = Range(match.range(at: 1), in: text) else {
+                return nil
+            }
+            return String(text[valueRange])
+        }
+    }
     
     /**
-     Starts the thinking proxy server on port 8317
+     Starts the thinking proxy server on the configured proxy port.
      */
     func start() {
         guard !isRunning else {
@@ -298,7 +438,16 @@ class ThinkingProxy {
             rewrittenPath = newPath
         }
 
-        forwardRequest(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
+        let diagnostics = requestDiagnostics(method: method, path: rewrittenPath, body: modifiedBody, originalBody: bodyString)
+        diagnostics?.logStart()
+
+        forwardRequest(method: method,
+                       path: rewrittenPath,
+                       version: httpVersion,
+                       headers: headers,
+                       body: modifiedBody,
+                       originalConnection: connection,
+                       diagnostics: diagnostics)
     }
 
     /**
@@ -315,6 +464,18 @@ class ThinkingProxy {
         }
 
         if let effort = codexReasoningEffort(for: model) {
+            if json["reasoning"] != nil || json["reasoning_effort"] != nil {
+                NSLog("[ThinkingProxy] Preserving request-provided Codex reasoning for '\(model)'")
+                ThinkingProxy.fileLog("PRESERVED Codex reasoning from request for model \(model)")
+                return nil
+            }
+
+            if AppPreferences.factoryNativeReasoning {
+                NSLog("[ThinkingProxy] Native Factory reasoning enabled; skipping GUI Codex reasoning injection for '\(model)'")
+                ThinkingProxy.fileLog("SKIPPED GUI Codex reasoning in native Factory mode for model \(model)")
+                return nil
+            }
+
             var result = jsonString
             result = injectJSONField(in: result, afterKey: "model", fieldName: "reasoning",
                                      fieldValue: "{\"effort\":\"\(effort)\"}")
@@ -427,6 +588,66 @@ class ThinkingProxy {
             return AppPreferences.sonnet46ThinkingEffort
         }
         return nil
+    }
+
+    private func requestDiagnostics(method: String,
+                                    path: String,
+                                    body: String,
+                                    originalBody: String) -> ProxyRequestDiagnostics? {
+        guard let jsonData = body.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+              let model = json["model"] as? String else {
+            return nil
+        }
+
+        let originalReasoning = requestReasoningSummary(from: originalBody)
+        let reasoning = requestReasoningSummary(from: json)
+        let reasoningSource: String
+        if originalReasoning != "none" {
+            reasoningSource = "request"
+        } else if reasoning != "none" {
+            reasoningSource = "droidproxy"
+        } else {
+            reasoningSource = "none"
+        }
+
+        return ProxyRequestDiagnostics(
+            method: method,
+            path: path,
+            model: model,
+            reasoning: reasoning,
+            reasoningSource: reasoningSource,
+            serviceTier: json["service_tier"] as? String ?? "default",
+            nativeFactoryReasoning: AppPreferences.factoryNativeReasoning
+        )
+    }
+
+    private func requestReasoningSummary(from body: String) -> String {
+        guard let data = body.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return "none"
+        }
+        return requestReasoningSummary(from: json)
+    }
+
+    private func requestReasoningSummary(from json: [String: Any]) -> String {
+        if let reasoning = json["reasoning"] as? [String: Any],
+           let effort = reasoning["effort"] as? String {
+            return effort
+        }
+        if let effort = json["reasoning_effort"] as? String {
+            return effort
+        }
+        if let outputConfig = json["output_config"] as? [String: Any],
+           let effort = outputConfig["effort"] as? String {
+            return effort
+        }
+        if let generationConfig = json["generationConfig"] as? [String: Any],
+           let thinkingConfig = generationConfig["thinkingConfig"] as? [String: Any],
+           let level = thinkingConfig["thinking_level"] as? String {
+            return level
+        }
+        return "none"
     }
 
     /// Matches Opus 4.5 (`claude-opus-4-5`, `gemini-claude-opus-4-5`, date-suffixed variants)
@@ -781,6 +1002,14 @@ class ThinkingProxy {
             return nil
         }
 
+        guard json["service_tier"] == nil else { return nil }
+
+        if AppPreferences.factoryNativeReasoning {
+            NSLog("[ThinkingProxy] Native Factory reasoning enabled; skipping GUI fast-mode injection for '\(model)'")
+            ThinkingProxy.fileLog("SKIPPED GUI fast-mode injection in native Factory mode for model \(model)")
+            return nil
+        }
+
         switch model {
         case "gpt-5.4":
             guard AppPreferences.gpt54FastMode else { return nil }
@@ -791,8 +1020,6 @@ class ThinkingProxy {
         default:
             return nil
         }
-
-        guard json["service_tier"] == nil else { return nil }
 
         let result = injectJSONField(in: jsonString, afterKey: "model", fieldName: "service_tier",
                                      fieldValue: "\"priority\"")
@@ -959,9 +1186,16 @@ class ThinkingProxy {
     }
 
     /**
-     Forwards the request to CLIProxyAPI on port 8318 (pass-through for non-thinking requests)
+     Forwards the request to CLIProxyAPI on the configured backend port.
      */
-    private func forwardRequest(method: String, path: String, version: String, headers: [(String, String)], body: String, originalConnection: NWConnection, retryWithApiPrefix: Bool = false) {
+    private func forwardRequest(method: String,
+                                path: String,
+                                version: String,
+                                headers: [(String, String)],
+                                body: String,
+                                originalConnection: NWConnection,
+                                retryWithApiPrefix: Bool = false,
+                                diagnostics: ProxyRequestDiagnostics? = nil) {
         // Create connection to CLIProxyAPI
         guard let port = NWEndpoint.Port(rawValue: targetPort) else {
             NSLog("[ThinkingProxy] Invalid target port: %d", targetPort)
@@ -1002,6 +1236,7 @@ class ThinkingProxy {
                     targetConnection.send(content: requestData, completion: .contentProcessed({ error in
                         if let error = error {
                             NSLog("[ThinkingProxy] Send error: \(error)")
+                            diagnostics?.finish()
                             targetConnection.cancel()
                             originalConnection.cancel()
                         } else {
@@ -1011,11 +1246,13 @@ class ThinkingProxy {
                                 self.receiveResponseWith404Retry(from: targetConnection, originalConnection: originalConnection, 
                                                                  method: method, path: path, version: version, 
                                                                  headers: headers, body: body,
-                                                                 normalizeAmpProviderResponse: normalizeAmpProviderResponse)
+                                                                 normalizeAmpProviderResponse: normalizeAmpProviderResponse,
+                                                                 diagnostics: diagnostics)
                             } else {
                                 self.receiveResponse(from: targetConnection,
                                                      originalConnection: originalConnection,
-                                                     normalizeAmpProviderResponse: normalizeAmpProviderResponse)
+                                                     normalizeAmpProviderResponse: normalizeAmpProviderResponse,
+                                                     diagnostics: diagnostics)
                             }
                         }
                     }))
@@ -1023,6 +1260,7 @@ class ThinkingProxy {
                 
             case .failed(let error):
                 NSLog("[ThinkingProxy] Target connection failed: \(error)")
+                diagnostics?.finish()
                 self.sendError(to: originalConnection, statusCode: 502, message: "Bad Gateway")
                 targetConnection.cancel()
                 
@@ -1040,13 +1278,15 @@ class ThinkingProxy {
     private func receiveResponseWith404Retry(from targetConnection: NWConnection, originalConnection: NWConnection, 
                                              method: String, path: String, version: String, 
                                              headers: [(String, String)], body: String,
-                                             normalizeAmpProviderResponse: Bool) {
+                                             normalizeAmpProviderResponse: Bool,
+                                             diagnostics: ProxyRequestDiagnostics? = nil) {
         let rewriteState = normalizeAmpProviderResponse ? AmpProviderRewriteState() : nil
         targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
             
             if let error = error {
                 NSLog("[ThinkingProxy] Receive error: \(error)")
+                diagnostics?.finish()
                 targetConnection.cancel()
                 originalConnection.cancel()
                 return
@@ -1073,20 +1313,22 @@ class ThinkingProxy {
                             // Retry with /api/ prefix
                             let newPath = "/api" + path
                             self.forwardRequest(method: method, path: newPath, version: version, headers: headers, 
-                                              body: body, originalConnection: originalConnection, retryWithApiPrefix: false)
+                                                body: body, originalConnection: originalConnection, retryWithApiPrefix: false,
+                                                diagnostics: diagnostics)
                             return
                         }
                     }
                 }
                 
                 // Not a 404 or already has /api/, forward response as-is
+                diagnostics?.appendResponseData(data)
                 var outboundData = data
                 if let rewriteState {
                     outboundData = self.normalizeAmpProviderResponseChunk(data, rewriteState: rewriteState, isComplete: isComplete)
                 }
 
                 if outboundData.isEmpty && !isComplete {
-                    self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
+                    self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState, diagnostics: diagnostics)
                     return
                 }
 
@@ -1096,16 +1338,18 @@ class ThinkingProxy {
                     }
                     
                     if isComplete {
+                        diagnostics?.finish()
                         targetConnection.cancel()
                         originalConnection.send(content: nil, isComplete: true, completion: .contentProcessed({ _ in
                             originalConnection.cancel()
                         }))
                     } else {
                         // Continue streaming
-                        self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
+                        self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState, diagnostics: diagnostics)
                     }
                 }))
             } else if isComplete {
+                diagnostics?.finish()
                 targetConnection.cancel()
                 if let carryData = self.flushNormalizedResponseCarry(rewriteState), !carryData.isEmpty {
                     originalConnection.send(content: carryData, completion: .contentProcessed({ _ in
@@ -1128,10 +1372,11 @@ class ThinkingProxy {
      */
     private func receiveResponse(from targetConnection: NWConnection,
                                  originalConnection: NWConnection,
-                                 normalizeAmpProviderResponse: Bool = false) {
+                                 normalizeAmpProviderResponse: Bool = false,
+                                 diagnostics: ProxyRequestDiagnostics? = nil) {
         let rewriteState = normalizeAmpProviderResponse ? AmpProviderRewriteState() : nil
         // Start the streaming loop
-        streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
+        streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState, diagnostics: diagnostics)
     }
     
     /**
@@ -1139,25 +1384,28 @@ class ThinkingProxy {
      */
     private func streamNextChunk(from targetConnection: NWConnection,
                                  to originalConnection: NWConnection,
-                                 rewriteState: AmpProviderRewriteState? = nil) {
+                                 rewriteState: AmpProviderRewriteState? = nil,
+                                 diagnostics: ProxyRequestDiagnostics? = nil) {
         targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
             
             if let error = error {
                 NSLog("[ThinkingProxy] Receive response error: \(error)")
+                diagnostics?.finish()
                 targetConnection.cancel()
                 originalConnection.cancel()
                 return
             }
             
             if let data = data, !data.isEmpty {
+                diagnostics?.appendResponseData(data)
                 var outboundData = data
                 if let rewriteState {
                     outboundData = self.normalizeAmpProviderResponseChunk(data, rewriteState: rewriteState, isComplete: isComplete)
                 }
 
                 if outboundData.isEmpty && !isComplete {
-                    self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
+                    self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState, diagnostics: diagnostics)
                     return
                 }
 
@@ -1168,6 +1416,7 @@ class ThinkingProxy {
                     }
                     
                     if isComplete {
+                        diagnostics?.finish()
                         targetConnection.cancel()
                         // Always close client connection - no keep-alive/pipelining support
                         originalConnection.send(content: nil, isComplete: true, completion: .contentProcessed({ _ in
@@ -1175,10 +1424,11 @@ class ThinkingProxy {
                         }))
                     } else {
                         // Schedule next iteration of the streaming loop
-                        self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState)
+                        self.streamNextChunk(from: targetConnection, to: originalConnection, rewriteState: rewriteState, diagnostics: diagnostics)
                     }
                 }))
             } else if isComplete {
+                diagnostics?.finish()
                 targetConnection.cancel()
                 if let carryData = self.flushNormalizedResponseCarry(rewriteState), !carryData.isEmpty {
                     originalConnection.send(content: carryData, completion: .contentProcessed({ _ in

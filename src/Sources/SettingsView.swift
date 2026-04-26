@@ -516,6 +516,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gpt53CodexFastModeKey) private var gpt53CodexFastMode = AppPreferences.defaultGpt53CodexFastMode
     @AppStorage(AppPreferences.gpt54FastModeKey) private var gpt54FastMode = AppPreferences.defaultGpt54FastMode
     @AppStorage(AppPreferences.gpt55FastModeKey) private var gpt55FastMode = AppPreferences.defaultGpt55FastMode
+    @AppStorage(AppPreferences.factoryNativeReasoningKey) private var factoryNativeReasoning = AppPreferences.defaultFactoryNativeReasoning
     @AppStorage(AppPreferences.gemini31ProThinkingLevelKey) private var gemini31ProThinkingLevel = AppPreferences.defaultGemini31ProThinkingLevel
     @AppStorage(AppPreferences.gemini3FlashThinkingLevelKey) private var gemini3FlashThinkingLevel = AppPreferences.defaultGemini3FlashThinkingLevel
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
@@ -693,6 +694,13 @@ struct SettingsView: View {
                         .droidGlassProminent()
                         .controlSize(.small)
                     }
+
+                    Toggle("Native Factory reasoning", isOn: $factoryNativeReasoning)
+                        .toggleStyle(.switch)
+                        .help("Uses Factory/Droid's native reasoning selector for custom GPT models. Current Factory/Droid builds expose low, medium, and high for custom models; extra high needs upstream selector support.")
+                        .onChange(of: factoryNativeReasoning) { _ in
+                            factoryModelsInstalled = checkFactoryModelsInstalled()
+                        }
 
                     HStack {
                         Text("Challenger Plugin")
@@ -902,6 +910,12 @@ struct SettingsView: View {
                                 }
                             }
                             if codexModelsExpanded {
+                                if factoryNativeReasoning {
+                                    Text("Native Factory reasoning is on. Current Factory/Droid custom models support low, medium, and high; extra high needs upstream selector support.")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack {
                                         Text("GPT 5.3 Codex reasoning effort")
@@ -923,6 +937,8 @@ struct SettingsView: View {
                                     .labelsHidden()
                                 }
                                 .padding(.vertical, 2)
+                                .disabled(factoryNativeReasoning)
+                                .opacity(factoryNativeReasoning ? 0.45 : 1.0)
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack {
                                         Text("GPT 5.4 reasoning effort")
@@ -944,6 +960,8 @@ struct SettingsView: View {
                                     .labelsHidden()
                                 }
                                 .padding(.vertical, 2)
+                                .disabled(factoryNativeReasoning)
+                                .opacity(factoryNativeReasoning ? 0.45 : 1.0)
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack {
                                         Text("GPT 5.5 reasoning effort")
@@ -965,6 +983,8 @@ struct SettingsView: View {
                                     .labelsHidden()
                                 }
                                 .padding(.vertical, 2)
+                                .disabled(factoryNativeReasoning)
+                                .opacity(factoryNativeReasoning ? 0.45 : 1.0)
                             }
                         }
                         .padding(.leading, 28)
@@ -1361,98 +1381,140 @@ struct SettingsView: View {
     /// so users don't end up with stale entries next to the current ones.
     private static let legacyDroidProxyModelIds: Set<String> = []
 
-    private static let droidProxyModels: [[String: Any]] = [
+    private static func modelId(_ suffix: String) -> String {
+        "custom:droidproxy:\(suffix)"
+    }
+
+    private static func baseURL(path: String = "") -> String {
+        "http://localhost:8317\(path)"
+    }
+
+    private static func displayName(_ name: String) -> String {
+        "DroidProxy: \(name)"
+    }
+
+    private static func droidProxyModels() -> [[String: Any]] {
         [
+            [
             "model": "claude-opus-4-7",
-            "id": "custom:droidproxy:opus-4-7",
-            "baseUrl": "http://localhost:8317",
+            "id": modelId("opus-4-7"),
+            "baseUrl": baseURL(),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: Opus 4.7",
+            "displayName": displayName("Opus 4.7"),
             "maxOutputTokens": 128000,
             "noImageSupport": false,
             "provider": "anthropic"
         ],
         [
             "model": "claude-opus-4-6",
-            "id": "custom:droidproxy:opus-4-6",
-            "baseUrl": "http://localhost:8317",
+            "id": modelId("opus-4-6"),
+            "baseUrl": baseURL(),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: Opus 4.6",
+            "displayName": displayName("Opus 4.6"),
             "maxOutputTokens": 128000,
             "noImageSupport": false,
             "provider": "anthropic"
         ],
         [
             "model": "claude-opus-4-5-20251101",
-            "id": "custom:droidproxy:opus-4-5",
-            "baseUrl": "http://localhost:8317",
+            "id": modelId("opus-4-5"),
+            "baseUrl": baseURL(),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: Opus 4.5",
+            "displayName": displayName("Opus 4.5"),
             "maxOutputTokens": 64000,
             "noImageSupport": false,
             "provider": "anthropic"
         ],
         [
             "model": "claude-sonnet-4-6",
-            "id": "custom:droidproxy:sonnet-4-6",
-            "baseUrl": "http://localhost:8317",
+            "id": modelId("sonnet-4-6"),
+            "baseUrl": baseURL(),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: Sonnet 4.6",
+            "displayName": displayName("Sonnet 4.6"),
             "maxOutputTokens": 64000,
             "noImageSupport": false,
             "provider": "anthropic"
         ],
         [
             "model": "gpt-5.3-codex",
-            "id": "custom:droidproxy:gpt-5.3-codex",
-            "baseUrl": "http://localhost:8317/v1",
+            "id": modelId("gpt-5.3-codex"),
+            "baseUrl": baseURL(path: "/v1"),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: GPT 5.3 Codex",
+            "displayName": displayName("GPT 5.3 Codex"),
             "maxOutputTokens": 128000,
             "noImageSupport": false,
             "provider": "openai"
         ],
         [
             "model": "gpt-5.4",
-            "id": "custom:droidproxy:gpt-5.4",
-            "baseUrl": "http://localhost:8317/v1",
+            "id": modelId("gpt-5.4"),
+            "baseUrl": baseURL(path: "/v1"),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: GPT 5.4",
+            "displayName": displayName("GPT 5.4"),
             "maxOutputTokens": 128000,
             "noImageSupport": false,
             "provider": "openai"
         ],
         [
             "model": "gpt-5.5",
-            "id": "custom:droidproxy:gpt-5.5",
-            "baseUrl": "http://localhost:8317/v1",
+            "id": modelId("gpt-5.5"),
+            "baseUrl": baseURL(path: "/v1"),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: GPT 5.5",
+            "displayName": displayName("GPT 5.5"),
             "maxOutputTokens": 128000,
             "noImageSupport": false,
             "provider": "openai"
         ],
         [
             "model": "gemini-3.1-pro-preview",
-            "id": "custom:droidproxy:gemini-3.1-pro",
-            "baseUrl": "http://localhost:8317",
+            "id": modelId("gemini-3.1-pro"),
+            "baseUrl": baseURL(),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: Gemini 3.1 Pro",
+            "displayName": displayName("Gemini 3.1 Pro"),
             "maxOutputTokens": 65536,
             "noImageSupport": false,
             "provider": "google"
         ],
         [
             "model": "gemini-3-flash-preview",
-            "id": "custom:droidproxy:gemini-3-flash",
-            "baseUrl": "http://localhost:8317",
+            "id": modelId("gemini-3-flash"),
+            "baseUrl": baseURL(),
             "apiKey": "dummy-not-used",
-            "displayName": "DroidProxy: Gemini 3 Flash",
+            "displayName": displayName("Gemini 3 Flash"),
             "maxOutputTokens": 65536,
             "noImageSupport": false,
             "provider": "google"
         ]
-    ]
+        ]
+    }
+
+    private static let codexReasoningEfforts = ["low", "medium", "high"]
+
+    private static func factoryModels(nativeReasoning: Bool) -> [[String: Any]] {
+        guard nativeReasoning else {
+            return droidProxyModels()
+        }
+
+        return droidProxyModels().map { model in
+            guard providerKey(for: model) == "codex" else {
+                return model
+            }
+
+            var advancedModel = model
+            advancedModel["enableThinking"] = true
+            advancedModel["reasoningEffort"] = "high"
+            advancedModel["supportedReasoningEfforts"] = codexReasoningEfforts
+            advancedModel["defaultReasoningEffort"] = "medium"
+            advancedModel["supportsFastMode"] = true
+            advancedModel["fastModeServiceTier"] = "priority"
+            return advancedModel
+        }
+    }
+
+    private static func allFactoryModelIdsForRemoval() -> Set<String> {
+        Set(factoryModels(nativeReasoning: true).compactMap { $0["id"] as? String })
+            .union(droidProxyModels().compactMap { $0["id"] as? String })
+    }
 
     private func factorySettingsURL() -> URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -1460,7 +1522,16 @@ struct SettingsView: View {
             .appendingPathComponent("settings.json")
     }
 
-    private func providerKey(for model: [String: Any]) -> String? {
+    private static func providerKey(for model: [String: Any]) -> String? {
+        if let provider = model["provider"] as? String {
+            switch provider {
+            case "anthropic": return "claude"
+            case "openai": return "codex"
+            case "google": return "gemini"
+            default: break
+            }
+        }
+
         guard let name = model["model"] as? String else { return nil }
         if name.hasPrefix("claude") { return "claude" }
         if name.hasPrefix("gpt") { return "codex" }
@@ -1476,8 +1547,8 @@ struct SettingsView: View {
             return false
         }
         let existingIds = Set(models.compactMap { $0["id"] as? String })
-        let enabledModels = Self.droidProxyModels.filter { model in
-            guard let key = providerKey(for: model) else { return true }
+        let enabledModels = Self.factoryModels(nativeReasoning: factoryNativeReasoning).filter { model in
+            guard let key = Self.providerKey(for: model) else { return true }
             return serverManager.isProviderEnabled(key)
         }
         let droidIds = Set(enabledModels.compactMap { $0["id"] as? String })
@@ -1498,14 +1569,14 @@ struct SettingsView: View {
 
         var models = (settings["customModels"] as? [[String: Any]]) ?? []
 
-        let droidIds = Set(Self.droidProxyModels.compactMap { $0["id"] as? String })
+        let droidIds = Self.allFactoryModelIdsForRemoval()
         models.removeAll { item in
             guard let id = item["id"] as? String else { return false }
             return droidIds.contains(id) || Self.legacyDroidProxyModelIds.contains(id) || id.hasPrefix("custom:CC:")
         }
 
-        let enabledModels = Self.droidProxyModels.filter { model in
-            guard let key = providerKey(for: model) else { return true }
+        let enabledModels = Self.factoryModels(nativeReasoning: factoryNativeReasoning).filter { model in
+            guard let key = Self.providerKey(for: model) else { return true }
             return serverManager.isProviderEnabled(key)
         }
         let startIndex = models.count
