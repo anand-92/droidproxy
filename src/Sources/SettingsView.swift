@@ -619,8 +619,14 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            ProgressView(value: remaining ?? 0, total: 100)
-                .tint((remaining ?? 100) < 20 ? .orange : .green)
+            if let remaining {
+                ProgressView(value: remaining, total: 100)
+                    .tint(remaining < 20 ? .orange : .green)
+            } else {
+                Text("Usage unavailable")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
             if let resetText = window.resetText {
                 Text(resetText)
                     .font(.caption2)

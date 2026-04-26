@@ -24,6 +24,10 @@ struct OAuthAccountUsage: Identifiable, Equatable {
     var updatedAt: Date?
 }
 
+private enum OAuthUsageParsing {
+    static let requestTimeout: TimeInterval = 15
+}
+
 @MainActor
 final class OAuthUsageTracker: ObservableObject {
     @Published private(set) var accounts: [OAuthAccountUsage] = []
@@ -86,6 +90,7 @@ final class OAuthUsageTracker: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        request.timeoutInterval = OAuthUsageParsing.requestTimeout
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("codex-cli", forHTTPHeaderField: "User-Agent")
@@ -246,7 +251,10 @@ final class OAuthUsageTracker: ObservableObject {
         for (key, value) in dictionary where key.lowercased().contains("reset") {
             let lowerKey = key.lowercased()
             if let string = value as? String, !string.isEmpty {
-                return ISO8601DateFormatter().date(from: string)
+                if let date = parseISO8601Date(string) {
+                    return date
+                }
+                continue
             }
             if let number = numberValue(value) {
                 if lowerKey.contains("after") {
@@ -256,6 +264,18 @@ final class OAuthUsageTracker: ObservableObject {
             }
         }
         return nil
+    }
+
+    nonisolated private static func parseISO8601Date(_ string: String) -> Date? {
+        let withFractionalSeconds = ISO8601DateFormatter()
+        withFractionalSeconds.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = withFractionalSeconds.date(from: string) {
+            return date
+        }
+
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        return standard.date(from: string)
     }
 
     nonisolated private static func resetText(for date: Date) -> String {
