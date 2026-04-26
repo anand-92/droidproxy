@@ -525,6 +525,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
     @AppStorage(AppPreferences.claudeMaxBudgetModeKey) private var claudeMaxBudgetMode = AppPreferences.defaultClaudeMaxBudgetMode
     @AppStorage(AppPreferences.oledThemeKey) private var oledTheme = AppPreferences.defaultOledTheme
+    @AppStorage(AppPreferences.factoryAdvancedModelsKey) private var factoryAdvancedModels = AppPreferences.defaultFactoryAdvancedModels
     @State private var authenticatingService: ServiceType? = nil
     @State private var showingAuthResult = false
     @State private var authResultMessage = ""
@@ -775,25 +776,42 @@ struct SettingsView: View {
                         .controlSize(.small)
                     }
 
-                    HStack {
-                        Text("Factory custom models")
-                        Spacer()
-                        if factoryModelsInstalled {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.caption)
-                                Text("Applied")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Factory custom models")
+                            Spacer()
+                            if factoryModelsInstalled {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                    Text("Applied")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                }
                             }
+                            Button(factoryModelsInstalled ? "Re-apply" : "Apply") {
+                                applyFactoryCustomModels()
+                            }
+                            .droidGlassProminent()
+                            .controlSize(.small)
                         }
-                        Button(factoryModelsInstalled ? "Re-apply" : "Apply") {
-                            applyFactoryCustomModels()
+
+                        Toggle("Advanced: add one Factory model entry per reasoning/thinking level", isOn: $factoryAdvancedModels)
+                            .toggleStyle(.checkbox)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .onChange(of: factoryAdvancedModels) { _ in
+                                factoryModelsInstalled = checkFactoryModelsInstalled()
+                                challengerPluginInstalled = checkChallengerPluginInstalled()
+                            }
+
+                        Text(factoryAdvancedModels
+                             ? "Apply writes separate Low/Medium/High/etc. model aliases into ~/.factory/settings.json."
+                             : "Apply writes the default DroidProxy model aliases into ~/.factory/settings.json.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
                         }
-                        .droidGlassProminent()
-                        .controlSize(.small)
-                    }
 
                     Toggle("Native Factory reasoning", isOn: nativeFactoryReasoningBinding)
                         .toggleStyle(.switch)
@@ -926,48 +944,52 @@ struct SettingsView: View {
                                 }
                             }
                             if claudeModelsExpanded {
-                                MaxBudgetToggleView(isOn: $claudeMaxBudgetMode)
-                                    .onChange(of: claudeMaxBudgetMode) { enabled in
-                                        if enabled {
-                                            showingMaxBudgetWarning = true
-                                            opus46ThinkingEffort = "max"
-                                            sonnet46ThinkingEffort = "max"
+                                if factoryAdvancedModels {
+                                    advancedFactoryModelsNotice("Claude")
+                                } else {
+                                    MaxBudgetToggleView(isOn: $claudeMaxBudgetMode)
+                                        .onChange(of: claudeMaxBudgetMode) { enabled in
+                                            if enabled {
+                                                showingMaxBudgetWarning = true
+                                                opus46ThinkingEffort = "max"
+                                                sonnet46ThinkingEffort = "max"
+                                            }
                                         }
-                                    }
-                                collapsibleEffortPickerRow(
-                                    "Opus 4.7 thinking effort",
-                                    selection: $opus47ThinkingEffort,
-                                    options: ["low", "medium", "high", "xhigh", "max"],
-                                    tint: claudeEffortSelectionColor,
-                                    isExpanded: $opus47EffortExpanded
-                                )
-                                collapsibleEffortPickerRow(
-                                    "Opus 4.6 thinking effort",
-                                    selection: $opus46ThinkingEffort,
-                                    options: ["low", "medium", "high", "max"],
-                                    tint: claudeEffortSelectionColor,
-                                    isExpanded: $opus46EffortExpanded,
-                                    overrideBadge: claudeMaxBudgetMode ? "MAX MODE" : nil
-                                )
-                                .disabled(claudeMaxBudgetMode)
-                                .opacity(claudeMaxBudgetMode ? 0.45 : 1.0)
-                                collapsibleEffortPickerRow(
-                                    "Opus 4.5 thinking effort",
-                                    selection: $opus45ThinkingEffort,
-                                    options: ["low", "medium", "high", "max"],
-                                    tint: claudeEffortSelectionColor,
-                                    isExpanded: $opus45EffortExpanded
-                                )
-                                collapsibleEffortPickerRow(
-                                    "Sonnet 4.6 thinking effort",
-                                    selection: $sonnet46ThinkingEffort,
-                                    options: ["low", "medium", "high", "max"],
-                                    tint: claudeEffortSelectionColor,
-                                    isExpanded: $sonnet46EffortExpanded,
-                                    overrideBadge: claudeMaxBudgetMode ? "MAX MODE" : nil
-                                )
-                                .disabled(claudeMaxBudgetMode)
-                                .opacity(claudeMaxBudgetMode ? 0.45 : 1.0)
+                                    collapsibleEffortPickerRow(
+                                        "Opus 4.7 thinking effort",
+                                        selection: $opus47ThinkingEffort,
+                                        options: ["low", "medium", "high", "xhigh", "max"],
+                                        tint: claudeEffortSelectionColor,
+                                        isExpanded: $opus47EffortExpanded
+                                    )
+                                    collapsibleEffortPickerRow(
+                                        "Opus 4.6 thinking effort",
+                                        selection: $opus46ThinkingEffort,
+                                        options: ["low", "medium", "high", "max"],
+                                        tint: claudeEffortSelectionColor,
+                                        isExpanded: $opus46EffortExpanded,
+                                        overrideBadge: claudeMaxBudgetMode ? "MAX MODE" : nil
+                                    )
+                                    .disabled(claudeMaxBudgetMode)
+                                    .opacity(claudeMaxBudgetMode ? 0.45 : 1.0)
+                                    collapsibleEffortPickerRow(
+                                        "Opus 4.5 thinking effort",
+                                        selection: $opus45ThinkingEffort,
+                                        options: ["low", "medium", "high", "max"],
+                                        tint: claudeEffortSelectionColor,
+                                        isExpanded: $opus45EffortExpanded
+                                    )
+                                    collapsibleEffortPickerRow(
+                                        "Sonnet 4.6 thinking effort",
+                                        selection: $sonnet46ThinkingEffort,
+                                        options: ["low", "medium", "high", "max"],
+                                        tint: claudeEffortSelectionColor,
+                                        isExpanded: $sonnet46EffortExpanded,
+                                        overrideBadge: claudeMaxBudgetMode ? "MAX MODE" : nil
+                                    )
+                                    .disabled(claudeMaxBudgetMode)
+                                    .opacity(claudeMaxBudgetMode ? 0.45 : 1.0)
+                                }
                             }
                         }
                         .padding(.leading, 28)
@@ -1007,81 +1029,98 @@ struct SettingsView: View {
                                 }
                             }
                             if codexModelsExpanded {
-                                if factoryNativeReasoning {
-                                    Text("Native Factory reasoning is on. Factory controls Codex reasoning per role/session. Current Factory/Droid custom models expose low, medium, and high only; GUI fast mode is paused in this mode.")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text("GPT 5.3 Codex reasoning effort")
+                                if factoryAdvancedModels {
+                                    advancedFactoryModelsNotice("Codex")
+                                    codexFastModeToggleRow(
+                                        "GPT 5.3 Codex",
+                                        isOn: $gpt53CodexFastMode,
+                                        helpText: "Injects service_tier=priority for GPT 5.3 Codex Responses API requests (Codex fast mode)"
+                                    )
+                                    codexFastModeToggleRow(
+                                        "GPT 5.4",
+                                        isOn: $gpt54FastMode,
+                                        helpText: "Injects service_tier=priority for GPT 5.4 Responses API requests (Codex fast mode)"
+                                    )
+                                    codexFastModeToggleRow(
+                                        "GPT 5.5",
+                                        isOn: $gpt55FastMode,
+                                        helpText: "Injects service_tier=priority for GPT 5.5 Responses API requests (Codex fast mode)"
+                                    )
+                                } else {
+                                    if factoryNativeReasoning {
+                                        Text("Native Factory reasoning is on. Factory controls Codex reasoning per role/session. Current Factory/Droid custom models expose low, medium, and high only; GUI fast mode is paused in this mode.")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
-                                        Spacer()
-                                        Toggle("Fast mode", isOn: $gpt53CodexFastMode)
-                                            .toggleStyle(.checkbox)
-                                            .font(.caption)
-                                            .help("Injects service_tier=priority for GPT 5.3 Codex Responses API requests (Codex fast mode)")
+                                            .fixedSize(horizontal: false, vertical: true)
                                     }
-                                    Picker("", selection: $gpt53CodexReasoningEffort) {
-                                        ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
-                                            Text(option).tag(option)
+                                    Group {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            HStack {
+                                                Text("GPT 5.3 Codex reasoning effort")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                Spacer()
+                                                Toggle("Fast mode", isOn: $gpt53CodexFastMode)
+                                                    .toggleStyle(.checkbox)
+                                                    .font(.caption)
+                                                    .help("Injects service_tier=priority for GPT 5.3 Codex Responses API requests (Codex fast mode)")
+                                            }
+                                            Picker("", selection: $gpt53CodexReasoningEffort) {
+                                                ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
+                                                    Text(option).tag(option)
+                                                }
+                                            }
+                                            .pickerStyle(.segmented)
+                                            .tint(codexEffortSelectionColor)
+                                            .labelsHidden()
                                         }
-                                    }
-                                    .pickerStyle(.segmented)
-                                    .tint(codexEffortSelectionColor)
-                                    .labelsHidden()
-                                }
-                                .padding(.vertical, 2)
-                                .disabled(factoryNativeReasoning)
-                                .opacity(factoryNativeReasoning ? 0.45 : 1.0)
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text("GPT 5.4 reasoning effort")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                        Spacer()
-                                        Toggle("Fast mode", isOn: $gpt54FastMode)
-                                            .toggleStyle(.checkbox)
-                                            .font(.caption)
-                                            .help("Injects service_tier=priority for GPT 5.4 Responses API requests (Codex fast mode)")
-                                    }
-                                    Picker("", selection: $gpt54ReasoningEffort) {
-                                        ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
-                                            Text(option).tag(option)
+                                        .padding(.vertical, 2)
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            HStack {
+                                                Text("GPT 5.4 reasoning effort")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                Spacer()
+                                                Toggle("Fast mode", isOn: $gpt54FastMode)
+                                                    .toggleStyle(.checkbox)
+                                                    .font(.caption)
+                                                    .help("Injects service_tier=priority for GPT 5.4 Responses API requests (Codex fast mode)")
+                                            }
+                                            Picker("", selection: $gpt54ReasoningEffort) {
+                                                ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
+                                                    Text(option).tag(option)
+                                                }
+                                            }
+                                            .pickerStyle(.segmented)
+                                            .tint(codexEffortSelectionColor)
+                                            .labelsHidden()
                                         }
-                                    }
-                                    .pickerStyle(.segmented)
-                                    .tint(codexEffortSelectionColor)
-                                    .labelsHidden()
-                                }
-                                .padding(.vertical, 2)
-                                .disabled(factoryNativeReasoning)
-                                .opacity(factoryNativeReasoning ? 0.45 : 1.0)
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text("GPT 5.5 reasoning effort")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                        Spacer()
-                                        Toggle("Fast mode", isOn: $gpt55FastMode)
-                                            .toggleStyle(.checkbox)
-                                            .font(.caption)
-                                            .help("Injects service_tier=priority for GPT 5.5 Responses API requests (Codex fast mode)")
-                                    }
-                                    Picker("", selection: $gpt55ReasoningEffort) {
-                                        ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
-                                            Text(option).tag(option)
+                                        .padding(.vertical, 2)
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            HStack {
+                                                Text("GPT 5.5 reasoning effort")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                Spacer()
+                                                Toggle("Fast mode", isOn: $gpt55FastMode)
+                                                    .toggleStyle(.checkbox)
+                                                    .font(.caption)
+                                                    .help("Injects service_tier=priority for GPT 5.5 Responses API requests (Codex fast mode)")
+                                            }
+                                            Picker("", selection: $gpt55ReasoningEffort) {
+                                                ForEach(["low", "medium", "high", "xhigh"], id: \.self) { option in
+                                                    Text(option).tag(option)
+                                                }
+                                            }
+                                            .pickerStyle(.segmented)
+                                            .tint(codexEffortSelectionColor)
+                                            .labelsHidden()
                                         }
+                                        .padding(.vertical, 2)
                                     }
-                                    .pickerStyle(.segmented)
-                                    .tint(codexEffortSelectionColor)
-                                    .labelsHidden()
+                                    .disabled(factoryNativeReasoning)
+                                    .opacity(factoryNativeReasoning ? 0.45 : 1.0)
                                 }
-                                .padding(.vertical, 2)
-                                .disabled(factoryNativeReasoning)
-                                .opacity(factoryNativeReasoning ? 0.45 : 1.0)
                             }
                         }
                         .padding(.leading, 28)
@@ -1121,18 +1160,22 @@ struct SettingsView: View {
                                 }
                             }
                             if geminiModelsExpanded {
-                                effortPickerRow(
-                                    "Gemini 3.1 Pro thinking level",
-                                    selection: $gemini31ProThinkingLevel,
-                                    options: ["low", "medium", "high"],
-                                    tint: geminiEffortSelectionColor
-                                )
-                                effortPickerRow(
-                                    "Gemini 3 Flash thinking level",
-                                    selection: $gemini3FlashThinkingLevel,
-                                    options: ["minimal", "low", "medium", "high"],
-                                    tint: geminiEffortSelectionColor
-                                )
+                                if factoryAdvancedModels {
+                                    advancedFactoryModelsNotice("Gemini")
+                                } else {
+                                    effortPickerRow(
+                                        "Gemini 3.1 Pro thinking level",
+                                        selection: $gemini31ProThinkingLevel,
+                                        options: ["low", "medium", "high"],
+                                        tint: geminiEffortSelectionColor
+                                    )
+                                    effortPickerRow(
+                                        "Gemini 3 Flash thinking level",
+                                        selection: $gemini3FlashThinkingLevel,
+                                        options: ["minimal", "low", "medium", "high"],
+                                        tint: geminiEffortSelectionColor
+                                    )
+                                }
                             }
                         }
                         .padding(.leading, 28)
@@ -1279,6 +1322,35 @@ struct SettingsView: View {
     }
 
     // MARK: - Actions
+
+    @ViewBuilder
+    private func advancedFactoryModelsNotice(_ providerName: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "slider.horizontal.3")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Text("Advanced Factory models are on. Re-apply custom models to pick \(providerName) reasoning/thinking levels directly from Factory's model picker.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func codexFastModeToggleRow(_ title: String, isOn: Binding<Bool>, helpText: String) -> some View {
+        HStack {
+            Text("\(title) fast mode")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+            Toggle("Fast mode", isOn: isOn)
+                .toggleStyle(.checkbox)
+                .font(.caption)
+                .help(helpText)
+        }
+        .padding(.vertical, 2)
+    }
 
     @ViewBuilder
     private func effortPickerRow(_ title: String, selection: Binding<String>, options: [String], tint: Color = AccountRowView.accent, overrideBadge: String? = nil) -> some View {
@@ -1525,113 +1597,6 @@ struct SettingsView: View {
     /// so users don't end up with stale entries next to the current ones.
     private static let legacyDroidProxyModelIds: Set<String> = []
 
-    private static func modelId(_ suffix: String) -> String {
-        "custom:droidproxy:\(suffix)"
-    }
-
-    private static func baseURL(path: String = "") -> String {
-        "http://localhost:8317\(path)"
-    }
-
-    private static func displayName(_ name: String) -> String {
-        "DroidProxy: \(name)"
-    }
-
-    private static func droidProxyModels() -> [[String: Any]] {
-        [
-            [
-            "model": "claude-opus-4-7",
-            "id": modelId("opus-4-7"),
-            "baseUrl": baseURL(),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("Opus 4.7"),
-            "maxOutputTokens": 128000,
-            "noImageSupport": false,
-            "provider": "anthropic"
-        ],
-        [
-            "model": "claude-opus-4-6",
-            "id": modelId("opus-4-6"),
-            "baseUrl": baseURL(),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("Opus 4.6"),
-            "maxOutputTokens": 128000,
-            "noImageSupport": false,
-            "provider": "anthropic"
-        ],
-        [
-            "model": "claude-opus-4-5-20251101",
-            "id": modelId("opus-4-5"),
-            "baseUrl": baseURL(),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("Opus 4.5"),
-            "maxOutputTokens": 64000,
-            "noImageSupport": false,
-            "provider": "anthropic"
-        ],
-        [
-            "model": "claude-sonnet-4-6",
-            "id": modelId("sonnet-4-6"),
-            "baseUrl": baseURL(),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("Sonnet 4.6"),
-            "maxOutputTokens": 64000,
-            "noImageSupport": false,
-            "provider": "anthropic"
-        ],
-        [
-            "model": "gpt-5.3-codex",
-            "id": modelId("gpt-5.3-codex"),
-            "baseUrl": baseURL(path: "/v1"),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("GPT 5.3 Codex"),
-            "maxOutputTokens": 128000,
-            "noImageSupport": false,
-            "provider": "openai"
-        ],
-        [
-            "model": "gpt-5.4",
-            "id": modelId("gpt-5.4"),
-            "baseUrl": baseURL(path: "/v1"),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("GPT 5.4"),
-            "maxOutputTokens": 128000,
-            "noImageSupport": false,
-            "provider": "openai"
-        ],
-        [
-            "model": "gpt-5.5",
-            "id": modelId("gpt-5.5"),
-            "baseUrl": baseURL(path: "/v1"),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("GPT 5.5"),
-            "maxOutputTokens": 128000,
-            "noImageSupport": false,
-            "provider": "openai"
-        ],
-        [
-            "model": "gemini-3.1-pro-preview",
-            "id": modelId("gemini-3.1-pro"),
-            "baseUrl": baseURL(),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("Gemini 3.1 Pro"),
-            "maxOutputTokens": 65536,
-            "noImageSupport": false,
-            "provider": "google"
-        ],
-        [
-            "model": "gemini-3-flash-preview",
-            "id": modelId("gemini-3-flash"),
-            "baseUrl": baseURL(),
-            "apiKey": "dummy-not-used",
-            "displayName": displayName("Gemini 3 Flash"),
-            "maxOutputTokens": 65536,
-            "noImageSupport": false,
-            "provider": "google"
-        ]
-        ]
-    }
-
     private static let codexReasoningEfforts = ["low", "medium", "high"]
     private static let nativeReasoningModelKeys: Set<String> = [
         "enableThinking",
@@ -1640,51 +1605,27 @@ struct SettingsView: View {
         "defaultReasoningEffort"
     ]
 
-    private static func factoryModels(nativeReasoning: Bool) -> [[String: Any]] {
-        guard nativeReasoning else {
-            return droidProxyModels()
-        }
-
-        return droidProxyModels().map { model in
-            guard providerKey(for: model) == "codex" else {
+    private static func factoryModels(advanced: Bool, nativeReasoning: Bool) -> [[String: Any]] {
+        DroidProxyModelCatalog.settingsModels(advanced: advanced).map { model in
+            guard nativeReasoning,
+                  !advanced,
+                  DroidProxyModelCatalog.providerKey(forSettingsModel: model) == "codex" else {
                 return model
             }
 
-            var advancedModel = model
-            advancedModel["enableThinking"] = true
-            advancedModel["reasoningEffort"] = "high"
-            advancedModel["supportedReasoningEfforts"] = codexReasoningEfforts
-            advancedModel["defaultReasoningEffort"] = "medium"
-            return advancedModel
+            var nativeModel = model
+            nativeModel["enableThinking"] = true
+            nativeModel["reasoningEffort"] = "high"
+            nativeModel["supportedReasoningEfforts"] = codexReasoningEfforts
+            nativeModel["defaultReasoningEffort"] = "medium"
+            return nativeModel
         }
-    }
-
-    private static func allFactoryModelIdsForRemoval() -> Set<String> {
-        Set(droidProxyModels().compactMap { $0["id"] as? String })
     }
 
     private func factorySettingsURL() -> URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".factory")
             .appendingPathComponent("settings.json")
-    }
-
-    private static func providerKey(for model: [String: Any]) -> String? {
-        if let provider = model["provider"] as? String {
-            switch provider {
-            case "anthropic": return "claude"
-            case "openai": return "codex"
-            case "google": return "gemini"
-            default: break
-            }
-        }
-
-        // Keep prefix fallback for legacy or externally supplied model dictionaries.
-        guard let name = model["model"] as? String else { return nil }
-        if name.hasPrefix("claude") { return "claude" }
-        if name.hasPrefix("gpt") { return "codex" }
-        if name.hasPrefix("gemini") { return "gemini" }
-        return nil
     }
 
     private func checkFactoryModelsInstalled() -> Bool {
@@ -1694,14 +1635,16 @@ struct SettingsView: View {
               let models = json["customModels"] as? [[String: Any]] else {
             return false
         }
-
         var existingById: [String: [String: Any]] = [:]
         for model in models {
             guard let id = model["id"] as? String else { continue }
             existingById[id] = model
         }
-        let enabledModels = Self.factoryModels(nativeReasoning: factoryNativeReasoning).filter { model in
-            guard let key = Self.providerKey(for: model) else { return true }
+        let enabledModels = Self.factoryModels(
+            advanced: factoryAdvancedModels,
+            nativeReasoning: factoryNativeReasoning
+        ).filter { model in
+            guard let key = DroidProxyModelCatalog.providerKey(forSettingsModel: model) else { return true }
             return serverManager.isProviderEnabled(key)
         }
 
@@ -1778,14 +1721,19 @@ struct SettingsView: View {
 
         var models = (settings["customModels"] as? [[String: Any]]) ?? []
 
-        let droidIds = Self.allFactoryModelIdsForRemoval()
         models.removeAll { item in
             guard let id = item["id"] as? String else { return false }
-            return droidIds.contains(id) || Self.legacyDroidProxyModelIds.contains(id) || id.hasPrefix("custom:CC:")
+            return DroidProxyModelCatalog.allSettingsIDs.contains(id)
+                || Self.legacyDroidProxyModelIds.contains(id)
+                || id.hasPrefix("custom:droidproxy:")
+                || id.hasPrefix("custom:CC:")
         }
 
-        let enabledModels = Self.factoryModels(nativeReasoning: nativeReasoning).filter { model in
-            guard let key = Self.providerKey(for: model) else { return true }
+        let enabledModels = Self.factoryModels(
+            advanced: factoryAdvancedModels,
+            nativeReasoning: nativeReasoning
+        ).filter { model in
+            guard let key = DroidProxyModelCatalog.providerKey(forSettingsModel: model) else { return true }
             return serverManager.isProviderEnabled(key)
         }
         let startIndex = models.count
@@ -1805,7 +1753,8 @@ struct SettingsView: View {
             try data.write(to: url, options: .atomic)
             factoryModelsInstalled = true
             authResultSuccess = true
-            authResultMessage = successMessage ?? "DroidProxy models added to Factory settings.\n\nRestart Factory/Droid or open a new CLI session to see the updated model picker."
+            let mode = factoryAdvancedModels ? "Advanced DroidProxy model entries" : "DroidProxy models"
+            authResultMessage = successMessage ?? "\(mode) added to Factory settings.\n\nRestart Factory/Droid or open a new CLI session to see the updated model picker."
             showingAuthResult = true
             NSLog("[SettingsView] Factory custom models applied to %@", url.path)
             return true
@@ -1980,8 +1929,30 @@ struct SettingsView: View {
         let home = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".factory")
         return Self.challengerPluginFiles.allSatisfy { entry in
             let url = home.appendingPathComponent(entry.directory).appendingPathComponent(entry.filename)
-            return FileManager.default.fileExists(atPath: url.path)
+            guard let existing = try? String(contentsOf: url, encoding: .utf8) else {
+                return false
+            }
+            return existing == renderedChallengerPluginContent(entry.content)
         }
+    }
+
+    private func renderedChallengerPluginContent(_ content: String) -> String {
+        var rendered = content
+        if factoryAdvancedModels {
+            rendered = rendered
+                .replacingOccurrences(of: "model: custom:droidproxy:opus-4-7", with: "model: custom:droidproxy:opus-4-7-xhigh")
+                .replacingOccurrences(of: "model: custom:droidproxy:gpt-5.5", with: "model: custom:droidproxy:gpt-5.5-high")
+                .replacingOccurrences(of: "model: custom:droidproxy:gemini-3.1-pro", with: "model: custom:droidproxy:gemini-3.1-pro-high")
+        }
+
+        return rendered
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { line in
+                var s = String(line)
+                while s.hasPrefix("        ") { s = String(s.dropFirst(8)) }
+                return s
+            }
+            .joined(separator: "\n")
     }
 
     private func applyChallengerPlugin() {
@@ -1993,16 +1964,7 @@ struct SettingsView: View {
                 let dir = home.appendingPathComponent(entry.directory)
                 try fm.createDirectory(at: dir, withIntermediateDirectories: true)
                 let fileURL = dir.appendingPathComponent(entry.filename)
-                // Trim leading whitespace from each line caused by Swift multi-line string indentation
-                let trimmed = entry.content
-                    .split(separator: "\n", omittingEmptySubsequences: false)
-                    .map { line in
-                        var s = String(line)
-                        while s.hasPrefix("        ") { s = String(s.dropFirst(8)) }
-                        return s
-                    }
-                    .joined(separator: "\n")
-                try trimmed.write(to: fileURL, atomically: true, encoding: .utf8)
+                try renderedChallengerPluginContent(entry.content).write(to: fileURL, atomically: true, encoding: .utf8)
             }
             challengerPluginInstalled = true
             authResultSuccess = true

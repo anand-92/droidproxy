@@ -4,7 +4,7 @@
   <img src="logo.png" alt="DroidProxy" width="128">
 </p>
 
-A native macOS menu bar app that proxies Claude Code, Codex, and Gemini authentication for use with AI coding tools like [<img src="factory-logo.svg" alt="Factory.ai" height="16">](https://app.factory.ai) Droids. Built on [CLIProxyAPIPlus](https://github.com/router-for-me/CLIProxyAPIPlus).
+A native macOS menu bar app that proxies Claude Code, Codex, and Gemini authentication for use with [<img src="factory-logo.svg" alt="Factory.ai" height="16">](https://app.factory.ai) Droids. Built on [CLIProxyAPIPlus](https://github.com/router-for-me/CLIProxyAPIPlus).
 
 ## Download
 
@@ -18,26 +18,16 @@ All releases are code-signed and notarized by Apple. Existing installs auto-upda
 ## Features
 
 - **One-click OAuth auth** -- Claude Code, Codex, and Gemini login from the menu bar, credential monitoring, auto-refresh
-- **Adaptive thinking proxy** -- Injects `thinking: {"type":"adaptive"}` and per-model `output_config.effort` for Claude Opus 4.7 and Claude Sonnet 4.6 requests sent through `http://localhost:8317`
-- **Codex reasoning controls** -- Injects `reasoning: {"effort":"..."}` for `gpt-5.3-codex`, `gpt-5.4`, and `gpt-5.5` via the OpenAI-compatible `http://localhost:8317/v1` endpoint
-- **Gemini thinking levels** -- Injects per-model thinking levels for `gemini-3.1-pro-preview` (`low` / `medium` / `high`) and `gemini-3-flash-preview` (`minimal` / `low` / `medium` / `high`) via model name suffix rewriting
-- **Per-model effort controls** -- Configure Opus 4.7 (`low` / `medium` / `high` / `xhigh` / `max`), Sonnet 4.6 (`low` / `medium` / `high` / `max`), GPT 5.3 Codex (`low` / `medium` / `high` / `xhigh`), GPT 5.4 (`low` / `medium` / `high` / `xhigh`), GPT 5.5 (`low` / `medium` / `high` / `xhigh`), Gemini 3.1 Pro (`low` / `medium` / `high`), and Gemini 3 Flash (`minimal` / `low` / `medium` / `high`) directly from the Settings window
-- **Max Budget Mode** -- Nuclear launch button that forces maximum reasoning on Sonnet 4.6 requests: classic extended thinking with `budget_tokens: 63999`, `max_tokens: 64000`, and `effort: max`. Opus 4.7 is unaffected and continues to use its configured thinking effort slider. Full thinking power for Sonnet, your quota's problem.
-
-<p align="center">
-  <img src="max-mode.png" alt="Max Budget Mode" width="420">
-</p>
-
-- **Sparkle auto-updates** -- Checks daily, installs in the background
-- **Factory integration** -- Use Claude models against `http://localhost:8317`, Codex/OpenAI models against `http://localhost:8317/v1`, and Gemini models against `http://localhost:8317/v1`
-
-## Setup
-
-See [SETUP.md](SETUP.md) for authentication and Factory configuration instructions.
+- **Per-model reasoning/effort controls** -- Configure Opus 4.7, Sonnet 4.6, GPT 5.3 Codex, GPT 5.4, GPT 5.5, Gemini 3.1 Pro, and Gemini 3 Flash directly from the Settings window. Also supports `fast` mode for gpt models.
+- **Max Budget Mode** -- Nuclear launch button that forces maximum reasoning on Opud/Sonnet 4.6 requests: classic extended thinking with `budget_tokens: 63999`, `max_tokens: 64000`, and `effort: max`. Opus 4.7 does not need this override. Full thinking power for Sonnet, your quota's problem.
 
 <p align="center">
   <img src="settings-screenshot.png" alt="DroidProxy Settings" width="420">
 </p>
+
+## Setup
+
+See [SETUP.md](SETUP.md) for authentication and manaul Factory configuration instructions. **(OR use the 1-click options in the UI!)**
 
 ## Requirements
 
@@ -81,27 +71,10 @@ src/
 └── Info.plist
 ```
 
-## Challenger Droids
+## Challenger Droids - 1 Click Install via UI
 
 DroidProxy ships with three devil's advocate code reviewer droids -- powered by Claude Opus 4.7, GPT 5.5, and Gemini 3.1 Pro. They challenge your code decisions, surface tradeoffs you may have missed, stress-test edge cases, and suggest concrete alternatives. Running multiple gives you a cross-model second opinion that catches blind spots a single reviewer might miss.
 
-### Install
-
-Copy the droid and command definitions into your personal Factory config:
-
-```bash
-mkdir -p ~/.factory/droids ~/.factory/commands
-
-# Droids
-cp .factory/droids/challenger-opus.md ~/.factory/droids/
-cp .factory/droids/challenger-gpt.md ~/.factory/droids/
-cp .factory/droids/challenger-gemini.md ~/.factory/droids/
-
-# Slash commands
-cp .factory/commands/challenge-opus.md ~/.factory/commands/
-cp .factory/commands/challenge-gpt.md ~/.factory/commands/
-cp .factory/commands/challenge-gemini.md ~/.factory/commands/
-```
 
 ### Usage
 
