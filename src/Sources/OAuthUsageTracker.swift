@@ -23,12 +23,13 @@ struct OAuthAccountUsage: Identifiable, Equatable {
     var updatedAt: Date?
 }
 
-final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
+@MainActor
+final class OAuthUsageTracker: ObservableObject {
     @Published private(set) var accounts: [OAuthAccountUsage] = []
     @Published private(set) var isRefreshing = false
 
-    func refresh(accounts authAccounts: [AuthAccount]) {
-        let enabledAccounts = authAccounts.filter { !$0.isDisabled && !$0.isExpired }
+    func refresh(codexAccounts authAccounts: [AuthAccount]) {
+        let enabledAccounts = authAccounts.filter { !$0.isDisabled && !$0.isExpired && $0.type == .codex }
         guard !enabledAccounts.isEmpty else {
             DispatchQueue.main.async {
                 self.accounts = []
@@ -44,11 +45,11 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
             }
         }
 
-        Task.detached(priority: .utility) { [enabledAccounts] in
+        Task { [enabledAccounts] in
             let results = await withTaskGroup(of: OAuthAccountUsage.self) { group in
                 for account in enabledAccounts {
                     group.addTask {
-                        await Self.fetchUsage(for: account)
+                        await Self.fetchCodexUsage(for: account)
                     }
                 }
 
@@ -64,25 +65,12 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
                 }
             }
 
-            await MainActor.run {
-                self.accounts = results
-                self.isRefreshing = false
-            }
+            self.accounts = results
+            self.isRefreshing = false
         }
     }
 
-    private static func fetchUsage(for account: AuthAccount) async -> OAuthAccountUsage {
-        switch account.type {
-        case .codex:
-            return await fetchCodexUsage(for: account)
-        case .gemini:
-            return await fetchGeminiUsage(for: account)
-        case .claude:
-            return failedAccount(account, "Usage tracking is not enabled for this provider")
-        }
-    }
-
-    private static func fetchCodexUsage(for account: AuthAccount) async -> OAuthAccountUsage {
+    nonisolated private static func fetchCodexUsage(for account: AuthAccount) async -> OAuthAccountUsage {
         guard let token = stringValue("access_token", from: account.filePath) else {
             return failedAccount(account, "Missing access token")
         }
@@ -94,36 +82,17 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        return await fetchJSONUsage(account: account, request: request) { json in
-            parseGenericWindows(json)
-        }
-    }
-
-    private static func fetchGeminiUsage(for account: AuthAccount) async -> OAuthAccountUsage {
-        guard let token = stringValue("access_token", from: account.filePath) else {
-            return failedAccount(account, "Missing access token")
-        }
-        guard let url = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota") else {
-            return failedAccount(account, "Invalid quota endpoint")
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let projectId = stringValue("project_id", from: account.filePath), !projectId.isEmpty {
-            request.httpBody = Data("{\"project\":\"\(projectId)\"}".utf8)
-        } else {
-            request.httpBody = Data("{}".utf8)
+        request.setValue("codex-cli", forHTTPHeaderField: "User-Agent")
+        if let accountId = stringValue("account_id", from: account.filePath) {
+            request.setValue(accountId, forHTTPHeaderField: "ChatGPT-Account-Id")
         }
 
         return await fetchJSONUsage(account: account, request: request) { json in
-            parseGeminiWindows(json)
+            parseCodexWindows(json)
         }
     }
 
-    private static func fetchJSONUsage(
+    nonisolated private static func fetchJSONUsage(
         account: AuthAccount,
         request: URLRequest,
         parse: (Any) -> [OAuthUsageWindow]
@@ -153,7 +122,7 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         }
     }
 
-    private static func failedAccount(_ account: AuthAccount, _ message: String) -> OAuthAccountUsage {
+    nonisolated private static func failedAccount(_ account: AuthAccount, _ message: String) -> OAuthAccountUsage {
         OAuthAccountUsage(
             id: account.id,
             provider: account.type,
@@ -163,7 +132,7 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         )
     }
 
-    private static func stringValue(_ key: String, from url: URL) -> String? {
+    nonisolated private static func stringValue(_ key: String, from url: URL) -> String? {
         guard let data = try? Data(contentsOf: url),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let value = json[key] as? String,
@@ -173,30 +142,28 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         return value
     }
 
-    private static func parseGeminiWindows(_ object: Any) -> [OAuthUsageWindow] {
+    nonisolated private static func parseCodexWindows(_ object: Any) -> [OAuthUsageWindow] {
         guard let root = object as? [String: Any],
-              let buckets = root["buckets"] as? [[String: Any]] else {
+              let rateLimit = root["rate_limit"] as? [String: Any] else {
             return parseGenericWindows(object)
         }
 
-        let grouped = Dictionary(grouping: buckets) { bucket in
-            (bucket["modelId"] as? String) ?? "Gemini"
-        }
-
-        return grouped.compactMap { model, buckets -> OAuthUsageWindow? in
-            let lowestRemaining = buckets.compactMap { numberValue($0["remainingFraction"]) }.min()
-            guard let remaining = lowestRemaining else { return nil }
-            let resetText = buckets.compactMap { Self.resetText(from: $0) }.first
-            return OAuthUsageWindow(
-                title: model.replacingOccurrences(of: "models/", with: ""),
-                usedPercent: max(0, min(100, 100 - (remaining * 100))),
-                resetText: resetText
-            )
-        }
-        .sorted { $0.title < $1.title }
+        return [
+            codexWindow(title: "5-hour", from: rateLimit["primary_window"]),
+            codexWindow(title: "Weekly", from: rateLimit["secondary_window"])
+        ].compactMap { $0 }
     }
 
-    private static func parseGenericWindows(_ object: Any) -> [OAuthUsageWindow] {
+    nonisolated private static func codexWindow(title: String, from value: Any?) -> OAuthUsageWindow? {
+        guard let window = value as? [String: Any] else { return nil }
+        return OAuthUsageWindow(
+            title: title,
+            usedPercent: numberValue(window["used_percent"]),
+            resetText: resetText(from: window)
+        )
+    }
+
+    nonisolated private static func parseGenericWindows(_ object: Any) -> [OAuthUsageWindow] {
         let dictionaries = flattenDictionaries(object)
         var windows: [OAuthUsageWindow] = []
 
@@ -215,7 +182,7 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         return windows.sorted { windowRank($0.title) < windowRank($1.title) }
     }
 
-    private static func flattenDictionaries(_ value: Any) -> [[String: Any]] {
+    nonisolated private static func flattenDictionaries(_ value: Any) -> [[String: Any]] {
         if let dictionary = value as? [String: Any] {
             return [dictionary] + dictionary.values.flatMap(flattenDictionaries)
         }
@@ -225,7 +192,7 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         return []
     }
 
-    private static func windowTitle(from dictionary: [String: Any]) -> String? {
+    nonisolated private static func windowTitle(from dictionary: [String: Any]) -> String? {
         let joined = dictionary.map { "\($0.key):\($0.value)" }.joined(separator: " ").lowercased()
         if joined.contains("5h") || joined.contains("5-hour") || joined.contains("five") {
             return "5-hour"
@@ -242,7 +209,7 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         return nil
     }
 
-    private static func percentValue(from dictionary: [String: Any]) -> Double? {
+    nonisolated private static func percentValue(from dictionary: [String: Any]) -> Double? {
         for (key, value) in dictionary {
             let lower = key.lowercased()
             guard lower.contains("percent") || lower.contains("usage") || lower.contains("used") || lower.contains("fraction") else {
@@ -254,8 +221,9 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         return nil
     }
 
-    private static func resetText(from dictionary: [String: Any]) -> String? {
+    nonisolated private static func resetText(from dictionary: [String: Any]) -> String? {
         for (key, value) in dictionary where key.lowercased().contains("reset") {
+            let lowerKey = key.lowercased()
             if let string = value as? String, !string.isEmpty {
                 if let date = ISO8601DateFormatter().date(from: string) {
                     return RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date())
@@ -263,14 +231,19 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
                 return string
             }
             if let number = numberValue(value) {
-                let date = Date(timeIntervalSince1970: number > 10_000_000_000 ? number / 1000 : number)
+                let date: Date
+                if lowerKey.contains("after") {
+                    date = Date().addingTimeInterval(number)
+                } else {
+                    date = Date(timeIntervalSince1970: number > 10_000_000_000 ? number / 1000 : number)
+                }
                 return RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date())
             }
         }
         return nil
     }
 
-    private static func numberValue(_ value: Any?) -> Double? {
+    nonisolated private static func numberValue(_ value: Any?) -> Double? {
         if let value = value as? Double { return value }
         if let value = value as? Int { return Double(value) }
         if let value = value as? NSNumber { return value.doubleValue }
@@ -280,7 +253,7 @@ final class OAuthUsageTracker: ObservableObject, @unchecked Sendable {
         return nil
     }
 
-    private static func windowRank(_ title: String) -> Int {
+    nonisolated private static func windowRank(_ title: String) -> Int {
         switch title {
         case "5-hour": return 0
         case "Session": return 1

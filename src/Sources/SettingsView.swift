@@ -602,7 +602,7 @@ struct SettingsView: View {
             }
 
             if oauthUsageTracker.accounts.isEmpty {
-                Text("Connect Codex or Gemini OAuth accounts to show quota windows.")
+                Text("Connect Codex OAuth accounts to show quota windows.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else {
@@ -863,7 +863,7 @@ struct SettingsView: View {
 
                     Toggle("OAuth usage tracker", isOn: $oauthUsageTrackingEnabled)
                         .toggleStyle(.switch)
-                        .help("Uses the existing DroidProxy OAuth accounts to show Codex and Gemini quota windows. No separate login is needed.")
+                        .help("Uses the existing DroidProxy Codex OAuth accounts to show quota windows. No separate login is needed.")
                         .onChange(of: oauthUsageTrackingEnabled) { enabled in
                             if enabled {
                                 refreshOAuthUsage()
@@ -1458,8 +1458,7 @@ struct SettingsView: View {
     }
 
     private func refreshOAuthUsage() {
-        let accounts = authManager.accounts(for: .codex) + authManager.accounts(for: .gemini)
-        oauthUsageTracker.refresh(accounts: accounts)
+        oauthUsageTracker.refresh(codexAccounts: authManager.accounts(for: .codex))
     }
     
     private func openAuthFolder() {

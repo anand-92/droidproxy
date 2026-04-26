@@ -39,19 +39,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         
         configureNotifications()
 
-        if ProcessInfo.processInfo.environment["DROIDPROXY_NO_AUTOSTART"] == "1" {
-            NSLog("[AppDelegate] DROIDPROXY_NO_AUTOSTART=1; skipping automatic server start")
-            updateMenuBarStatus()
-        } else {
-            // Start server automatically
-            startServer()
-        }
-
-        if ProcessInfo.processInfo.environment["DROIDPROXY_OPEN_SETTINGS"] == "1" {
-            DispatchQueue.main.async { [weak self] in
-                self?.openSettings()
-            }
-        }
+        // Start server automatically
+        startServer()
 
         // Register for notifications
         NotificationCenter.default.addObserver(

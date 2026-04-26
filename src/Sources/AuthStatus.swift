@@ -4,6 +4,19 @@ enum ServiceType: String, CaseIterable {
     case claude
     case codex
     case gemini
+
+    init?(authFileType: String) {
+        switch authFileType.lowercased() {
+        case "claude":
+            self = .claude
+        case "codex":
+            self = .codex
+        case "gemini", "gemini-cli":
+            self = .gemini
+        default:
+            return nil
+        }
+    }
     
     var displayName: String {
         switch self {
@@ -98,7 +111,7 @@ class AuthManager: ObservableObject {
                 guard let data = try? Data(contentsOf: file),
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let type = json["type"] as? String,
-                      let serviceType = ServiceType(rawValue: type.lowercased()) else {
+                      let serviceType = ServiceType(authFileType: type) else {
                     continue
                 }
                 
