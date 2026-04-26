@@ -12,7 +12,7 @@ enum AppPreferences {
     static let gpt54FastModeKey = "gpt54FastMode"
     static let gpt55FastModeKey = "gpt55FastMode"
     static let factoryNativeReasoningKey = "factoryNativeReasoning"
-    static let oauthUsageTrackingEnabledKey = "oauthUsageTrackingEnabled"
+    static let codexUsageVisibleKey = "codexUsageVisible"
     static let gemini31ProThinkingLevelKey = "gemini31ProThinkingLevel"
     static let gemini3FlashThinkingLevelKey = "gemini3FlashThinkingLevel"
     static let claudeMaxBudgetModeKey = "claudeMaxBudgetMode"
@@ -31,7 +31,7 @@ enum AppPreferences {
     static let defaultGpt54FastMode = false
     static let defaultGpt55FastMode = false
     static let defaultFactoryNativeReasoning = false
-    static let defaultOAuthUsageTrackingEnabled = false
+    static let defaultCodexUsageVisible = false
     static let defaultGemini31ProThinkingLevel = "high"
     static let defaultGemini3FlashThinkingLevel = "high"
     static let defaultClaudeMaxBudgetMode = false
@@ -100,10 +100,6 @@ enum AppPreferences {
 
     static var factoryNativeReasoning: Bool {
         UserDefaults.standard.bool(forKey: factoryNativeReasoningKey)
-    }
-
-    static var oauthUsageTrackingEnabled: Bool {
-        UserDefaults.standard.bool(forKey: oauthUsageTrackingEnabledKey)
     }
 
     static var gemini31ProThinkingLevel: String {

@@ -6,6 +6,7 @@ struct OAuthUsageWindow: Identifiable, Equatable {
     let title: String
     let usedPercent: Double?
     let resetText: String?
+    let resetDate: Date?
 
     var remainingPercent: Double? {
         guard let usedPercent else { return nil }
@@ -162,10 +163,12 @@ final class OAuthUsageTracker: ObservableObject {
 
     nonisolated private static func codexWindow(title: String, from value: Any?) -> OAuthUsageWindow? {
         guard let window = value as? [String: Any] else { return nil }
+        let resetDate = resetDate(from: window)
         return OAuthUsageWindow(
             title: title,
             usedPercent: numberValue(window["used_percent"]),
-            resetText: resetText(from: window)
+            resetText: resetDate.map(resetText(for:)) ?? resetText(from: window),
+            resetDate: resetDate
         )
     }
 
@@ -181,7 +184,7 @@ final class OAuthUsageTracker: ObservableObject {
             let percent = percentValue(from: dictionary)
             let reset = resetText(from: dictionary)
             if percent != nil || reset != nil {
-                windows.append(OAuthUsageWindow(title: title, usedPercent: percent, resetText: reset))
+                windows.append(OAuthUsageWindow(title: title, usedPercent: percent, resetText: reset, resetDate: nil))
             }
         }
 
@@ -228,25 +231,39 @@ final class OAuthUsageTracker: ObservableObject {
     }
 
     nonisolated private static func resetText(from dictionary: [String: Any]) -> String? {
+        if let date = resetDate(from: dictionary) {
+            return resetText(for: date)
+        }
         for (key, value) in dictionary where key.lowercased().contains("reset") {
-            let lowerKey = key.lowercased()
             if let string = value as? String, !string.isEmpty {
-                if let date = ISO8601DateFormatter().date(from: string) {
-                    return RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date())
-                }
                 return string
-            }
-            if let number = numberValue(value) {
-                let date: Date
-                if lowerKey.contains("after") {
-                    date = Date().addingTimeInterval(number)
-                } else {
-                    date = Date(timeIntervalSince1970: number > 10_000_000_000 ? number / 1000 : number)
-                }
-                return RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date())
             }
         }
         return nil
+    }
+
+    nonisolated private static func resetDate(from dictionary: [String: Any]) -> Date? {
+        for (key, value) in dictionary where key.lowercased().contains("reset") {
+            let lowerKey = key.lowercased()
+            if let string = value as? String, !string.isEmpty {
+                return ISO8601DateFormatter().date(from: string)
+            }
+            if let number = numberValue(value) {
+                if lowerKey.contains("after") {
+                    return Date().addingTimeInterval(number)
+                }
+                return Date(timeIntervalSince1970: number > 10_000_000_000 ? number / 1000 : number)
+            }
+        }
+        return nil
+    }
+
+    nonisolated private static func resetText(for date: Date) -> String {
+        let relative = RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date())
+        let absoluteFormatter = DateFormatter()
+        absoluteFormatter.dateStyle = .medium
+        absoluteFormatter.timeStyle = .short
+        return "\(relative) (\(absoluteFormatter.string(from: date)))"
     }
 
     nonisolated private static func numberValue(_ value: Any?) -> Double? {

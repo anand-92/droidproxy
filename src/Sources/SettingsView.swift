@@ -518,7 +518,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gpt54FastModeKey) private var gpt54FastMode = AppPreferences.defaultGpt54FastMode
     @AppStorage(AppPreferences.gpt55FastModeKey) private var gpt55FastMode = AppPreferences.defaultGpt55FastMode
     @AppStorage(AppPreferences.factoryNativeReasoningKey) private var factoryNativeReasoning = AppPreferences.defaultFactoryNativeReasoning
-    @AppStorage(AppPreferences.oauthUsageTrackingEnabledKey) private var oauthUsageTrackingEnabled = AppPreferences.defaultOAuthUsageTrackingEnabled
+    @AppStorage(AppPreferences.codexUsageVisibleKey) private var codexUsageVisible = AppPreferences.defaultCodexUsageVisible
     @AppStorage(AppPreferences.gemini31ProThinkingLevelKey) private var gemini31ProThinkingLevel = AppPreferences.defaultGemini31ProThinkingLevel
     @AppStorage(AppPreferences.gemini3FlashThinkingLevelKey) private var gemini3FlashThinkingLevel = AppPreferences.defaultGemini3FlashThinkingLevel
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
@@ -536,6 +536,7 @@ struct SettingsView: View {
     @State private var challengerPluginInstalled = false
     @State private var remoteManagementExpanded = false
     @State private var showingMaxBudgetWarning = false
+    @State private var showingNativeFactoryReasoningWarning = false
     @State private var claudeModelsExpanded = true
     @State private var codexModelsExpanded = true
     @State private var geminiModelsExpanded = true
@@ -552,20 +553,15 @@ struct SettingsView: View {
 
     private var oauthUsageDashboard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Connected account limits", systemImage: "gauge")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button(oauthUsageTracker.isRefreshing ? "Refreshing" : "Refresh") {
-                    refreshOAuthUsage()
+            if oauthUsageTracker.isRefreshing {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .scaleEffect(0.55)
+                    Text("Refreshing usage")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .droidGlassPlain()
-                .controlSize(.small)
-                .disabled(oauthUsageTracker.isRefreshing)
-            }
-
-            if oauthUsageTracker.accounts.isEmpty {
+            } else if oauthUsageTracker.accounts.isEmpty {
                 Text("Connect Codex OAuth accounts to show quota windows.")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -744,6 +740,19 @@ struct SettingsView: View {
                 }
                 .listRowBackground(glassRowBackground)
 
+                if serverManager.isProviderEnabled("codex") || authManager.hasAccounts(for: .codex) {
+                    Section {
+                        Toggle("Codex Usage", isOn: $codexUsageVisible)
+                            .toggleStyle(.switch)
+                            .help("Show Codex OAuth quota usage in Settings.")
+                        if codexUsageVisible {
+                            oauthUsageDashboard
+                                .padding(.leading, 28)
+                        }
+                    }
+                    .listRowBackground(glassRowBackground)
+                }
+
                 Section {
                     Toggle("Launch at login", isOn: $launchAtLogin)
                         .onChange(of: launchAtLogin) { newValue in
@@ -780,25 +789,9 @@ struct SettingsView: View {
                         .controlSize(.small)
                     }
 
-                    Toggle("Native Factory reasoning", isOn: $factoryNativeReasoning)
+                    Toggle("Native Factory reasoning", isOn: nativeFactoryReasoningBinding)
                         .toggleStyle(.switch)
                         .help("Uses Factory/Droid's native reasoning selector for custom GPT models. Re-apply Factory custom models after changing this. Current Factory/Droid builds expose low, medium, and high for custom models; extra high and fast mode are not exposed through this native custom-model selector yet.")
-                        .onChange(of: factoryNativeReasoning) { _ in
-                            factoryModelsInstalled = false
-                        }
-
-                    Toggle("OAuth usage tracker", isOn: $oauthUsageTrackingEnabled)
-                        .toggleStyle(.switch)
-                        .help("Uses the existing DroidProxy Codex OAuth accounts to show quota windows. No separate login is needed.")
-                        .onChange(of: oauthUsageTrackingEnabled) { enabled in
-                            if enabled {
-                                refreshOAuthUsage()
-                            }
-                        }
-
-                    if oauthUsageTrackingEnabled {
-                        oauthUsageDashboard
-                    }
 
                     HStack {
                         Text("Challenger Plugin")
@@ -1246,7 +1239,13 @@ struct SettingsView: View {
             startMonitoringAuthDirectory()
             factoryModelsInstalled = checkFactoryModelsInstalled()
             challengerPluginInstalled = checkChallengerPluginInstalled()
-            if oauthUsageTrackingEnabled {
+            refreshOAuthUsageIfVisible()
+        }
+        .onChange(of: codexUsageAccountSignature) { _ in
+            refreshOAuthUsageIfVisible()
+        }
+        .onChange(of: codexUsageVisible) { enabled in
+            if enabled {
                 refreshOAuthUsage()
             }
         }
@@ -1262,6 +1261,15 @@ struct SettingsView: View {
             Button("Engage", role: .cancel) { }
         } message: {
             Text("Opus 4.6 and Sonnet 4.6 requests will bypass their effort sliders and revert to classic extended thinking with maximum budget_tokens and effort=max. Opus 4.7 keeps its own slider — Max Budget Mode does not apply to it. These requests will burn through your quota fast.")
+        }
+        .alert("Enable Native Factory reasoning?", isPresented: $showingNativeFactoryReasoningWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Enable") {
+                factoryNativeReasoning = true
+                factoryModelsInstalled = false
+            }
+        } message: {
+            Text("Factory/Droid currently exposes low, medium, and high for custom model reasoning. Extra high and fast mode are not available through the native custom-model selector yet. Keep this off if you need DroidProxy's GUI xhigh or fast-mode controls.")
         }
     }
 
@@ -1385,6 +1393,33 @@ struct SettingsView: View {
 
     private func refreshOAuthUsage() {
         oauthUsageTracker.refresh(codexAccounts: authManager.accounts(for: .codex))
+    }
+
+    private func refreshOAuthUsageIfVisible() {
+        guard codexUsageVisible else { return }
+        refreshOAuthUsage()
+    }
+
+    private var nativeFactoryReasoningBinding: Binding<Bool> {
+        Binding(
+            get: { factoryNativeReasoning },
+            set: { enabled in
+                if enabled {
+                    showingNativeFactoryReasoningWarning = true
+                } else {
+                    factoryNativeReasoning = false
+                    factoryModelsInstalled = false
+                }
+            }
+        )
+    }
+
+    private var codexUsageAccountSignature: String {
+        authManager.accounts(for: .codex)
+            .filter { !$0.isDisabled && !$0.isExpired }
+            .map(\.id)
+            .sorted()
+            .joined(separator: "|")
     }
     
     private func openAuthFolder() {
