@@ -27,7 +27,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DroidProxy — Run Claude, Codex & Gemini through one local proxy</title>
-<meta name="description" content="A native macOS menu bar app that proxies Claude Code, Codex, and Gemini OAuth for Factory.ai Droids. Per-model thinking controls, Max Budget Mode, Sparkle auto-updates. Free and open source." />
+<meta name="description" content="A native macOS menu bar app that handles OAuth for Claude Code, Codex, and Gemini — then exposes them at localhost:8317 so Factory.ai Droids and any AI coding tool can use your existing subscriptions. Per-model thinking controls, Max Budget Mode, Sparkle auto-updates. Free and open source." />
 <link rel="icon" type="image/png" href="assets/logo.png" />
 <style>
   :root {
@@ -701,10 +701,10 @@
     <div>
       <span class="eyebrow"><span class="dot"></span>v1.8.1 · macOS · open source</span>
       <h1 class="title">
-        Run Claude, Codex &amp; Gemini through <em>one local proxy</em>.
+        One-click OAuth proxy for <em>Claude, Codex &amp; Gemini</em>.
       </h1>
       <p class="lede">
-        DroidProxy is a native macOS menu bar app that brokers OAuth and forwards every request from Factory.ai Droids — and any other AI client — to Claude Code, Codex, or Gemini at <code class="mono" style="color:var(--fg);background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px">localhost:8317</code>.
+        DroidProxy is a native macOS menu bar app that handles OAuth for Claude Code, Codex, and Gemini — then exposes them at <code class="mono" style="color:var(--fg);background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px">localhost:8317</code> so Factory.ai Droids and any other AI coding tool can plug straight into your existing subscriptions.
       </p>
       <div class="hero-cta">
         <a href="https://github.com/anand-92/droidproxy/releases/latest" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
@@ -739,7 +739,7 @@
 <!-- ── Logos strip ────────────────────────────────────── -->
 <section class="logos" style="padding:28px 0">
   <div class="container logos-inner">
-    <span class="logos-label">Routes auth for</span>
+    <span class="logos-label">Brokers OAuth for</span>
     <div class="logos-row">
       <span class="logo-chip">
         <img src="assets/icon-claude.png" alt="" /> Claude Code
@@ -753,9 +753,13 @@
         <img src="assets/icon-gemini.png" alt="" /> Gemini
         <small style="color:var(--dim); font-family:var(--font-mono); font-size:11px; margin-left:4px">Google</small>
       </span>
+    </div>
+    <span class="logos-label" style="margin-left:auto">Used by</span>
+    <div class="logos-row">
       <span class="logo-chip" style="opacity:.85">
         <img src="assets/factory-logo.svg" alt="" style="width:auto; height:14px" /> Factory.ai Droids
       </span>
+      <span class="logo-chip" style="opacity:.85; color:var(--muted)">Claude Code · Cursor · any OpenAI-compatible client</span>
     </div>
   </div>
 </section>
@@ -775,8 +779,8 @@
 
       <div class="usecase">
         <span class="usecase-tag">01 — Factory.ai</span>
-        <h3>Run Factory.ai Droids on your Claude or Codex subscription.</h3>
-        <p>Point any Droid at <code class="mono" style="font-size:12.5px">localhost:8317</code> and it inherits your existing OAuth session — no API keys to provision, no per-token billing for prototype runs.</p>
+        <h3>Use your Claude / Codex / Gemini subscriptions inside Factory.ai Droids.</h3>
+        <p>DroidProxy holds the OAuth tokens. Point any Droid at <code class="mono" style="font-size:12.5px">localhost:8317</code> and it consumes your existing logins — no API keys to provision, no per-token billing for prototype runs.</p>
         <div class="usecase-foot">
           <span><b>Models</b> Opus 4.7 · Sonnet 4.6</span>
           <span>1 click</span>
@@ -815,16 +819,16 @@
         <div class="meta">§ 02 — How it works</div>
         <h2 style="margin-top:10px">Two ports, four hops, zero terminal.</h2>
       </div>
-      <p>DroidProxy boots two local services from the menu bar app: a thin TCP proxy that injects thinking parameters, and a child process (CLIProxyAPIPlus) that handles OAuth and talks to upstream APIs.</p>
+      <p>DroidProxy boots two local services from the menu bar app: a thin TCP proxy that injects thinking parameters, and a child process (CLIProxyAPIPlus) that holds your Claude / Codex / Gemini OAuth tokens and talks to the upstream APIs on your behalf.</p>
     </div>
 
     <div class="flow">
       <div class="flow-row">
         <div class="flow-stage">
           <span class="flow-num">01</span>
-          <span class="flow-stage-name">AI client</span>
+          <span class="flow-stage-name">AI coding tool</span>
         </div>
-        <div class="flow-desc">Factory.ai Droid, Claude Code, Cursor, or any tool configured with a custom OpenAI-compatible base URL.</div>
+        <div class="flow-desc">Factory.ai Droid or any other AI client configured with a custom Anthropic / OpenAI-compatible base URL — DroidProxy is the back end it talks to.</div>
         <div class="flow-port"><small>sends to</small>localhost:8317</div>
       </div>
 
@@ -842,7 +846,7 @@
           <span class="flow-num">03</span>
           <span class="flow-stage-name">CLIProxyAPIPlus</span>
         </div>
-        <div class="flow-desc">Bundled child process managed by ServerManager. Holds OAuth tokens, refreshes them automatically, signs upstream requests.</div>
+        <div class="flow-desc">Bundled child process managed by ServerManager. Holds your Claude / Codex / Gemini OAuth tokens, refreshes them automatically, signs upstream requests on your behalf.</div>
         <div class="flow-port"><small>resolves</small>OAuth → signed</div>
       </div>
 
@@ -996,7 +1000,7 @@
           <span class="step-n">04</span>
           <div>
             <h4>Click <em style="font-style:normal; color:var(--accent)">Apply</em> on Factory custom models</h4>
-            <p>DroidProxy registers seven pre-configured models in your Factory client pointed at <code class="mono" style="font-size:12.5px">localhost:8317</code>. Restart your Droid session — done.</p>
+            <p>DroidProxy writes seven pre-configured custom models into your Factory client config — all pointed at <code class="mono" style="font-size:12.5px">localhost:8317</code>. Restart your Droid session and it's now using DroidProxy as its back end.</p>
           </div>
         </div>
       </div>
@@ -1108,8 +1112,8 @@
 <!-- ── Closing CTA ────────────────────────────────────── -->
 <section class="closing">
   <div class="container">
-    <h2>Stop pasting tokens. Ship through one port.</h2>
-    <p>Free, open source, signed by Apple, and small enough to live in your menu bar. Your call whether to flip Max Budget Mode.</p>
+    <h2>Stop pasting tokens. Sign in once, ship through one port.</h2>
+    <p>One menu bar app holds your Claude, Codex, and Gemini logins. Every AI coding tool you use plugs into the same <code class="mono" style="background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px;color:var(--fg-2)">localhost:8317</code>. Free, open source, signed by Apple.</p>
     <div class="closing-cta">
       <a href="https://github.com/anand-92/droidproxy/releases/latest" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
         Download for macOS
