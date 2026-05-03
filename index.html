@@ -27,7 +27,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DroidProxy — Run Claude, Codex & Gemini through one local proxy</title>
-<meta name="description" content="A native macOS menu bar app that handles OAuth for Claude Code, Codex, and Gemini — then exposes them at localhost:8317 so Factory.ai Droids and any AI coding tool can use your existing subscriptions. Per-model thinking controls, Max Budget Mode, Sparkle auto-updates. Free and open source." />
+<meta name="description" content="Use your Claude, ChatGPT, and Gemini subscriptions inside Factory Droid. DroidProxy is a free macOS menu bar app that lets Factory Droid run on the AI subscriptions you already pay for — instead of Factory's per-token pricing." />
 <link rel="icon" type="image/png" href="assets/logo.png" />
 <style>
   :root {
@@ -675,7 +675,7 @@
       <span>DroidProxy</span>
     </a>
     <nav class="nav-links">
-      <a href="#use-cases">Use cases</a>
+      <a href="#use-cases">Why</a>
       <a href="#how-it-works">How it works</a>
       <a href="#models">Models</a>
       <a href="#install">Install</a>
@@ -699,12 +699,12 @@
 <section class="hero" style="border-bottom: 1px solid var(--border)">
   <div class="container hero-grid">
     <div>
-      <span class="eyebrow"><span class="dot"></span>v1.8.1 · macOS · open source</span>
+      <span class="eyebrow"><span class="dot"></span>v1.8.1 · macOS · free &amp; open source</span>
       <h1 class="title">
-        One-click OAuth proxy for <em>Claude, Codex &amp; Gemini</em>.
+        Use your <em>Claude, ChatGPT &amp; Gemini</em> subscriptions inside Factory Droid.
       </h1>
       <p class="lede">
-        DroidProxy is a native macOS menu bar app that handles OAuth for Claude Code, Codex, and Gemini — then exposes them at <code class="mono" style="color:var(--fg);background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px">localhost:8317</code> so Factory.ai Droids and any other AI coding tool can plug straight into your existing subscriptions.
+        Factory Droid is a great coding agent — but its token packages are pricey because they pay full API rates upstream. DroidProxy is a tiny macOS menu bar app that lets Factory Droid run on the Claude, ChatGPT, and Gemini subscriptions you already pay for. Same Droid, same models, your existing plan.
       </p>
       <div class="hero-cta">
         <a href="https://github.com/anand-92/droidproxy/releases/latest" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
@@ -717,10 +717,10 @@
         </a>
       </div>
       <div class="hero-meta">
-        <span><span class="pip"></span>macOS 13.0+ &nbsp;<span style="color:var(--dim)">(Ventura)</span></span>
-        <span><span class="pip"></span>Apple Silicon</span>
-        <span><span class="pip"></span>Signed &amp; notarized</span>
-        <span><span class="pip"></span>MIT license</span>
+        <span><span class="pip"></span>Free forever</span>
+        <span><span class="pip"></span>macOS · Apple Silicon</span>
+        <span><span class="pip"></span>Open source</span>
+        <span><span class="pip"></span>Signed &amp; notarized by Apple</span>
       </div>
     </div>
 
@@ -729,7 +729,7 @@
       <div class="product-chrome">
         <span class="lights"><span></span><span></span><span></span></span>
         <span class="crumb">DroidProxy <span style="color:var(--dim)">·</span> Settings</span>
-        <span style="margin-left:auto" class="crumb num">localhost:8317</span>
+        <span style="margin-left:auto" class="crumb">Claude · ChatGPT · Gemini connected</span>
       </div>
       <img class="product-shot" src="assets/settings-screenshot.png" alt="DroidProxy menu bar settings — Factory custom models applied, Claude Code, Codex, and Gemini connected." loading="eager" />
     </div>
@@ -739,27 +739,24 @@
 <!-- ── Logos strip ────────────────────────────────────── -->
 <section class="logos" style="padding:28px 0">
   <div class="container logos-inner">
-    <span class="logos-label">Brokers OAuth for</span>
+    <span class="logos-label">Bring your own subscription</span>
     <div class="logos-row">
       <span class="logo-chip">
-        <img src="assets/icon-claude.png" alt="" /> Claude Code
+        <img src="assets/icon-claude.png" alt="" /> Claude
         <small style="color:var(--dim); font-family:var(--font-mono); font-size:11px; margin-left:4px">Anthropic</small>
       </span>
       <span class="logo-chip">
-        <img src="assets/icon-codex.png" alt="" /> Codex
+        <img src="assets/icon-codex.png" alt="" /> ChatGPT
         <small style="color:var(--dim); font-family:var(--font-mono); font-size:11px; margin-left:4px">OpenAI</small>
       </span>
       <span class="logo-chip">
         <img src="assets/icon-gemini.png" alt="" /> Gemini
         <small style="color:var(--dim); font-family:var(--font-mono); font-size:11px; margin-left:4px">Google</small>
       </span>
-    </div>
-    <span class="logos-label" style="margin-left:auto">Used by</span>
-    <div class="logos-row">
-      <span class="logo-chip" style="opacity:.85">
-        <img src="assets/factory-logo.svg" alt="" style="width:auto; height:14px" /> Factory.ai Droids
+      <span class="logo-chip" style="opacity:.85; margin-left:auto">
+        <img src="assets/factory-logo.svg" alt="" style="width:auto; height:14px" />
+        <span style="color:var(--muted); font-family:var(--font-mono); font-size:11px;">→ runs in Factory Droid</span>
       </span>
-      <span class="logo-chip" style="opacity:.85; color:var(--muted)">Claude Code · Cursor · any OpenAI-compatible client</span>
     </div>
   </div>
 </section>
@@ -769,41 +766,41 @@
   <div class="container">
     <div class="section-head">
       <div>
-        <div class="meta">§ 01 — Use cases</div>
-        <h2 style="margin-top:10px">What people actually run it for.</h2>
+        <div class="meta">§ 01 — Why it exists</div>
+        <h2 style="margin-top:10px">Stop paying twice for the same models.</h2>
       </div>
-      <p>Three real workflows DroidProxy unlocks for engineers and indie devs working across Anthropic, OpenAI, and Google models — without juggling four billing dashboards or hand-editing JSON to swap providers.</p>
+      <p>You already pay Anthropic, OpenAI, or Google for Claude, ChatGPT, and Gemini. Factory Droid is just another coding agent that talks to those same models — and they charge a steep markup to handle billing for you. DroidProxy cuts the middleman.</p>
     </div>
 
     <div class="usecase-grid">
 
       <div class="usecase">
-        <span class="usecase-tag">01 — Factory.ai</span>
-        <h3>Use your Claude / Codex / Gemini subscriptions inside Factory.ai Droids.</h3>
-        <p>DroidProxy holds the OAuth tokens. Point any Droid at <code class="mono" style="font-size:12.5px">localhost:8317</code> and it consumes your existing logins — no API keys to provision, no per-token billing for prototype runs.</p>
+        <span class="usecase-tag">01 — Save money</span>
+        <h3>Factory tokens are expensive. Your Claude Pro plan isn't.</h3>
+        <p>Factory bills per token because they pay full API rates upstream. Big AI labs subsidize their own consumer plans — so a $20 Claude or ChatGPT subscription gets you way more usage than the equivalent Factory tokens.</p>
         <div class="usecase-foot">
-          <span><b>Models</b> Opus 4.7 · Sonnet 4.6</span>
+          <span><b>You pay</b> only the AI lab</span>
+          <span>BYO plan</span>
+        </div>
+      </div>
+
+      <div class="usecase">
+        <span class="usecase-tag">02 — Same Droid</span>
+        <h3>Nothing about Factory Droid changes.</h3>
+        <p>DroidProxy installs custom models in your Factory client with one click. Pick "DroidProxy: Opus 4.7" instead of the default — same UI, same agent, same models. Your subscription handles the bill.</p>
+        <div class="usecase-foot">
+          <span><b>Setup</b> install · sign in · apply</span>
           <span>1 click</span>
         </div>
       </div>
 
       <div class="usecase">
-        <span class="usecase-tag">02 — Multi-provider</span>
-        <h3>One endpoint for Claude, GPT &amp; Gemini side-by-side.</h3>
-        <p>Compare the same prompt across Opus 4.7, GPT 5.5 and Gemini 3.1 Pro from the same client. Per-model thinking effort is stored per provider so reviews are fair.</p>
+        <span class="usecase-tag">03 — Pick your lab</span>
+        <h3>Mix and match Claude, ChatGPT &amp; Gemini.</h3>
+        <p>Got a Claude Pro plan? Use Opus 4.7 and Sonnet 4.6. ChatGPT Plus? Run GPT-5 inside Droid. Gemini Advanced? Same. Sign in to whichever ones you have — the rest just stay disabled.</p>
         <div class="usecase-foot">
-          <span><b>Endpoint</b> :8317  ·  :8317/v1</span>
-          <span>3 providers</span>
-        </div>
-      </div>
-
-      <div class="usecase">
-        <span class="usecase-tag">03 — Max budget</span>
-        <h3>Force max thinking on Sonnet for harder tickets.</h3>
-        <p>Flip <em style="color:var(--accent); font-style:normal">Max Budget Mode</em> and DroidProxy injects <code class="mono" style="font-size:12.5px">budget_tokens: 63999</code> + classic extended thinking into every Sonnet 4.6 request — your quota's problem, not your prompt's.</p>
-        <div class="usecase-foot">
-          <span><b>Tokens</b> 63,999 budget · 64,000 max</span>
-          <span>Sonnet 4.6</span>
+          <span><b>Models</b> 7 supported · all optional</span>
+          <span>3 labs</span>
         </div>
       </div>
 
@@ -817,46 +814,37 @@
     <div class="section-head">
       <div>
         <div class="meta">§ 02 — How it works</div>
-        <h2 style="margin-top:10px">Two ports, four hops, zero terminal.</h2>
+        <h2 style="margin-top:10px">Sign in once. Factory Droid uses it.</h2>
       </div>
-      <p>DroidProxy boots two local services from the menu bar app: a thin TCP proxy that injects thinking parameters, and a child process (CLIProxyAPIPlus) that holds your Claude / Codex / Gemini OAuth tokens and talks to the upstream APIs on your behalf.</p>
+      <p>DroidProxy lives in your menu bar. You sign in to Claude, ChatGPT, or Gemini through it — exactly like signing in to those apps anywhere else. Then it tells Factory Droid "use these subscriptions instead of your own billing."</p>
     </div>
 
     <div class="flow">
       <div class="flow-row">
         <div class="flow-stage">
           <span class="flow-num">01</span>
-          <span class="flow-stage-name">AI coding tool</span>
+          <span class="flow-stage-name">You sign in</span>
         </div>
-        <div class="flow-desc">Factory.ai Droid or any other AI client configured with a custom Anthropic / OpenAI-compatible base URL — DroidProxy is the back end it talks to.</div>
-        <div class="flow-port"><small>sends to</small>localhost:8317</div>
+        <div class="flow-desc">Click a button in the DroidProxy menu bar. A normal browser login window opens for Claude, ChatGPT, or Gemini — the same one you've already used a hundred times.</div>
+        <div class="flow-port"><small>handled by</small>DroidProxy</div>
       </div>
 
       <div class="flow-row">
         <div class="flow-stage">
           <span class="flow-num">02</span>
-          <span class="flow-stage-name">ThinkingProxy</span>
+          <span class="flow-stage-name">DroidProxy holds the login</span>
         </div>
-        <div class="flow-desc">User-facing TCP proxy. Injects <code class="mono" style="background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:12px;color:var(--fg-2)">thinking: {type:"adaptive"}</code> + per-model effort, then forwards.</div>
-        <div class="flow-port"><small>forwards to</small>127.0.0.1:8318</div>
+        <div class="flow-desc">Tokens stay on your Mac. DroidProxy refreshes them in the background so nothing ever expires mid-session — no API keys, no copy-paste, no .env files.</div>
+        <div class="flow-port"><small>stored at</small>~/.cli-proxy-api</div>
       </div>
 
       <div class="flow-row">
         <div class="flow-stage">
           <span class="flow-num">03</span>
-          <span class="flow-stage-name">CLIProxyAPIPlus</span>
+          <span class="flow-stage-name">Factory Droid uses it</span>
         </div>
-        <div class="flow-desc">Bundled child process managed by ServerManager. Holds your Claude / Codex / Gemini OAuth tokens, refreshes them automatically, signs upstream requests on your behalf.</div>
-        <div class="flow-port"><small>resolves</small>OAuth → signed</div>
-      </div>
-
-      <div class="flow-row">
-        <div class="flow-stage">
-          <span class="flow-num">04</span>
-          <span class="flow-stage-name">Upstream provider</span>
-        </div>
-        <div class="flow-desc">Anthropic, OpenAI, or Google — same wire format, your subscription, your rate limits, no middleman API key.</div>
-        <div class="flow-port"><small>terminates at</small>api.anthropic.com</div>
+        <div class="flow-desc">Click "Apply" once and DroidProxy adds custom models to your Factory client. Pick one and Droid sends every request to DroidProxy — which forwards to Anthropic, OpenAI, or Google on your subscription.</div>
+        <div class="flow-port"><small>billed by</small>your AI lab</div>
       </div>
     </div>
   </div>
@@ -867,10 +855,10 @@
   <div class="container">
     <div class="section-head">
       <div>
-        <div class="meta">§ 03 — Per-model controls</div>
-        <h2 style="margin-top:10px">Every model gets its own thinking dial.</h2>
+        <div class="meta">§ 03 — Models</div>
+        <h2 style="margin-top:10px">All the frontier models, your subscription.</h2>
       </div>
-      <p>Effort levels are persisted per model. DroidProxy translates them to the right wire-level field for each provider — <code class="mono" style="font-size:12.5px">thinking_budget</code>, <code class="mono" style="font-size:12.5px">reasoning.effort</code>, or extended thinking — so you don't have to.</p>
+      <p>Each model has a thinking dial — turn it up for harder problems, down for faster answers. Pick whichever models match the subscriptions you actually have.</p>
     </div>
 
     <div class="table-wrap">
@@ -937,14 +925,13 @@
   <div class="container spotlight">
     <div>
       <span class="spot-pill">⚡ Max Budget Mode</span>
-      <h2>The nuclear button for Sonnet 4.6.</h2>
-      <p>One toggle forces classic extended thinking on every Sonnet 4.6 request. DroidProxy rewrites the request body to push thinking budget to its ceiling. Opus 4.7 doesn't need this override — it ships with adaptive thinking on.</p>
+      <h2>One switch, smarter Sonnet.</h2>
+      <p>Got a hard problem? Flip Max Budget Mode and Sonnet thinks as long as it wants before answering. It costs more of your subscription quota, but you get better answers on the things that actually matter.</p>
       <dl class="spot-list">
-        <dt>Budget</dt><dd><code>budget_tokens: 63999</code></dd>
-        <dt>Max output</dt><dd><code>max_tokens: 64000</code></dd>
-        <dt>Effort flag</dt><dd><code>effort: max</code></dd>
-        <dt>Scope</dt><dd>Sonnet 4.6 only — Opus 4.7 already adaptive</dd>
-        <dt>Caveat</dt><dd>Burns through your quota faster. Worth it for tough tickets.</dd>
+        <dt>What it does</dt><dd>Sonnet 4.6 thinks at full strength on every request</dd>
+        <dt>When to use</dt><dd>Tough debugging, big refactors, deep architecture questions</dd>
+        <dt>Trade-off</dt><dd>Burns subscription quota faster — but it's still your subscription, not metered Factory tokens</dd>
+        <dt>Opus 4.7</dt><dd>Already runs adaptive thinking by default — no toggle needed</dd>
       </dl>
     </div>
     <div class="spot-shot">
@@ -959,9 +946,9 @@
     <div class="section-head">
       <div>
         <div class="meta">§ 04 — Install</div>
-        <h2 style="margin-top:10px">From DMG to first request in under a minute.</h2>
+        <h2 style="margin-top:10px">Setup takes about a minute.</h2>
       </div>
-      <p>Releases are code-signed and notarized by Apple. Existing installs auto-update via Sparkle — you'll never have to do this twice.</p>
+      <p>Download, sign in, click apply. DroidProxy stays in your menu bar and updates itself in the background — so you'll never have to do this twice.</p>
     </div>
 
     <div class="install-grid">
@@ -969,11 +956,11 @@
         <div class="step">
           <span class="step-n">01</span>
           <div>
-            <h4>Grab the latest DMG</h4>
-            <p>From <code class="mono" style="font-size:12.5px">github.com/anand-92/droidproxy/releases/latest</code>. Pick <code class="mono" style="font-size:12.5px">DroidProxy-arm64.dmg</code> for Apple Silicon.</p>
+            <h4>Download DroidProxy</h4>
+            <p>Grab the latest release from GitHub. Drag it to Applications and open — it lives in your menu bar from then on.</p>
             <div class="step-cta">
               <a class="btn btn-primary" href="https://github.com/anand-92/droidproxy/releases/latest" target="_blank" rel="noopener">
-                Download .dmg
+                Download for macOS
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14m0 0l-5-5m5 5l-5 5"/></svg>
               </a>
             </div>
@@ -983,24 +970,24 @@
         <div class="step">
           <span class="step-n">02</span>
           <div>
-            <h4>Open from the menu bar</h4>
-            <p>The DroidProxy icon lands top-right. Click → Settings to open the configuration window.</p>
+            <h4>Sign in to your AI subscriptions</h4>
+            <p>Click the menu bar icon → Settings, then sign in to Claude, ChatGPT, or Gemini. A normal browser login window opens. Sign in to as many or as few as you like.</p>
           </div>
         </div>
 
         <div class="step">
           <span class="step-n">03</span>
           <div>
-            <h4>Sign into Claude, Codex, or Gemini</h4>
-            <p>Each provider opens a real OAuth flow in your browser — no API key handling, no token files to lose. Credentials are monitored and auto-refreshed.</p>
+            <h4>Click <em style="font-style:normal; color:var(--accent)">Apply Factory Models</em></h4>
+            <p>One click adds DroidProxy's models to your Factory Droid setup. Restart your Droid session — when you pick "DroidProxy: Opus 4.7" or any of the others, your subscription handles the bill.</p>
           </div>
         </div>
 
         <div class="step">
           <span class="step-n">04</span>
           <div>
-            <h4>Click <em style="font-style:normal; color:var(--accent)">Apply</em> on Factory custom models</h4>
-            <p>DroidProxy writes seven pre-configured custom models into your Factory client config — all pointed at <code class="mono" style="font-size:12.5px">localhost:8317</code>. Restart your Droid session and it's now using DroidProxy as its back end.</p>
+            <h4>That's it.</h4>
+            <p>Use Factory Droid like you always have. DroidProxy quietly handles auth in the background and updates itself when there's a new version.</p>
           </div>
         </div>
       </div>
@@ -1011,7 +998,7 @@
             <span><span class="mono" style="color:var(--accent)">$</span> &nbsp; ~/.factory/config.json &nbsp; <span style="color:var(--dim)">— customModels</span></span>
             <button class="copy" type="button" data-target="cfg">Copy</button>
           </div>
-          <pre class="code-body" id="cfg"><span class="c">// 7 models registered, all routed to localhost:8317</span>
+          <pre class="code-body" id="cfg"><span class="c">// What "Apply" writes for you — no need to touch this yourself.</span>
 <span class="k">"customModels"</span>: [
   {
     <span class="k">"model"</span>: <span class="s">"claude-opus-4-7"</span>,
@@ -1112,8 +1099,8 @@
 <!-- ── Closing CTA ────────────────────────────────────── -->
 <section class="closing">
   <div class="container">
-    <h2>Stop pasting tokens. Sign in once, ship through one port.</h2>
-    <p>One menu bar app holds your Claude, Codex, and Gemini logins. Every AI coding tool you use plugs into the same <code class="mono" style="background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px;color:var(--fg-2)">localhost:8317</code>. Free, open source, signed by Apple.</p>
+    <h2>Use Factory Droid on the subscriptions you already have.</h2>
+    <p>Stop paying twice for the same models. Free, open source, signed by Apple, and small enough to live in your menu bar.</p>
     <div class="closing-cta">
       <a href="https://github.com/anand-92/droidproxy/releases/latest" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
         Download for macOS
