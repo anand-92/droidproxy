@@ -34,6 +34,22 @@ request-retry: 3
 # Important for Extended Thinking requests which may take 5-10+ minutes.
 request-timeout: "10m"
 
+# Disable global auth/model cooldown scheduling.
+# Prevents long Factory/Droid sessions from hitting blackout windows where every
+# Codex/Claude/Gemini auth shows as "auth_unavailable" after a single transient
+# failure. See https://github.com/anand-92/droidproxy/issues/57.
+disable-cooling: true
+
+# Routing strategy
+routing:
+  strategy: "round-robin"
+  # Pin a session to one upstream auth so stateful Responses API traffic
+  # (encrypted reasoning state, previous_response_id) does not break when a
+  # follow-up turn would otherwise round-robin to a different account.
+  # See https://github.com/anand-92/droidproxy/issues/58.
+  session-affinity: true
+  session-affinity-ttl: "2h"
+
 # Quota management
 quota-exceeded:
   switch-project: true
