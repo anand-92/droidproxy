@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+- **Codex `auth_unavailable` blackout during long sessions** ([#57](https://github.com/anand-92/droidproxy/issues/57)) -- Bundled `config.yaml` now sets `disable-cooling: true` so a single transient failure on a Codex/Claude/Gemini auth no longer parks every available account behind a cooldown window. Long Factory/Droid sessions on `gpt-5.5`, `gpt-5.4`, etc. no longer fail with `503 auth_unavailable: no auth available (providers=codex,github-copilot)` after working normally for hours.
+- **Encrypted reasoning state mismatch on `/v1/responses`** ([#58](https://github.com/anand-92/droidproxy/issues/58)) -- Bundled `config.yaml` now enables `routing.session-affinity: true` (TTL `2h`). Stateful Codex Responses API turns now stay pinned to the same upstream auth, so encrypted reasoning content created on turn N is no longer replayed through a different account on turn N+1 with `400 The encrypted content ... could not be verified`.
+
 ### Changed
 - **Claude Opus 4.7 migration** -- Opus 4.6 support replaced with Opus 4.7 throughout the app: model detection (`claude-opus-4-7`), Settings UI label, Factory custom models entry (`custom:droidproxy:opus-4-7`), and the bundled Challenger droid (`challenger-opus`) now target Opus 4.7. Effort options are `low` / `medium` / `high` / `xhigh` / `max`, with a default of `xhigh` per Anthropic's recommendation for coding and agentic workloads.
 - **Opus 4.6 Factory custom model** -- `custom:droidproxy:opus-4-6` is removed from `customModels` during Apply/Re-apply so users don't end up with stale entries alongside the new Opus 4.7 model.
