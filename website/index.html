@@ -212,41 +212,29 @@
     background: var(--ok);
   }
 
-  /* product window */
-  .product-card {
+  /* product screenshot */
+  .product-shot-wrap {
     position: relative;
-    border: 1px solid var(--border);
-    background:
-      linear-gradient(180deg, oklch(20% 0.012 50) 0%, oklch(15% 0.012 50) 100%);
-    border-radius: 14px;
-    padding: 0;
-    overflow: hidden;
-    box-shadow:
-      0 1px 0 oklch(100% 0 0 / 0.03) inset,
-      0 30px 80px -20px oklch(0% 0 0 / 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
-  .product-chrome {
-    height: 32px;
-    display: flex; align-items: center; gap: 12px;
-    padding: 0 12px;
-    border-bottom: 1px solid var(--border);
-    font-family: var(--font-mono);
-    font-size: 11px; color: var(--muted);
-    letter-spacing: 0.02em;
+  .product-shot-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -10% -10% -5% -10%;
+    background: radial-gradient(ellipse at center, oklch(70% 0.17 40 / 0.18) 0%, transparent 60%);
+    filter: blur(20px);
+    z-index: 0;
+    pointer-events: none;
   }
-  .product-chrome .lights { display: flex; gap: 6px; }
-  .product-chrome .lights span {
-    width: 11px; height: 11px; border-radius: 999px;
-    background: oklch(35% 0.012 50);
-  }
-  .product-chrome .lights span:nth-child(1) { background: oklch(60% 0.16 25); }
-  .product-chrome .lights span:nth-child(2) { background: oklch(74% 0.14 80); }
-  .product-chrome .lights span:nth-child(3) { background: oklch(72% 0.13 150); }
-  .product-chrome .crumb { color: var(--dim); }
   .product-shot {
+    position: relative;
+    z-index: 1;
     display: block;
-    width: 100%;
+    max-width: 100%;
     height: auto;
+    filter: drop-shadow(0 30px 60px oklch(0% 0 0 / 0.5));
   }
 
   /* ── Logos strip ─────────────────────────────────────── */
@@ -724,14 +712,9 @@
       </div>
     </div>
 
-    <!-- Product window -->
-    <div class="product-card">
-      <div class="product-chrome">
-        <span class="lights"><span></span><span></span><span></span></span>
-        <span class="crumb">DroidProxy <span style="color:var(--dim)">·</span> Settings</span>
-        <span style="margin-left:auto" class="crumb">Claude · ChatGPT · Gemini connected</span>
-      </div>
-      <img class="product-shot" src="assets/settings-screenshot.png" alt="DroidProxy menu bar settings — Factory custom models applied, Claude Code, Codex, and Gemini connected." loading="eager" />
+    <!-- Product screenshot -->
+    <div class="product-shot-wrap">
+      <img class="product-shot" src="assets/settings-screenshot.png" alt="DroidProxy settings window — Factory custom models applied, Claude, ChatGPT, and Gemini connected." loading="eager" />
     </div>
   </div>
 </section>
