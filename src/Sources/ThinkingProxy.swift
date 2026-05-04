@@ -53,9 +53,9 @@ class ThinkingProxy {
     private enum Config {
         static let anthropicVersion = "2023-06-01"
     }
-    
+
     /**
-     Starts the thinking proxy server on port 8317
+     Starts the thinking proxy server on the configured proxy port.
      */
     func start() {
         guard !isRunning else {
@@ -319,6 +319,18 @@ class ThinkingProxy {
         }
 
         if let effort = codexReasoningEffort(for: model) {
+            if json["reasoning"] != nil || json["reasoning_effort"] != nil {
+                NSLog("[ThinkingProxy] Preserving request-provided Codex reasoning for '\(model)'")
+                ThinkingProxy.fileLog("PRESERVED Codex reasoning from request for model \(model)")
+                return nil
+            }
+
+            if AppPreferences.factoryNativeReasoning {
+                NSLog("[ThinkingProxy] Native Factory reasoning enabled; skipping GUI Codex reasoning injection for '\(model)'")
+                ThinkingProxy.fileLog("SKIPPED GUI Codex reasoning in native Factory mode for model \(model)")
+                return nil
+            }
+
             var result = jsonString
             result = injectJSONField(in: result, afterKey: "model", fieldName: "reasoning",
                                      fieldValue: "{\"effort\":\"\(effort)\"}")
@@ -886,6 +898,14 @@ class ThinkingProxy {
             return nil
         }
 
+        if AppPreferences.factoryNativeReasoning {
+            NSLog("[ThinkingProxy] Native Factory reasoning enabled; skipping GUI fast-mode injection for '\(model)'")
+            ThinkingProxy.fileLog("SKIPPED GUI fast-mode injection in native Factory mode for model \(model)")
+            return nil
+        }
+
+        guard json["service_tier"] == nil else { return nil }
+
         switch model {
         case "gpt-5.4":
             guard AppPreferences.gpt54FastMode else { return nil }
@@ -896,8 +916,6 @@ class ThinkingProxy {
         default:
             return nil
         }
-
-        guard json["service_tier"] == nil else { return nil }
 
         let result = injectJSONField(in: jsonString, afterKey: "model", fieldName: "service_tier",
                                      fieldValue: "\"priority\"")
@@ -1064,9 +1082,15 @@ class ThinkingProxy {
     }
 
     /**
-     Forwards the request to CLIProxyAPI on port 8318 (pass-through for non-thinking requests)
+     Forwards the request to CLIProxyAPI on the configured backend port.
      */
-    private func forwardRequest(method: String, path: String, version: String, headers: [(String, String)], body: String, originalConnection: NWConnection, retryWithApiPrefix: Bool = false) {
+    private func forwardRequest(method: String,
+                                path: String,
+                                version: String,
+                                headers: [(String, String)],
+                                body: String,
+                                originalConnection: NWConnection,
+                                retryWithApiPrefix: Bool = false) {
         // Create connection to CLIProxyAPI
         guard let port = NWEndpoint.Port(rawValue: targetPort) else {
             NSLog("[ThinkingProxy] Invalid target port: %d", targetPort)
@@ -1178,7 +1202,7 @@ class ThinkingProxy {
                             // Retry with /api/ prefix
                             let newPath = "/api" + path
                             self.forwardRequest(method: method, path: newPath, version: version, headers: headers, 
-                                              body: body, originalConnection: originalConnection, retryWithApiPrefix: false)
+                                                body: body, originalConnection: originalConnection, retryWithApiPrefix: false)
                             return
                         }
                     }
