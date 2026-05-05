@@ -1,5 +1,6 @@
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
 import { ArrowRightIcon } from './icons'
+import { useInstallAnimation } from '../animations/useSiteAnimations'
 
 const codePlain = `// What "Apply" writes for you — no need to touch this yourself.
 "customModels": [
@@ -93,20 +94,21 @@ const codeHtml = `<span class="c">// What "Apply" writes for you — no need to 
 
 export default function InstallSection() {
   const { copy, copied } = useCopyToClipboard()
+  const containerRef = useInstallAnimation()
 
   const handleCopy = () => {
     copy(codePlain)
   }
 
   return (
-    <section id="install">
+    <section id="install" ref={containerRef}>
       <div className="container">
-        <div className="section-head">
+        <div className="section-head install-head">
           <div>
-            <div className="meta">§ 04 — Install</div>
-            <h2 style={{ marginTop: 10 }}>Setup takes about a minute.</h2>
+            <div className="meta install-meta">§ 04 — Install</div>
+            <h2 className="install-h2" style={{ marginTop: 10 }}>Setup takes about a minute.</h2>
           </div>
-          <p>Download, sign in, click apply. DroidProxy stays in your menu bar and updates itself in the background — so you'll never have to do this twice.</p>
+          <p className="install-p">Download, sign in, click apply. DroidProxy stays in your menu bar and updates itself in the background — so you'll never have to do this twice.</p>
         </div>
 
         <div className="install-grid">

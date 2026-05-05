@@ -9,6 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@andresclua/infinite-marquee-gsap": "^0.0.15",
+    "@gsap/react": "^2.1.2",
+    "@lobehub/icons": "^5.6.0",
+    "gsap": "^3.15.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -1,3 +1,5 @@
+import { useHowItWorksAnimation } from '../animations/useSiteAnimations'
+
 const steps = [
   {
     num: '01',
@@ -23,15 +25,17 @@ const steps = [
 ]
 
 export default function HowItWorksSection() {
+  const containerRef = useHowItWorksAnimation()
+
   return (
-    <section id="how-it-works">
+    <section id="how-it-works" ref={containerRef}>
       <div className="container">
-        <div className="section-head">
+        <div className="section-head hiw-head">
           <div>
-            <div className="meta">§ 02 — How it works</div>
-            <h2 style={{ marginTop: 10 }}>Sign in once. Factory Droid uses it.</h2>
+            <div className="meta hiw-meta">§ 02 — How it works</div>
+            <h2 className="hiw-h2" style={{ marginTop: 10 }}>Sign in once. Factory Droid uses it.</h2>
           </div>
-          <p>DroidProxy lives in your menu bar. You sign in to Claude, ChatGPT, or Gemini through it — exactly like signing in to those apps anywhere else. Then it tells Factory Droid "use these subscriptions instead of your own billing."</p>
+          <p className="hiw-p">DroidProxy lives in your menu bar. You sign in to Claude, ChatGPT, or Gemini through it — exactly like signing in to those apps anywhere else. Then it tells Factory Droid "use these subscriptions instead of your own billing."</p>
         </div>
 
         <div className="flow">

@@ -1,15 +1,18 @@
 import { DownloadIcon, GitHubIcon } from './icons'
+import { useHeroAnimation } from '../animations/useSiteAnimations'
 
 export default function HeroSection() {
+  const containerRef = useHeroAnimation()
+
   return (
-    <section className="hero" style={{ borderBottom: '1px solid var(--border)' }}>
+    <section className="hero" style={{ borderBottom: '1px solid var(--border)' }} ref={containerRef}>
       <div className="container hero-grid">
         <div>
-          <span className="eyebrow"><span className="dot"></span>v1.8.1 · macOS · free & open source</span>
-          <h1 className="title">
+          <span className="eyebrow hero-eyebrow"><span className="dot"></span>v1.8.1 · macOS · free & open source</span>
+          <h1 className="title hero-title">
             Use your <em>Claude, ChatGPT & Gemini</em> subscriptions inside Factory Droid.
           </h1>
-          <p className="lede">
+          <p className="lede hero-lede">
             Factory Droid is a great coding agent — but its token packages are pricey because they pay full API rates upstream. DroidProxy is a tiny macOS menu bar app that lets Factory Droid run on the Claude, ChatGPT, and Gemini subscriptions you already pay for. Same Droid, same models, your existing plan.
           </p>
           <div className="hero-cta">
@@ -30,9 +33,9 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="product-shot-wrap">
+        <div className="product-shot-wrap will-change-transform">
           <img
-            className="product-shot"
+            className="product-shot will-change-transform"
             src="/assets/settings-screenshot.png"
             alt="DroidProxy settings window — Factory custom models applied, Claude, ChatGPT, and Gemini connected."
             loading="eager"

@@ -1,8 +1,11 @@
 import { GitHubIcon } from './icons'
+import { useNavbarAnimation } from '../animations/useSiteAnimations'
 
 export default function Navbar() {
+  const containerRef = useNavbarAnimation()
+
   return (
-    <header className="nav">
+    <header className="nav" ref={containerRef}>
       <div className="container nav-inner">
         <a href="#" className="brand">
           <img src="/assets/logo.png" alt="" />

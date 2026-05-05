@@ -1,6 +1,9 @@
+import { useModelsAnimation } from '../animations/useSiteAnimations'
+import { Claude, Codex, Gemini } from '@lobehub/icons'
+
 const models = [
   {
-    icon: '/assets/icon-claude.png',
+    Icon: Claude.Color,
     name: 'Claude Opus 4.7',
     id: 'opus-4-7',
     levels: ['low', 'medium', 'high', 'xhigh', 'max'],
@@ -8,7 +11,7 @@ const models = [
     provider: 'Anthropic',
   },
   {
-    icon: '/assets/icon-claude.png',
+    Icon: Claude.Color,
     name: 'Claude Sonnet 4.6',
     id: 'sonnet-4-6',
     levels: ['low', 'medium', 'high', 'max'],
@@ -16,7 +19,7 @@ const models = [
     provider: 'Anthropic',
   },
   {
-    icon: '/assets/icon-codex.png',
+    Icon: Codex.Color,
     name: 'GPT 5.3 Codex',
     id: 'gpt-5.3-codex',
     levels: ['low', 'medium', 'high', 'xhigh', 'fast'],
@@ -24,7 +27,7 @@ const models = [
     provider: 'OpenAI',
   },
   {
-    icon: '/assets/icon-codex.png',
+    Icon: Codex.Color,
     name: 'GPT 5.4',
     id: 'gpt-5.4',
     levels: ['low', 'medium', 'high', 'xhigh', 'fast'],
@@ -32,7 +35,7 @@ const models = [
     provider: 'OpenAI',
   },
   {
-    icon: '/assets/icon-codex.png',
+    Icon: Codex.Color,
     name: 'GPT 5.5',
     id: 'gpt-5.5',
     levels: ['low', 'medium', 'high', 'xhigh', 'fast'],
@@ -40,7 +43,7 @@ const models = [
     provider: 'OpenAI',
   },
   {
-    icon: '/assets/icon-gemini.png',
+    Icon: Gemini.Color,
     name: 'Gemini 3.1 Pro',
     id: 'gemini-3.1-pro-preview',
     levels: ['low', 'medium', 'high'],
@@ -48,7 +51,7 @@ const models = [
     provider: 'Google',
   },
   {
-    icon: '/assets/icon-gemini.png',
+    Icon: Gemini.Color,
     name: 'Gemini 3 Flash',
     id: 'gemini-3-flash-preview',
     levels: ['minimal', 'low', 'medium', 'high'],
@@ -58,15 +61,17 @@ const models = [
 ]
 
 export default function ModelsSection() {
+  const containerRef = useModelsAnimation()
+
   return (
-    <section id="models">
+    <section id="models" ref={containerRef}>
       <div className="container">
-        <div className="section-head">
+        <div className="section-head models-head">
           <div>
-            <div className="meta">§ 03 — Models</div>
-            <h2 style={{ marginTop: 10 }}>All the frontier models, your subscription.</h2>
+            <div className="meta models-meta">§ 03 — Models</div>
+            <h2 className="models-h2" style={{ marginTop: 10 }}>All the frontier models, your subscription.</h2>
           </div>
-          <p>Each model has a thinking dial — turn it up for harder problems, down for faster answers. Pick whichever models match the subscriptions you actually have.</p>
+          <p className="models-p">Each model has a thinking dial — turn it up for harder problems, down for faster answers. Pick whichever models match the subscriptions you actually have.</p>
         </div>
 
         <div className="table-wrap">
@@ -83,7 +88,7 @@ export default function ModelsSection() {
               {models.map((m) => (
                 <tr key={m.id}>
                   <td className="model-cell">
-                    <img src={m.icon} alt="" />
+                    <m.Icon size={18} />
                     <div>
                       <b>{m.name}</b>
                       <span>{m.id}</span>

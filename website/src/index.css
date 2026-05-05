@@ -206,22 +206,32 @@ h1.title {
 
 /* Logos strip */
 .logos {
-  padding: 32px 0;
+  padding: 28px 0;
   border-bottom: 1px solid var(--border);
+  overflow: hidden;
 }
-.logos-inner {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-  gap: 28px;
+.logos-row {
+  display: flex;
+  align-items: center;
+  position: relative;
 }
-.logos-label {
+.marquee-item {
+  flex-shrink: 0;
+  padding: 0 22px;
+}
+.logo-chip { display: inline-flex; align-items: center; gap: 10px; color: var(--fg-2); font-size: 14px; font-weight: 500; white-space: nowrap; }
+.logo-chip svg { width: 22px; height: 22px; color: var(--fg-2); flex-shrink: 0; }
+.logo-chip small {
+  color: var(--dim);
   font-family: var(--font-mono);
-  font-size: 11px; letter-spacing: 0.06em;
-  color: var(--dim); text-transform: uppercase;
+  font-size: 11px;
+  margin-left: 4px;
+  white-space: nowrap;
 }
-.logos-row { display: flex; align-items: center; gap: 36px; flex-wrap: wrap; }
-.logo-chip { display: inline-flex; align-items: center; gap: 10px; color: var(--fg-2); font-size: 14px; font-weight: 500; }
-.logo-chip img { width: 22px; height: 22px; }
-.logo-chip svg { width: 22px; height: 22px; color: var(--fg-2); }
+.factory-chip { opacity: 0.85; color: var(--muted); }
+.factory-chip svg { color: var(--fg-2); flex-shrink: 0; width: auto !important; height: 18px !important; }
+
+
 
 /* Sections */
 section { padding: 88px 0; border-bottom: 1px solid var(--border); }
@@ -602,6 +612,10 @@ footer.foot {
 .foot-links a:hover { color: var(--fg); }
 .foot .brand { color: var(--fg); font-size: 14px; }
 .foot .brand small { color: var(--dim); margin-left: 8px; font-family: var(--font-mono); font-size: 11px; }
+
+/* Animation helpers */
+.will-change-transform { will-change: transform; }
+.will-change-opacity { will-change: opacity; }
 
 /* Misc */
 .kbd {

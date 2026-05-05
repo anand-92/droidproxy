@@ -1,6 +1,10 @@
+import { useFooterAnimation } from '../animations/useSiteAnimations'
+
 export default function Footer() {
+  const containerRef = useFooterAnimation()
+
   return (
-    <footer className="foot">
+    <footer className="foot" ref={containerRef}>
       <div className="container foot-inner">
         <a href="#" className="brand">
           <img src="/assets/logo.png" alt="" />

@@ -1,3 +1,5 @@
+import { useSpecsAnimation } from '../animations/useSiteAnimations'
+
 const specs = [
   { label: 'Platform', value: 'macOS 13.0+', small: 'Ventura · Sonoma · Sequoia' },
   { label: 'Architecture', value: 'Apple Silicon', small: 'M1 · M2 · M3 · M4' },
@@ -10,20 +12,22 @@ const specs = [
 ]
 
 export default function SpecsSection() {
+  const containerRef = useSpecsAnimation()
+
   return (
-    <section id="specs">
+    <section id="specs" ref={containerRef}>
       <div className="container">
-        <div className="section-head">
+        <div className="section-head specs-head">
           <div>
-            <div className="meta">§ 05 — Spec sheet</div>
-            <h2 style={{ marginTop: 10 }}>The boring numbers.</h2>
+            <div className="meta specs-meta">§ 05 — Spec sheet</div>
+            <h2 className="specs-h2" style={{ marginTop: 10 }}>The boring numbers.</h2>
           </div>
-          <p>Everything worth knowing about runtime, footprint, and licensing — at a glance, no marketing detour.</p>
+          <p className="specs-p">Everything worth knowing about runtime, footprint, and licensing — at a glance, no marketing detour.</p>
         </div>
 
         <div className="specs">
           {specs.map((s) => (
-            <div className="spec" key={s.label}>
+            <div className="spec will-change-transform" key={s.label}>
               <div className="spec-label">{s.label}</div>
               <div className={`spec-value ${s.mono ? 'mono num' : ''}`}>
                 {s.value}

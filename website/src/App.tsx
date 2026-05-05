@@ -1,3 +1,8 @@
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { SplitText } from 'gsap/SplitText'
+
 import Navbar from './components/Navbar'
 import HeroSection from './components/HeroSection'
 import LogosStrip from './components/LogosStrip'
@@ -9,6 +14,8 @@ import InstallSection from './components/InstallSection'
 import SpecsSection from './components/SpecsSection'
 import ClosingCTA from './components/ClosingCTA'
 import Footer from './components/Footer'
+
+gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText)
 
 function App() {
   return (

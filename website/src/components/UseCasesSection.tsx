@@ -1,3 +1,5 @@
+import { useUseCasesAnimation } from '../animations/useSiteAnimations'
+
 const cases = [
   {
     tag: '01 — Save money',
@@ -26,20 +28,22 @@ const cases = [
 ]
 
 export default function UseCasesSection() {
+  const containerRef = useUseCasesAnimation()
+
   return (
-    <section id="use-cases">
+    <section id="use-cases" ref={containerRef}>
       <div className="container">
         <div className="section-head">
           <div>
-            <div className="meta">§ 01 — Why it exists</div>
-            <h2 style={{ marginTop: 10 }}>Stop paying twice for the same models.</h2>
+            <div className="meta usecases-meta">§ 01 — Why it exists</div>
+            <h2 className="usecases-h2" style={{ marginTop: 10 }}>Stop paying twice for the same models.</h2>
           </div>
-          <p>You already pay Anthropic, OpenAI, or Google for Claude, ChatGPT, and Gemini. Factory Droid is just another coding agent that talks to those same models — and they charge a steep markup to handle billing for you. DroidProxy cuts the middleman.</p>
+          <p className="usecases-p">You already pay Anthropic, OpenAI, or Google for Claude, ChatGPT, and Gemini. Factory Droid is just another coding agent that talks to those same models — and they charge a steep markup to handle billing for you. DroidProxy cuts the middleman.</p>
         </div>
 
         <div className="usecase-grid">
           {cases.map((c) => (
-            <div className="usecase" key={c.tag}>
+            <div className="usecase will-change-transform" key={c.tag}>
               <span className="usecase-tag">{c.tag}</span>
               <h3>{c.title}</h3>
               <p>{c.body}</p>
