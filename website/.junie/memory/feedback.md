@@ -54,3 +54,11 @@
     "NEW INSTRUCTION": "WHEN user reports no visual change THEN verify live UI with screenshot and DOM selector evidence"
 }
 
+[2026-05-05 05:52] - Updated by Junie
+{
+    "TYPE": "correction",
+    "CATEGORY": "wrong working directory",
+    "EXPECTATION": "Run git commands from the repository root one level above the website folder.",
+    "NEW INSTRUCTION": "WHEN performing git operations in website folder THEN cd to repository root first"
+}
+
