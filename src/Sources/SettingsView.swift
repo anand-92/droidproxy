@@ -344,6 +344,8 @@ struct SettingsView: View {
     @State private var authResultMessage = ""
     @State private var showingCursorApiKeyAlert = false
     @State private var cursorApiKey = ""
+    @State private var showingJunieApiKeyAlert = false
+    @State private var junieApiKey = ""
     @State private var authDirectoryMonitor: AuthDirectoryMonitor?
     @State private var expandedRowCount = 0
     @State private var factoryModelsInstalled = false
@@ -354,6 +356,7 @@ struct SettingsView: View {
     private let antigravityEffortSelectionColor = Color(red: 0x42/255, green: 0x85/255, blue: 0xF4/255)
     private let kimiEffortSelectionColor = Color(red: 0x00/255, green: 0xBF/255, blue: 0x91/255)
     private let cursorEffortSelectionColor = Color(red: 0x5E/255, green: 0x5C/255, blue: 0xFA/255)
+    private let junieEffortSelectionColor = Color(red: 0x48/255, green: 0xE0/255, blue: 0x54/255)
     private let oledFooterText = Color(red: 0xA8/255, green: 0xA8/255, blue: 0xA8/255)
 
     private var oauthUsageDashboard: some View {
@@ -793,6 +796,13 @@ struct SettingsView: View {
                         toggleTint: kimiEffortSelectionColor
                     )
 
+                    providerServiceRow(
+                        .junie,
+                        iconName: "icon-junie.svg",
+                        toggleTint: junieEffortSelectionColor,
+                        helpText: "Enter your JetBrains Junie API key to use your JetBrains AI subscription for Junie Sonnet 5, Opus 4.8, and Fable 5."
+                    )
+
                     if betaFlag {
                         providerServiceRow(
                             .cursor,
@@ -909,6 +919,15 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Please enter your Cursor API Key. It will be saved under ~/.cli-proxy-api/cursor.json.")
+        }
+        .alert("Add Junie API Key", isPresented: $showingJunieApiKeyAlert) {
+            SecureField("Enter Junie Key", text: $junieApiKey)
+            Button("Save") {
+                saveJunieApiKey(junieApiKey)
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Please enter your JetBrains Junie API key. It will be saved under ~/.cli-proxy-api/junie.json.")
         }
     }
 
@@ -1027,6 +1046,12 @@ struct SettingsView: View {
             return
         }
 
+        if serviceType == .junie {
+            junieApiKey = ""
+            showingJunieApiKeyAlert = true
+            return
+        }
+
         authenticatingService = serviceType
         NSLog("[SettingsView] Starting %@ authentication", serviceType.displayName)
         
@@ -1037,6 +1062,7 @@ struct SettingsView: View {
         case .antigravity: command = .antigravityLogin
         case .kimi: command = .kimiLogin
         case .cursor: return // handled by the early-return above; defensive
+        case .junie: return // handled by the early-return above; defensive
         }
         
         serverManager.runAuthCommand(command) { success, output in
@@ -1066,6 +1092,8 @@ struct SettingsView: View {
             return "🌐 Browser opened for Kimi authentication.\n\nPlease complete the login in your browser.\n\nThe app will automatically detect your credentials."
         case .cursor:
             return "✓ Successfully saved Cursor API Key."
+        case .junie:
+            return "✓ Successfully saved Junie API Key."
         }
     }
 
@@ -1097,7 +1125,36 @@ struct SettingsView: View {
             self.showingAuthResult = true
         }
     }
-    
+
+    private func saveJunieApiKey(_ apiKey: String) {
+        guard !apiKey.isEmpty else { return }
+
+        let fileURL = AuthPaths.authDirectory.appendingPathComponent("junie.json")
+        let json: [String: Any] = [
+            "type": "junie",
+            "email": "junie-user",
+            "apiKey": apiKey,
+            "disabled": false
+        ]
+
+        do {
+            try FileManager.default.createDirectory(at: AuthPaths.authDirectory, withIntermediateDirectories: true)
+            let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted])
+            try data.write(to: fileURL)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
+            NSLog("[SettingsView] Saved Junie API Key with secure permissions to \(fileURL.path)")
+
+            authManager.checkAuthStatus()
+
+            self.authResultMessage = "✓ Successfully added Junie API Key."
+            self.showingAuthResult = true
+        } catch {
+            NSLog("[SettingsView] Failed to save Junie API Key: \(error.localizedDescription)")
+            self.authResultMessage = "Failed to save Junie API Key: \(error.localizedDescription)"
+            self.showingAuthResult = true
+        }
+    }
+
     private func disconnectAccount(_ account: AuthAccount) {
         let wasRunning = serverManager.isRunning
         

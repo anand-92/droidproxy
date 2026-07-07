@@ -6,6 +6,7 @@ enum DroidProxyModelKind {
     case kimi
     case antigravity
     case cursor
+    case junie
 }
 
 struct DroidProxyThinkingLevel: Equatable {
@@ -250,6 +251,47 @@ enum DroidProxyModelCatalog {
                 kind: .kimi,
                 levels: [high],
                 defaultLevelValue: "high"
+            ),
+
+            // Junie (JetBrains AI) subscription models. Routed through the antigravity-style
+            // Junie executor in ThinkingProxy, which strips the `junie-` prefix and forwards
+            // to the JetBrains Grazie backend over TLS using the key in junie.json. The
+            // `junie-` prefix keeps these distinct from the OAuth Claude entries above.
+            DroidProxyModelDefinition(
+                baseModel: "junie-claude-sonnet-5",
+                idSlug: "junie-claude-sonnet-5",
+                displayName: "Junie Sonnet 5",
+                maxOutputTokens: 128000,
+                provider: "anthropic",
+                providerKey: "junie",
+                baseURL: "http://localhost:8317",
+                kind: .junie,
+                levels: claudeAdvancedLevels,
+                defaultLevelValue: "xhigh"
+            ),
+            DroidProxyModelDefinition(
+                baseModel: "junie-claude-opus-4-8",
+                idSlug: "junie-claude-opus-4-8",
+                displayName: "Junie Opus 4.8",
+                maxOutputTokens: 128000,
+                provider: "anthropic",
+                providerKey: "junie",
+                baseURL: "http://localhost:8317",
+                kind: .junie,
+                levels: claudeAdvancedLevels,
+                defaultLevelValue: "xhigh"
+            ),
+            DroidProxyModelDefinition(
+                baseModel: "junie-claude-fable-5",
+                idSlug: "junie-claude-fable-5",
+                displayName: "Junie Fable 5",
+                maxOutputTokens: 128000,
+                provider: "anthropic",
+                providerKey: "junie",
+                baseURL: "http://localhost:8317",
+                kind: .junie,
+                levels: claudeAdvancedLevels,
+                defaultLevelValue: "xhigh"
             )
         ]
 

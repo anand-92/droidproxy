@@ -337,6 +337,19 @@ class ThinkingProxy {
                 forwardToCursor(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
                 return
             }
+            if isJunieModel(requestFields) {
+                guard isJunieEnabled() else {
+                    NSLog("[ThinkingProxy] Warning: Junie model requested but the provider is disabled in settings.")
+                    sendError(to: connection, statusCode: 400, message: "Junie provider is disabled in DroidProxy settings.")
+                    return
+                }
+                if let result = rewriteJunieModelAlias(jsonString: modifiedBody, fields: requestFields) {
+                    modifiedBody = result
+                    requestFields = inspectRequestJSONFields(in: modifiedBody)
+                }
+                forwardToJunie(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
+                return
+            }
             if let result = processOpenAIFastMode(jsonString: modifiedBody, path: rewrittenPath, fields: requestFields) {
                 modifiedBody = result
                 requestFields = inspectRequestJSONFields(in: modifiedBody)
@@ -1115,6 +1128,166 @@ class ThinkingProxy {
                     self.finishStreaming(target: targetConnection, client: originalConnection)
                 } else {
                     self.receiveCursorResponse(from: targetConnection, originalConnection: originalConnection)
+                }
+            }))
+        }
+    }
+
+    // MARK: - Junie (JetBrains AI) API Proxying
+    //
+    // Junie models are Anthropic models served by the JetBrains Grazie backend. The
+    // bundled CLIProxyAPI has no JetBrains support, so — like Cursor — we forward these
+    // directly over TLS using the permanent API key stored in junie.json. The DroidProxy
+    // model IDs carry a `junie-` prefix (e.g. `junie-claude-sonnet-5`) so they stay
+    // distinct from the OAuth Claude entries; we strip that prefix before forwarding.
+
+    private static let junieHost = "ingrazzio-cloud-prod.labs.jb.gg"
+    private static let junieAgentHeader = "{\"name\":\"junie:cli\",\"version\":\"2144.7\"}"
+
+    private func isJunieModel(_ requestFields: RequestJSONFields?) -> Bool {
+        guard let model = requestFields?.model else {
+            return false
+        }
+        return model.hasPrefix("junie-")
+    }
+
+    private func isJunieEnabled() -> Bool {
+        if let saved = UserDefaults.standard.dictionary(forKey: "enabledProviders") as? [String: Bool] {
+            return saved["junie"] ?? true
+        }
+        return true
+    }
+
+    /// Strips the `junie-` prefix from the request body's `model` field so the
+    /// JetBrains backend receives the real Anthropic model ID (e.g. `claude-sonnet-5`).
+    private func rewriteJunieModelAlias(jsonString: String, fields: RequestJSONFields?) -> String? {
+        guard let model = fields?.model,
+              let modelLocation = fields?.modelLocation,
+              model.hasPrefix("junie-") else {
+            return nil
+        }
+
+        let backendModel = String(model.dropFirst("junie-".count))
+        var result = jsonString
+        result.replaceSubrange(modelLocation.valueRange, with: "\"\(backendModel)\"")
+        ThinkingProxy.fileLog("REWRITE MODEL: \(model) -> \(backendModel) (Junie alias)")
+        return result
+    }
+
+    private func loadJunieApiKey() -> String? {
+        let authDir = AuthPaths.authDirectory
+        guard let files = try? FileManager.default.contentsOfDirectory(at: authDir, includingPropertiesForKeys: nil) else {
+            return nil
+        }
+        for file in files where file.pathExtension == "json" {
+            guard let data = try? Data(contentsOf: file),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let type = json["type"] as? String,
+                  type.lowercased() == "junie",
+                  let apiKey = json["apiKey"] as? String,
+                  !(json["disabled"] as? Bool ?? false) else {
+                continue
+            }
+            return apiKey
+        }
+        return nil
+    }
+
+    private func forwardToJunie(method: String, path: String, version: String, headers: [(String, String)], body: String, originalConnection: NWConnection) {
+        guard let apiKey = loadJunieApiKey() else {
+            NSLog("[ThinkingProxy] Error: No active Junie API key found")
+            sendError(to: originalConnection, statusCode: 401, message: "No active Junie API key found. Please add a Junie key in DroidProxy settings.")
+            return
+        }
+
+        let tlsOptions = NWProtocolTLS.Options()
+        let parameters = NWParameters(tls: tlsOptions, tcp: NWProtocolTCP.Options())
+
+        let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(Self.junieHost), port: 443)
+        let targetConnection = NWConnection(to: endpoint, using: parameters)
+
+        targetConnection.stateUpdateHandler = { [weak self] state in
+            guard let self = self else { return }
+            switch state {
+            case .ready:
+                var forwardedRequest = "\(method) \(path) \(version)\r\n"
+                // Strip client auth / hop-by-hop headers and anything provider-specific
+                // (anthropic-beta / anthropic-version) that the Grazie backend rejects.
+                let excludedHeaders: Set<String> = [
+                    "host", "content-length", "connection", "transfer-encoding",
+                    "authorization", "anthropic-beta", "anthropic-version",
+                    "accept-encoding", "x-api-key"
+                ]
+                for (name, value) in headers {
+                    if !excludedHeaders.contains(name.lowercased()) {
+                        forwardedRequest += "\(name): \(value)\r\n"
+                    }
+                }
+
+                forwardedRequest += "Host: \(Self.junieHost)\r\n"
+                forwardedRequest += "Authorization: Bearer \(apiKey)\r\n"
+                forwardedRequest += "Content-Type: application/json\r\n"
+                forwardedRequest += "Accept-Encoding: identity\r\n"
+                forwardedRequest += "Grazie-Agent: \(Self.junieAgentHeader)\r\n"
+                forwardedRequest += "X-LLM-Model: anthropic\r\n"
+                forwardedRequest += "X-Keep-Path: true\r\n"
+                forwardedRequest += "X-Accept-EAP-License: true\r\n"
+                forwardedRequest += "Connection: close\r\n"
+                forwardedRequest += "Content-Length: \(body.utf8.count)\r\n\r\n"
+                forwardedRequest += body
+
+                if let requestData = forwardedRequest.data(using: .utf8) {
+                    targetConnection.send(content: requestData, completion: .contentProcessed({ error in
+                        if let error = error {
+                            NSLog("[ThinkingProxy] Send error to \(Self.junieHost): \(error)")
+                            targetConnection.cancel()
+                            originalConnection.cancel()
+                        } else {
+                            self.receiveJunieResponse(from: targetConnection, originalConnection: originalConnection)
+                        }
+                    }))
+                }
+
+            case .failed(let error):
+                NSLog("[ThinkingProxy] Connection to \(Self.junieHost) failed: \(error)")
+                self.sendError(to: originalConnection, statusCode: 502, message: "Bad Gateway - Could not connect to \(Self.junieHost)")
+                targetConnection.cancel()
+
+            default:
+                break
+            }
+        }
+
+        targetConnection.start(queue: .global(qos: .userInitiated))
+    }
+
+    private func receiveJunieResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
+        targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                NSLog("[ThinkingProxy] Receive Junie response error: \(error)")
+                targetConnection.cancel()
+                originalConnection.cancel()
+                return
+            }
+
+            guard let data = data, !data.isEmpty else {
+                if isComplete {
+                    self.finishStreaming(target: targetConnection, client: originalConnection)
+                }
+                return
+            }
+
+            originalConnection.send(content: data, completion: .contentProcessed({ sendError in
+                if let sendError = sendError {
+                    NSLog("[ThinkingProxy] Send Junie response error: \(sendError)")
+                }
+
+                if isComplete {
+                    self.finishStreaming(target: targetConnection, client: originalConnection)
+                } else {
+                    self.receiveJunieResponse(from: targetConnection, originalConnection: originalConnection)
                 }
             }))
         }
