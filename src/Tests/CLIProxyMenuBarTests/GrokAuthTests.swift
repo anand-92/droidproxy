@@ -17,7 +17,7 @@ final class GrokAuthTests: XCTestCase {
     func testParseTokenResponseSuccess() throws {
         // id_token payload: {"email":"u@x.ai"} as base64url
         let json = """
-        {"access_token":"access","refresh_token":"refresh","expires_in":3600,"id_token":"hdr.eyJlbWFpbCI6InVAeC5haSJ9.sig"}
+        {"access_token":"access","refresh_token":"refresh","expires_in":7200,"id_token":"hdr.eyJlbWFpbCI6InVAeC5haSJ9.sig"}
         """.data(using: .utf8)!
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let result = GrokAuth.parseTokenResponse(json, statusCode: 200, now: now)
@@ -27,7 +27,14 @@ final class GrokAuthTests: XCTestCase {
         XCTAssertEqual(creds.access, "access")
         XCTAssertEqual(creds.refresh, "refresh")
         XCTAssertEqual(creds.email, "u@x.ai")
-        XCTAssertEqual(creds.expiresAtMs, now.timeIntervalSince1970 * 1000 + 3600 * 1000 - GrokAuth.refreshSkewMs)
+        // Absolute expiry stored without skew.
+        XCTAssertEqual(creds.expiresAtMs, now.timeIntervalSince1970 * 1000 + 7200 * 1000)
+        // Fresh token: not expired yet.
+        XCTAssertFalse(creds.isAccessExpired(now: now))
+        // Inside the last hour of life, skew forces refresh.
+        XCTAssertTrue(creds.isAccessExpired(now: now.addingTimeInterval(3600)))
+        // Past absolute expiry.
+        XCTAssertTrue(creds.isAccessExpired(now: now.addingTimeInterval(7200), skewMs: 0))
     }
 
     func testParseTokenResponseAuthorizationPending() {

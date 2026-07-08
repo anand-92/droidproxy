@@ -23,7 +23,7 @@ enum ServiceType: String, CaseIterable {
             self = .cursor
         case "junie":
             self = .junie
-        case "grok-cli", "grok", "xai-oauth":
+        case "grok-cli", "grok":
             self = .grok
         default:
             return nil

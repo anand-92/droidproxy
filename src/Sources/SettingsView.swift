@@ -810,7 +810,7 @@ struct SettingsView: View {
                         .grok,
                         iconName: "icon-grok.svg",
                         toggleTint: grokEffortSelectionColor,
-                        helpText: "Log in with SuperGrok / X Premium+ (Hermes-style xAI OAuth) to use Grok 4.5 via api.x.ai — no API key required."
+                        helpText: "Log in with SuperGrok / X Premium+ to use Grok 4.5 via api.x.ai — no API key required."
                     )
 
                     if betaFlag {

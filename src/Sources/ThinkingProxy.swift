@@ -1302,11 +1302,10 @@ class ThinkingProxy {
         }
     }
 
-    // MARK: - Grok (xAI OAuth → api.x.ai)
+    // MARK: - Grok (SuperGrok / X Premium+ OAuth → api.x.ai)
     //
-    // Hermes-style SuperGrok / X Premium+ OAuth. Credentials live in
-    // ~/.cli-proxy-api/grok-cli.json (type: grok-cli). We attach the bearer and
-    // forward to api.x.ai so public models like grok-4.5 work without an API key.
+    // Credentials live in ~/.cli-proxy-api/grok-cli.json (type: grok-cli).
+    // Attach the OAuth bearer and forward to api.x.ai for public Grok models.
 
     private func isGrokModel(_ requestFields: RequestJSONFields?) -> Bool {
         guard let model = requestFields?.model else {
@@ -1384,9 +1383,12 @@ class ThinkingProxy {
             switch state {
             case .ready:
                 var forwardedRequest = "\(method) \(upstreamPath) \(version)\r\n"
+                // Drop Content-Type from the client: we set a single
+                // application/json below. api.x.ai returns 415 if the header
+                // appears more than once.
                 let excludedHeaders: Set<String> = [
                     "host", "content-length", "connection", "transfer-encoding",
-                    "authorization", "anthropic-beta", "anthropic-version",
+                    "authorization", "content-type", "anthropic-beta", "anthropic-version",
                     "accept-encoding", "x-api-key"
                 ]
                 for (name, value) in headers {

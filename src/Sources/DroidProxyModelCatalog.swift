@@ -295,9 +295,8 @@ enum DroidProxyModelCatalog {
                 defaultLevelValue: "xhigh"
             ),
 
-            // Grok OAuth (SuperGrok / X Premium+) via api.x.ai — Hermes-style xai-oauth.
-            // provider="openai" + /v1 makes Droid send Responses API requests; ThinkingProxy
-            // attaches the OAuth bearer and forwards to api.x.ai.
+            // Grok OAuth (SuperGrok / X Premium+) via api.x.ai.
+            // provider="openai" + /v1 → Responses API; ThinkingProxy attaches the bearer.
             DroidProxyModelDefinition(
                 baseModel: "grok-4.5",
                 idSlug: "grok-4.5",

@@ -4,39 +4,33 @@ import AppKit
 /// xAI Grok OAuth 2.0 Device Authorization Grant (RFC 8628), token refresh,
 /// and credential storage compatible with `AuthManager`'s auth-directory scan.
 ///
-/// Mirrors Hermes Agent's `xai-oauth` provider: authenticate with a SuperGrok /
-/// X Premium+ subscription via the public Grok CLI OAuth client, then call the
-/// public `api.x.ai` Responses / Chat Completions surface with the resulting
-/// bearer token. That is how `grok-4.5` (and other public Grok models) are
-/// reached without an `XAI_API_KEY`.
+/// Authenticates a SuperGrok / X Premium+ subscription via the public Grok CLI
+/// OAuth client, then calls `api.x.ai` with the resulting bearer token so
+/// `grok-4.5` (and other public Grok models) work without an `XAI_API_KEY`.
 ///
-/// `ThinkingProxy.forwardToGrok` attaches the OAuth access token and forwards
-/// to `api.x.ai`.
+/// `ThinkingProxy.forwardToGrok` attaches the access token and forwards upstream.
 enum GrokAuth {
 
     // MARK: - Constants
 
-    /// Public OAuth client id used by the Grok CLI / Hermes `xai-oauth`.
+    /// Public OAuth client id used by the Grok CLI.
     /// Not a secret: the device grant uses no client authentication
     /// (`token_endpoint_auth_method: none`).
     static let clientID = "b1a00492-073a-47ea-816f-4c329264a828"
-    /// Same scope string Hermes and the Grok CLI request.
     static let scope = "openid profile email offline_access grok-cli:access api:access"
     static let deviceCodeURL = URL(string: "https://auth.x.ai/oauth2/device/code")!
     static let tokenURL = URL(string: "https://auth.x.ai/oauth2/token")!
     static let deviceGrantType = "urn:ietf:params:oauth:grant-type:device_code"
 
-    /// Public xAI API host (Hermes `DEFAULT_XAI_OAUTH_BASE_URL`).
+    /// Public xAI API host.
     static let apiHost = "api.x.ai"
 
     /// Auth file `type` tag + filename (scanned by AuthManager and ThinkingProxy).
-    /// Kept as `grok-cli` so credentials are interchangeable with Hermes / Grok CLI
-    /// device-flow tokens that use the same public client.
     static let authFileType = "grok-cli"
     static let authFileName = "grok-cli.json"
 
-    /// Refresh up to one hour early (Hermes `XAI_ACCESS_TOKEN_REFRESH_SKEW_SECONDS`)
-    /// so long-running Droid sessions stay warm without mid-turn 401s.
+    /// Refresh this many ms before access-token expiry so long Droid sessions
+    /// stay warm. Applied at check time — not baked into stored `expires`.
     static let refreshSkewMs: Double = 3_600_000
 
     // MARK: - Models
@@ -56,8 +50,8 @@ enum GrokAuth {
         var expiresAtMs: Double
         var email: String?
 
-        func isAccessExpired(now: Date = Date()) -> Bool {
-            now.timeIntervalSince1970 * 1000 >= expiresAtMs
+        func isAccessExpired(now: Date = Date(), skewMs: Double = GrokAuth.refreshSkewMs) -> Bool {
+            now.timeIntervalSince1970 * 1000 + skewMs >= expiresAtMs
         }
     }
 
@@ -136,7 +130,8 @@ enum GrokAuth {
         if statusCode == 200, let access = obj["access_token"] as? String, !access.isEmpty {
             let refresh = (obj["refresh_token"] as? String) ?? ""
             let expiresIn = jsonNumber(obj["expires_in"]) ?? 3600
-            let expiresAtMs = now.timeIntervalSince1970 * 1000 + expiresIn * 1000 - refreshSkewMs
+            // Store absolute expiry; skew is applied in `isAccessExpired`.
+            let expiresAtMs = now.timeIntervalSince1970 * 1000 + expiresIn * 1000
             let email = emailFromIDToken(obj["id_token"] as? String)
             return .success(Credentials(access: access, refresh: refresh, expiresAtMs: expiresAtMs, email: email))
         }
