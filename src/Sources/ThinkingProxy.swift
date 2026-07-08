@@ -356,6 +356,11 @@ class ThinkingProxy {
                     sendError(to: connection, statusCode: 400, message: "Grok provider is disabled in DroidProxy settings.")
                     return
                 }
+                let grokBody = GrokRequestSanitizer.sanitize(modifiedBody)
+                if grokBody != modifiedBody {
+                    ThinkingProxy.fileLog("SANITIZED GROK TOOLS: remapped/dropped unsupported tool types before api.x.ai")
+                    modifiedBody = grokBody
+                }
                 forwardToGrok(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
                 return
             }
