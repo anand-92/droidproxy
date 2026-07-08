@@ -350,6 +350,15 @@ class ThinkingProxy {
                 forwardToJunie(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
                 return
             }
+            if isGrokModel(requestFields) {
+                guard isGrokEnabled() else {
+                    NSLog("[ThinkingProxy] Warning: Grok model requested but the provider is disabled in settings.")
+                    sendError(to: connection, statusCode: 400, message: "Grok provider is disabled in DroidProxy settings.")
+                    return
+                }
+                forwardToGrok(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
+                return
+            }
             if let result = processOpenAIFastMode(jsonString: modifiedBody, path: rewrittenPath, fields: requestFields) {
                 modifiedBody = result
                 requestFields = inspectRequestJSONFields(in: modifiedBody)
@@ -1288,6 +1297,166 @@ class ThinkingProxy {
                     self.finishStreaming(target: targetConnection, client: originalConnection)
                 } else {
                     self.receiveJunieResponse(from: targetConnection, originalConnection: originalConnection)
+                }
+            }))
+        }
+    }
+
+    // MARK: - Grok (xAI OAuth → api.x.ai)
+    //
+    // Hermes-style SuperGrok / X Premium+ OAuth. Credentials live in
+    // ~/.cli-proxy-api/grok-cli.json (type: grok-cli). We attach the bearer and
+    // forward to api.x.ai so public models like grok-4.5 work without an API key.
+
+    private func isGrokModel(_ requestFields: RequestJSONFields?) -> Bool {
+        guard let model = requestFields?.model else {
+            return false
+        }
+        return model.hasPrefix("grok-")
+    }
+
+    private func isGrokEnabled() -> Bool {
+        if let saved = UserDefaults.standard.dictionary(forKey: "enabledProviders") as? [String: Bool] {
+            return saved["grok"] ?? true
+        }
+        return true
+    }
+
+    /// Ensures the path reaches api.x.ai under `/v1/...`. Factory may send
+    /// `/v1/responses` or `/responses` depending on baseUrl; normalize both.
+    private func grokUpstreamPath(_ path: String) -> String {
+        if path.hasPrefix("/v1/") || path == "/v1" {
+            return path
+        }
+        if path.hasPrefix("/") {
+            return "/v1" + path
+        }
+        return "/v1/" + path
+    }
+
+    private func forwardToGrok(method: String, path: String, version: String, headers: [(String, String)], body: String, originalConnection: NWConnection) {
+        GrokAuth.ensureValidAccessToken { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .failure(let error):
+                NSLog("[ThinkingProxy] Grok auth error: %@", error.localizedDescription)
+                let status = (error == .notLoggedIn) ? 401 : 502
+                let message: String
+                switch error {
+                case .notLoggedIn:
+                    message = "Not logged in to Grok. Connect Grok in DroidProxy settings (SuperGrok / X Premium+ OAuth)."
+                default:
+                    message = "Grok authentication failed: \(error.localizedDescription)"
+                }
+                self.sendError(to: originalConnection, statusCode: status, message: message)
+            case .success(let accessToken):
+                self.sendGrokUpstream(
+                    method: method,
+                    path: path,
+                    version: version,
+                    headers: headers,
+                    body: body,
+                    accessToken: accessToken,
+                    originalConnection: originalConnection
+                )
+            }
+        }
+    }
+
+    private func sendGrokUpstream(
+        method: String,
+        path: String,
+        version: String,
+        headers: [(String, String)],
+        body: String,
+        accessToken: String,
+        originalConnection: NWConnection
+    ) {
+        let tlsOptions = NWProtocolTLS.Options()
+        let parameters = NWParameters(tls: tlsOptions, tcp: NWProtocolTCP.Options())
+        let host = GrokAuth.apiHost
+        let upstreamPath = grokUpstreamPath(path)
+        let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: 443)
+        let targetConnection = NWConnection(to: endpoint, using: parameters)
+
+        targetConnection.stateUpdateHandler = { [weak self] state in
+            guard let self = self else { return }
+            switch state {
+            case .ready:
+                var forwardedRequest = "\(method) \(upstreamPath) \(version)\r\n"
+                let excludedHeaders: Set<String> = [
+                    "host", "content-length", "connection", "transfer-encoding",
+                    "authorization", "anthropic-beta", "anthropic-version",
+                    "accept-encoding", "x-api-key"
+                ]
+                for (name, value) in headers {
+                    if !excludedHeaders.contains(name.lowercased()) {
+                        forwardedRequest += "\(name): \(value)\r\n"
+                    }
+                }
+
+                forwardedRequest += "Host: \(host)\r\n"
+                forwardedRequest += "Authorization: Bearer \(accessToken)\r\n"
+                forwardedRequest += "Content-Type: application/json\r\n"
+                forwardedRequest += "Accept-Encoding: identity\r\n"
+                forwardedRequest += "Connection: close\r\n"
+                forwardedRequest += "Content-Length: \(body.utf8.count)\r\n\r\n"
+                forwardedRequest += body
+
+                ThinkingProxy.fileLog("FORWARD GROK: \(method) \(upstreamPath) -> \(host)")
+
+                if let requestData = forwardedRequest.data(using: .utf8) {
+                    targetConnection.send(content: requestData, completion: .contentProcessed({ error in
+                        if let error = error {
+                            NSLog("[ThinkingProxy] Send error to \(host): \(error)")
+                            targetConnection.cancel()
+                            originalConnection.cancel()
+                        } else {
+                            self.relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Grok")
+                        }
+                    }))
+                }
+
+            case .failed(let error):
+                NSLog("[ThinkingProxy] Connection to \(host) failed: \(error)")
+                self.sendError(to: originalConnection, statusCode: 502, message: "Bad Gateway - Could not connect to \(host)")
+                targetConnection.cancel()
+
+            default:
+                break
+            }
+        }
+
+        targetConnection.start(queue: .global(qos: .userInitiated))
+    }
+
+    private func relayUpstreamResponse(from targetConnection: NWConnection, originalConnection: NWConnection, label: String) {
+        targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                NSLog("[ThinkingProxy] Receive \(label) response error: \(error)")
+                targetConnection.cancel()
+                originalConnection.cancel()
+                return
+            }
+
+            guard let data = data, !data.isEmpty else {
+                if isComplete {
+                    self.finishStreaming(target: targetConnection, client: originalConnection)
+                }
+                return
+            }
+
+            originalConnection.send(content: data, completion: .contentProcessed({ sendError in
+                if let sendError = sendError {
+                    NSLog("[ThinkingProxy] Send \(label) response error: \(sendError)")
+                }
+
+                if isComplete {
+                    self.finishStreaming(target: targetConnection, client: originalConnection)
+                } else {
+                    self.relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: label)
                 }
             }))
         }

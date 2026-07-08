@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
+- **Grok 4.5 OAuth (Hermes-style)** -- SuperGrok / X Premium+ device-flow login against `auth.x.ai`, credentials stored at `~/.cli-proxy-api/grok-cli.json`, and direct TLS forwarding to `api.x.ai` for `grok-4.5`, `grok-4.3`, and `grok-build-0.1`. Same public OAuth client Hermes uses (`xai-oauth`); no `XAI_API_KEY` required. Connect from Settings → Grok, then Apply Factory models (or `/model` → DroidProxy: Grok 4.5).
 - **Claude Fable 5** -- Anthropic's newest flagship (`claude-fable-5`) is registered as Factory custom model `custom:droidproxy:fable-5` with the same effort levels as Opus 4.8 (`low` / `medium` / `high` / `xhigh` / `max`, default `xhigh`) and a 128k output-token ceiling.
 - **Gemini provider support** -- OAuth login, credential monitoring, provider enable/disable, and service icon in Settings UI
 - **Gemini thinking level controls** -- Per-model thinking level pickers for Gemini 3.1 Pro (`low` / `medium` / `high`) and Gemini 3 Flash (`minimal` / `low` / `medium` / `high`)

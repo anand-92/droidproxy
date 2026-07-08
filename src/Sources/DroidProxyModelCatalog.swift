@@ -7,6 +7,7 @@ enum DroidProxyModelKind {
     case antigravity
     case cursor
     case junie
+    case grok
 }
 
 struct DroidProxyThinkingLevel: Equatable {
@@ -292,6 +293,46 @@ enum DroidProxyModelCatalog {
                 kind: .junie,
                 levels: claudeAdvancedLevels,
                 defaultLevelValue: "xhigh"
+            ),
+
+            // Grok OAuth (SuperGrok / X Premium+) via api.x.ai — Hermes-style xai-oauth.
+            // provider="openai" + /v1 makes Droid send Responses API requests; ThinkingProxy
+            // attaches the OAuth bearer and forwards to api.x.ai.
+            DroidProxyModelDefinition(
+                baseModel: "grok-4.5",
+                idSlug: "grok-4.5",
+                displayName: "Grok 4.5",
+                maxOutputTokens: 128000,
+                provider: "openai",
+                providerKey: "grok",
+                baseURL: "http://localhost:8317/v1",
+                kind: .grok,
+                levels: codexLevels,
+                defaultLevelValue: "high"
+            ),
+            DroidProxyModelDefinition(
+                baseModel: "grok-4.3",
+                idSlug: "grok-4.3",
+                displayName: "Grok 4.3",
+                maxOutputTokens: 128000,
+                provider: "openai",
+                providerKey: "grok",
+                baseURL: "http://localhost:8317/v1",
+                kind: .grok,
+                levels: codexLevels,
+                defaultLevelValue: "high"
+            ),
+            DroidProxyModelDefinition(
+                baseModel: "grok-build-0.1",
+                idSlug: "grok-build-0.1",
+                displayName: "Grok Build",
+                maxOutputTokens: 128000,
+                provider: "openai",
+                providerKey: "grok",
+                baseURL: "http://localhost:8317/v1",
+                kind: .grok,
+                levels: codexLevels,
+                defaultLevelValue: "high"
             )
         ]
 
