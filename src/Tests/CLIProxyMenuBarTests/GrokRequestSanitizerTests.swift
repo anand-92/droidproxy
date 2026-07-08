@@ -86,6 +86,54 @@ final class GrokRequestSanitizerTests: XCTestCase {
         XCTAssertEqual(choice["name"] as? String, "Read")
     }
 
+    func testFlattensNestedFunctionToolChoice() throws {
+        let request = """
+        {"model":"grok-4.5","tool_choice":{"type":"function","function":{"name":"Read"}}}
+        """
+        let sanitized = GrokRequestSanitizer.sanitize(request)
+        let root = try XCTUnwrap(jsonObject(sanitized))
+        let choice = try XCTUnwrap(root["tool_choice"] as? [String: Any])
+        XCTAssertEqual(choice["type"] as? String, "function")
+        XCTAssertEqual(choice["name"] as? String, "Read")
+        XCTAssertNil(choice["function"])
+    }
+
+    func testMapsInputSchemaToParameters() throws {
+        let request = """
+        {"model":"grok-4.5","tools":[{"type":"custom","name":"Read","input_schema":{"type":"object","properties":{"path":{"type":"string"}}}}]}
+        """
+        let sanitized = GrokRequestSanitizer.sanitize(request)
+        let root = try XCTUnwrap(jsonObject(sanitized))
+        let tools = try XCTUnwrap(root["tools"] as? [[String: Any]])
+        let parameters = try XCTUnwrap(tools[0]["parameters"] as? [String: Any])
+        XCTAssertEqual(parameters["type"] as? String, "object")
+        XCTAssertNotNil(parameters["properties"] as? [String: Any])
+        XCTAssertNil(tools[0]["input_schema"])
+    }
+
+    func testDropsNamelessCustomToolAndDefaultsEmptyParameters() throws {
+        let request = """
+        {"model":"grok-4.5","tools":[{"type":"custom","description":"no name"},{"type":"function","name":"Bare"}]}
+        """
+        let sanitized = GrokRequestSanitizer.sanitize(request)
+        let root = try XCTUnwrap(jsonObject(sanitized))
+        let tools = try XCTUnwrap(root["tools"] as? [[String: Any]])
+        XCTAssertEqual(tools.count, 1)
+        XCTAssertEqual(tools[0]["name"] as? String, "Bare")
+        let parameters = try XCTUnwrap(tools[0]["parameters"] as? [String: Any])
+        XCTAssertEqual(parameters["type"] as? String, "object")
+    }
+
+    func testLeavesInvalidJSONUnchanged() {
+        let request = "{not-json"
+        XCTAssertEqual(GrokRequestSanitizer.sanitize(request), request)
+    }
+
+    func testLeavesStringToolChoiceUnchanged() {
+        let request = #"{"model":"grok-4.5","tool_choice":"auto"}"#
+        XCTAssertEqual(GrokRequestSanitizer.sanitize(request), request)
+    }
+
     private func jsonObject(_ string: String) throws -> [String: Any] {
         let data = try XCTUnwrap(string.data(using: .utf8))
         let obj = try JSONSerialization.jsonObject(with: data)

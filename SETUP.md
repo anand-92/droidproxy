@@ -4,7 +4,7 @@
 
 1. Open DroidProxy from your Applications folder
 2. Click the menu bar icon and select "Open Settings"
-3. Click "Connect" next to Claude Code, Codex, Gemini, Kimi, Junie, or **Grok** and complete the OAuth flow in your browser
+3. Click "Connect" next to Claude Code, Codex, Gemini, or Kimi (browser OAuth), Junie (API key), or **Grok** (device-code browser login)
 
 For **Grok 4.5** (SuperGrok / X Premium+ OAuth → `api.x.ai`):
 

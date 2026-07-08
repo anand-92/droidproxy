@@ -359,9 +359,8 @@ class ThinkingProxy {
                 let grokBody = GrokRequestSanitizer.sanitize(modifiedBody)
                 if grokBody != modifiedBody {
                     ThinkingProxy.fileLog("SANITIZED GROK TOOLS: remapped/dropped unsupported tool types before api.x.ai")
-                    modifiedBody = grokBody
                 }
-                forwardToGrok(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
+                forwardToGrok(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: grokBody, originalConnection: connection)
                 return
             }
             if let result = processOpenAIFastMode(jsonString: modifiedBody, path: rewrittenPath, fields: requestFields) {
@@ -1307,10 +1306,11 @@ class ThinkingProxy {
         }
     }
 
-    // MARK: - Grok (SuperGrok / X Premium+ OAuth → api.x.ai)
+    // MARK: - Grok (OAuth → api.x.ai)
     //
     // Credentials live in ~/.cli-proxy-api/grok-cli.json (type: grok-cli).
-    // Attach the OAuth bearer and forward to api.x.ai for public Grok models.
+    // Attach the OAuth bearer and forward to api.x.ai — same TLS pattern as
+    // Cursor/Junie, with path normalization and a single Content-Type.
 
     private func isGrokModel(_ requestFields: RequestJSONFields?) -> Bool {
         guard let model = requestFields?.model else {
@@ -1326,16 +1326,9 @@ class ThinkingProxy {
         return true
     }
 
-    /// Ensures the path reaches api.x.ai under `/v1/...`. Factory may send
-    /// `/v1/responses` or `/responses` depending on baseUrl; normalize both.
+    /// Normalize to `/v1/...` for api.x.ai (strips `/api/v1` when present).
     private func grokUpstreamPath(_ path: String) -> String {
-        if path.hasPrefix("/v1/") || path == "/v1" {
-            return path
-        }
-        if path.hasPrefix("/") {
-            return "/v1" + path
-        }
-        return "/v1/" + path
+        GrokAuth.normalizeUpstreamPath(path)
     }
 
     private func forwardToGrok(method: String, path: String, version: String, headers: [(String, String)], body: String, originalConnection: NWConnection) {
@@ -1344,12 +1337,17 @@ class ThinkingProxy {
             switch result {
             case .failure(let error):
                 NSLog("[ThinkingProxy] Grok auth error: %@", error.localizedDescription)
-                let status = (error == .notLoggedIn) ? 401 : 502
+                let status: Int
                 let message: String
                 switch error {
                 case .notLoggedIn:
-                    message = "Not logged in to Grok. Connect Grok in DroidProxy settings (SuperGrok / X Premium+ OAuth)."
+                    status = 401
+                    message = "Not logged in to Grok. Connect Grok in DroidProxy settings."
+                case .reauthRequired:
+                    status = 401
+                    message = error.localizedDescription
                 default:
+                    status = 502
                     message = "Grok authentication failed: \(error.localizedDescription)"
                 }
                 self.sendError(to: originalConnection, statusCode: status, message: message)
@@ -1388,18 +1386,10 @@ class ThinkingProxy {
             switch state {
             case .ready:
                 var forwardedRequest = "\(method) \(upstreamPath) \(version)\r\n"
-                // Drop Content-Type from the client: we set a single
-                // application/json below. api.x.ai returns 415 if the header
-                // appears more than once.
-                let excludedHeaders: Set<String> = [
-                    "host", "content-length", "connection", "transfer-encoding",
-                    "authorization", "content-type", "anthropic-beta", "anthropic-version",
-                    "accept-encoding", "x-api-key"
-                ]
-                for (name, value) in headers {
-                    if !excludedHeaders.contains(name.lowercased()) {
-                        forwardedRequest += "\(name): \(value)\r\n"
-                    }
+                // Drop client Content-Type; set a single application/json below
+                // (api.x.ai returns 415 on duplicate Content-Type).
+                for (name, value) in GrokAuth.filterClientHeaders(headers) {
+                    forwardedRequest += "\(name): \(value)\r\n"
                 }
 
                 forwardedRequest += "Host: \(host)\r\n"
@@ -1419,9 +1409,13 @@ class ThinkingProxy {
                             targetConnection.cancel()
                             originalConnection.cancel()
                         } else {
-                            self.relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Grok")
+                            self.receiveGrokResponse(from: targetConnection, originalConnection: originalConnection)
                         }
                     }))
+                } else {
+                    NSLog("[ThinkingProxy] Failed to encode Grok upstream request as UTF-8")
+                    self.sendError(to: originalConnection, statusCode: 500, message: "Failed to encode Grok request.")
+                    targetConnection.cancel()
                 }
 
             case .failed(let error):
@@ -1437,12 +1431,12 @@ class ThinkingProxy {
         targetConnection.start(queue: .global(qos: .userInitiated))
     }
 
-    private func relayUpstreamResponse(from targetConnection: NWConnection, originalConnection: NWConnection, label: String) {
+    private func receiveGrokResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
         targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
 
             if let error = error {
-                NSLog("[ThinkingProxy] Receive \(label) response error: \(error)")
+                NSLog("[ThinkingProxy] Receive Grok response error: \(error)")
                 targetConnection.cancel()
                 originalConnection.cancel()
                 return
@@ -1457,15 +1451,16 @@ class ThinkingProxy {
 
             originalConnection.send(content: data, completion: .contentProcessed({ sendError in
                 if let sendError = sendError {
-                    NSLog("[ThinkingProxy] Send \(label) response error: \(sendError)")
+                    NSLog("[ThinkingProxy] Send Grok response error: \(sendError)")
                 }
 
                 if isComplete {
                     self.finishStreaming(target: targetConnection, client: originalConnection)
                 } else {
-                    self.relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: label)
+                    self.receiveGrokResponse(from: targetConnection, originalConnection: originalConnection)
                 }
             }))
         }
     }
 }
+

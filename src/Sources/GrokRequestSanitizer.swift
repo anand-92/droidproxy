@@ -4,9 +4,8 @@ import Foundation
 ///
 /// xAI rejects OpenAI-style `"type":"custom"` tools with HTTP 422
 /// (`unknown variant custom, expected one of function, web_search, …`).
-/// Client-side tools are remapped to `"function"`; anything outside the
-/// xAI allowlist is dropped. Nested chat-completions function wrappers are
-/// flattened to the Responses shape xAI expects.
+/// Client tools are remapped to `"function"`; anything outside the allowlist
+/// is dropped. Nested chat-completions function wrappers are flattened.
 enum GrokRequestSanitizer {
     /// Tool `type` values accepted by api.x.ai Responses (from the 422 allowlist).
     static let allowedToolTypes: Set<String> = [
@@ -28,6 +27,7 @@ enum GrokRequestSanitizer {
     ]
 
     /// Returns a body safe for api.x.ai, or the original string when unchanged / unparseable.
+    /// Re-serialization may reorder JSON keys (acceptable for api.x.ai; not used on Anthropic paths).
     static func sanitize(_ json: String) -> String {
         guard let data = json.data(using: .utf8),
               var root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -71,19 +71,16 @@ enum GrokRequestSanitizer {
                 changed = true
                 continue
             }
-            if let next = sanitizeTool(tool) {
-                sanitized.append(next)
-                if !nsEqual(next, tool) {
-                    changed = true
-                }
-            } else {
+            guard let next = sanitizeTool(tool) else {
+                changed = true
+                continue
+            }
+            sanitized.append(next)
+            if !nsEqual(next, tool) {
                 changed = true
             }
         }
 
-        if sanitized.count != tools.count {
-            changed = true
-        }
         return (sanitized, changed)
     }
 
@@ -97,16 +94,12 @@ enum GrokRequestSanitizer {
             return flattenFunctionTool(nested)
         }
 
-        if type == "custom" {
+        if type == "custom" || type == "function" {
             return flattenFunctionTool(tool)
         }
 
         guard let resolvedType = type, allowedToolTypes.contains(resolvedType) else {
             return nil
-        }
-
-        if resolvedType == "function" {
-            return flattenFunctionTool(tool)
         }
 
         // Built-ins: pass through (web_search, x_search, …).

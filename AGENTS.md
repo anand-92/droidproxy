@@ -81,12 +81,13 @@ What it no longer does (removed in the Droid-CLI-thinking refactor):
 
 ## Auth And Providers
 
-The current app/UI exposes four provider types:
+The current app/UI exposes these provider types:
 
 - `claude`
 - `codex`
 - `gemini`
 - `kimi`
+- `grok` (device-flow OAuth; credentials in `~/.cli-proxy-api/grok-cli.json`; ThinkingProxy forwards `grok-*` to `api.x.ai` and bypasses CLIProxyAPI)
 
 Auth data lives in `~/.cli-proxy-api/` as JSON files. `AuthManager` scans that directory and reads fields like:
 
@@ -113,7 +114,9 @@ Behavior to know:
 | `src/Sources/main.swift` | NSApplication entry point that instantiates `AppDelegate` and calls `NSApplicationMain`. |
 | `src/Sources/AppDelegate.swift` | App lifecycle, menu bar UI, settings window, notifications, Sparkle updater, auth-directory watcher, startup ordering for the two local servers. |
 | `src/Sources/ServerManager.swift` | Starts/stops bundled `cli-proxy-api`, captures logs, merges config (including injecting the remote-management `allow-remote`/`secret-key` settings from UserDefaults), handles provider enable/disable, runs Claude/Codex/Gemini login commands, and kills orphaned backend processes. |
-| `src/Sources/ThinkingProxy.swift` | Raw TCP HTTP proxy that forwards requests to CLIProxyAPI. Rewrites the Anthropic-Beta header to drop `redact-thinking-2026-02-12` on Claude thinking requests, injects `service_tier=priority` on enabled Codex fast-mode models, rewrites OAuth Code Assist Gemini `/v1/responses` to `/v1/chat/completions`, and emits a `REQUEST REASONING` log line per request. Does not inject reasoning or thinking fields. |
+| `src/Sources/ThinkingProxy.swift` | Raw TCP HTTP proxy that forwards requests to CLIProxyAPI (and TLS-forwards Cursor/Junie/Grok). Rewrites the Anthropic-Beta header to drop `redact-thinking-2026-02-12` on Claude thinking requests, injects `service_tier=priority` on enabled Codex fast-mode models, rewrites OAuth Code Assist Gemini `/v1/responses` to `/v1/chat/completions`, sanitizes Grok tool types before `api.x.ai`, and emits a `REQUEST REASONING` log line per request. Does not inject reasoning or thinking fields. |
+| `src/Sources/GrokAuth.swift` | Grok device-flow OAuth, token refresh (single-flight + terminal-refresh quarantine), path/header helpers for api.x.ai. |
+| `src/Sources/GrokRequestSanitizer.swift` | Remaps Factory `custom` tools to `function` (and drops unsupported types) before Grok upstream. |
 | `src/Sources/DroidProxyModelCatalog.swift` | Authoritative catalog of DroidProxy-exposed models. Each `DroidProxyModelDefinition` carries its supported `levels` plus a `defaultLevelValue`, and `settingsEntry` always embeds Factory's native reasoning metadata (`enableThinking`, `supportedReasoningEfforts`, `defaultReasoningEffort`, `reasoningEffort`) so Droid CLI's per-session selector can expose the full level set. |
 | `src/Sources/SettingsView.swift` | SwiftUI settings UI for server status, launch-at-login, provider toggles, auth flows, the Codex fast-mode (`service_tier=priority`) subsection, the Factory custom-models Apply button, OLED theme, background opacity, and remote-access settings. No thinking/reasoning selectors — those live in Droid CLI. |
 | `src/Sources/AuthStatus.swift` | `AuthManager`, account parsing, expiry detection, file deletion, and per-account disabled-state updates. |

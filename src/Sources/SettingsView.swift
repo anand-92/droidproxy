@@ -810,7 +810,7 @@ struct SettingsView: View {
                         .grok,
                         iconName: "icon-grok.svg",
                         toggleTint: grokEffortSelectionColor,
-                        helpText: "Log in with SuperGrok / X Premium+ to use Grok 4.5 via api.x.ai — no API key required."
+                        helpText: "Log in with SuperGrok / X Premium+ to use Grok 4.5 via api.x.ai (supported tiers; no xAI API key)."
                     )
 
                     if betaFlag {
@@ -1141,6 +1141,9 @@ struct SettingsView: View {
                         self.showingAuthResult = true
                     case .failure(.cancelled):
                         break
+                    case .failure(.reauthRequired):
+                        self.authResultMessage = "Grok session expired. Reconnect Grok in Settings."
+                        self.showingAuthResult = true
                     case .failure(let error):
                         self.authResultMessage = "Grok login failed: \(error.localizedDescription)"
                         self.showingAuthResult = true
