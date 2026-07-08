@@ -358,7 +358,7 @@ class ThinkingProxy {
                 }
                 let grokBody = GrokRequestSanitizer.sanitize(modifiedBody)
                 if grokBody != modifiedBody {
-                    ThinkingProxy.fileLog("SANITIZED GROK TOOLS: remapped/dropped unsupported tool types before api.x.ai")
+                    ThinkingProxy.fileLog("SANITIZED GROK: remapped custom tools/calls and dropped unsupported fields before api.x.ai")
                 }
                 forwardToGrok(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: grokBody, originalConnection: connection)
                 return

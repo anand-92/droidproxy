@@ -2,10 +2,16 @@ import Foundation
 
 /// Sanitizes Factory/Droid `/v1/responses` bodies before forwarding to api.x.ai.
 ///
-/// xAI rejects OpenAI-style `"type":"custom"` tools with HTTP 422
-/// (`unknown variant custom, expected one of function, web_search, …`).
-/// Client tools are remapped to `"function"`; anything outside the allowlist
-/// is dropped. Nested chat-completions function wrappers are flattened.
+/// xAI rejects:
+/// - OpenAI-style `"type":"custom"` tool definitions (HTTP 422)
+/// - `"type":"custom_tool_call"` / `"custom_tool_call_output"` items in `input`
+///   (HTTP 422: `data did not match any variant of untagged enum ModelInput`)
+/// - `tool_choice` / `parallel_tool_calls` when `tools` is empty or absent (HTTP 400)
+///
+/// Client tools are remapped to `"function"`; unsupported tool types are dropped.
+/// Nested chat-completions function wrappers are flattened. Custom tool-call
+/// history items become `function_call` / `function_call_output` with object
+/// `arguments` (xAI rejects non-object argument values).
 enum GrokRequestSanitizer {
     /// Tool `type` values accepted by api.x.ai Responses (from the 422 allowlist).
     static let allowedToolTypes: Set<String> = [
@@ -51,6 +57,20 @@ enum GrokRequestSanitizer {
         if let choice = root["tool_choice"] as? [String: Any],
            let sanitizedChoice = sanitizeToolChoice(choice) {
             root["tool_choice"] = sanitizedChoice
+            changed = true
+        }
+
+        if let input = root["input"] as? [Any] {
+            let (sanitizedInput, inputChanged) = sanitizeInputArray(input)
+            if inputChanged {
+                changed = true
+                root["input"] = sanitizedInput
+            }
+        }
+
+        // After tool filtering, drop orphaned tool_choice / parallel_tool_calls.
+        // xAI: "A tool_choice was set on the request but no tools were specified."
+        if dropOrphanedToolControls(&root) {
             changed = true
         }
 
@@ -106,6 +126,50 @@ enum GrokRequestSanitizer {
         return tool
     }
 
+    /// Converts `custom_tool_call` / `custom_tool_call_output` history items that
+    /// Factory/Codex emit but xAI's ModelInput enum does not accept.
+    static func sanitizeInputArray(_ input: [Any]) -> (input: [Any], changed: Bool) {
+        var sanitized: [Any] = []
+        var changed = false
+
+        for entry in input {
+            guard var item = entry as? [String: Any] else {
+                sanitized.append(entry)
+                continue
+            }
+
+            let type = item["type"] as? String
+            switch type {
+            case "custom_tool_call":
+                item["type"] = "function_call"
+                if item["input"] != nil {
+                    item["arguments"] = customToolCallArgumentsJSON(item["input"])
+                    item.removeValue(forKey: "input")
+                } else if item["arguments"] == nil {
+                    item["arguments"] = "{}"
+                } else if let args = item["arguments"] as? [String: Any],
+                          let encoded = jsonString(args) {
+                    // xAI expects arguments as a JSON-object *string*.
+                    item["arguments"] = encoded
+                } else if !(item["arguments"] is String) {
+                    item["arguments"] = customToolCallArgumentsJSON(item["arguments"])
+                }
+                changed = true
+                sanitized.append(item)
+
+            case "custom_tool_call_output":
+                item["type"] = "function_call_output"
+                changed = true
+                sanitized.append(item)
+
+            default:
+                sanitized.append(entry)
+            }
+        }
+
+        return (sanitized, changed)
+    }
+
     private static func flattenFunctionTool(_ source: [String: Any]) -> [String: Any]? {
         guard let name = source["name"] as? String, !name.isEmpty else {
             return nil
@@ -156,6 +220,70 @@ enum GrokRequestSanitizer {
         }
 
         return nil
+    }
+
+    /// Drop empty `tools` and orphaned `tool_choice` / `parallel_tool_calls`.
+    @discardableResult
+    private static func dropOrphanedToolControls(_ root: inout [String: Any]) -> Bool {
+        var changed = false
+
+        let hasTools: Bool
+        if let tools = root["tools"] as? [Any] {
+            hasTools = !tools.isEmpty
+            if !hasTools {
+                root.removeValue(forKey: "tools")
+                changed = true
+            }
+        } else {
+            hasTools = false
+        }
+
+        guard !hasTools else { return changed }
+
+        if root.removeValue(forKey: "tool_choice") != nil {
+            changed = true
+        }
+        if root.removeValue(forKey: "parallel_tool_calls") != nil {
+            changed = true
+        }
+        return changed
+    }
+
+    /// Wrap freeform custom-tool `input` into a JSON-object arguments string.
+    private static func customToolCallArgumentsJSON(_ value: Any?) -> String {
+        guard let value else { return "{}" }
+
+        if let text = value as? String {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("{"),
+               let data = trimmed.data(using: .utf8),
+               (try? JSONSerialization.jsonObject(with: data)) is [String: Any] {
+                return trimmed
+            }
+            if let encoded = jsonString(["input": text]) {
+                return encoded
+            }
+            return "{}"
+        }
+
+        if let obj = value as? [String: Any], let encoded = jsonString(obj) {
+            return encoded
+        }
+
+        if JSONSerialization.isValidJSONObject(["input": value]),
+           let encoded = jsonString(["input": value]) {
+            return encoded
+        }
+        return "{}"
+    }
+
+    private static func jsonString(_ object: Any) -> String? {
+        guard JSONSerialization.isValidJSONObject(object),
+              let data = try? JSONSerialization.data(withJSONObject: object),
+              let str = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return str
     }
 
     private static func nsEqual(_ a: [String: Any], _ b: [String: Any]) -> Bool {
