@@ -350,6 +350,19 @@ class ThinkingProxy {
                 forwardToJunie(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
                 return
             }
+            if isGrokModel(requestFields) {
+                guard isGrokEnabled() else {
+                    NSLog("[ThinkingProxy] Warning: Grok model requested but the provider is disabled in settings.")
+                    sendError(to: connection, statusCode: 400, message: "Grok provider is disabled in DroidProxy settings.")
+                    return
+                }
+                let grokBody = GrokRequestSanitizer.sanitize(modifiedBody)
+                if grokBody != modifiedBody {
+                    ThinkingProxy.fileLog("SANITIZED GROK: remapped custom tools/calls and dropped unsupported fields before api.x.ai")
+                }
+                forwardToGrok(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: grokBody, originalConnection: connection)
+                return
+            }
             if let result = processOpenAIFastMode(jsonString: modifiedBody, path: rewrittenPath, fields: requestFields) {
                 modifiedBody = result
                 requestFields = inspectRequestJSONFields(in: modifiedBody)
@@ -1106,35 +1119,7 @@ class ThinkingProxy {
     }
 
     private func receiveCursorResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
-        targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                NSLog("[ThinkingProxy] Receive Cursor response error: \(error)")
-                targetConnection.cancel()
-                originalConnection.cancel()
-                return
-            }
-
-            guard let data = data, !data.isEmpty else {
-                if isComplete {
-                    self.finishStreaming(target: targetConnection, client: originalConnection)
-                }
-                return
-            }
-
-            originalConnection.send(content: data, completion: .contentProcessed({ sendError in
-                if let sendError = sendError {
-                    NSLog("[ThinkingProxy] Send Cursor response error: \(sendError)")
-                }
-
-                if isComplete {
-                    self.finishStreaming(target: targetConnection, client: originalConnection)
-                } else {
-                    self.receiveCursorResponse(from: targetConnection, originalConnection: originalConnection)
-                }
-            }))
-        }
+        relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Cursor")
     }
 
     // MARK: - Junie (JetBrains AI) API Proxying
@@ -1266,11 +1251,145 @@ class ThinkingProxy {
     }
 
     private func receiveJunieResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
+        relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Junie")
+    }
+
+    // MARK: - Grok (OAuth → api.x.ai)
+    //
+    // Credentials live in ~/.cli-proxy-api/grok-cli.json (type: grok-cli).
+    // Attach the OAuth bearer and forward to api.x.ai — same TLS pattern as
+    // Cursor/Junie, with path normalization and a single Content-Type.
+
+    private func isGrokModel(_ requestFields: RequestJSONFields?) -> Bool {
+        guard let model = requestFields?.model else {
+            return false
+        }
+        return model.hasPrefix("grok-")
+    }
+
+    private func isGrokEnabled() -> Bool {
+        if let saved = UserDefaults.standard.dictionary(forKey: "enabledProviders") as? [String: Bool] {
+            return saved["grok"] ?? true
+        }
+        return true
+    }
+
+    /// Normalize to `/v1/...` for api.x.ai (strips `/api/v1` when present).
+    private func grokUpstreamPath(_ path: String) -> String {
+        GrokAuth.normalizeUpstreamPath(path)
+    }
+
+    private func forwardToGrok(method: String, path: String, version: String, headers: [(String, String)], body: String, originalConnection: NWConnection) {
+        GrokAuth.ensureValidAccessToken { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .failure(let error):
+                NSLog("[ThinkingProxy] Grok auth error: %@", error.localizedDescription)
+                let status: Int
+                let message: String
+                switch error {
+                case .notLoggedIn:
+                    status = 401
+                    message = "Not logged in to Grok. Connect Grok in DroidProxy settings."
+                case .reauthRequired:
+                    status = 401
+                    message = error.localizedDescription
+                default:
+                    status = 502
+                    message = "Grok authentication failed: \(error.localizedDescription)"
+                }
+                self.sendError(to: originalConnection, statusCode: status, message: message)
+            case .success(let accessToken):
+                self.sendGrokUpstream(
+                    method: method,
+                    path: path,
+                    version: version,
+                    headers: headers,
+                    body: body,
+                    accessToken: accessToken,
+                    originalConnection: originalConnection
+                )
+            }
+        }
+    }
+
+    private func sendGrokUpstream(
+        method: String,
+        path: String,
+        version: String,
+        headers: [(String, String)],
+        body: String,
+        accessToken: String,
+        originalConnection: NWConnection
+    ) {
+        let tlsOptions = NWProtocolTLS.Options()
+        let parameters = NWParameters(tls: tlsOptions, tcp: NWProtocolTCP.Options())
+        let host = GrokAuth.apiHost
+        let upstreamPath = grokUpstreamPath(path)
+        let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: 443)
+        let targetConnection = NWConnection(to: endpoint, using: parameters)
+
+        targetConnection.stateUpdateHandler = { [weak self] state in
+            guard let self = self else { return }
+            switch state {
+            case .ready:
+                var forwardedRequest = "\(method) \(upstreamPath) \(version)\r\n"
+                // Drop client Content-Type; set a single application/json below
+                // (api.x.ai returns 415 on duplicate Content-Type).
+                for (name, value) in GrokAuth.filterClientHeaders(headers) {
+                    forwardedRequest += "\(name): \(value)\r\n"
+                }
+
+                forwardedRequest += "Host: \(host)\r\n"
+                forwardedRequest += "Authorization: Bearer \(accessToken)\r\n"
+                forwardedRequest += "Content-Type: application/json\r\n"
+                forwardedRequest += "Accept-Encoding: identity\r\n"
+                forwardedRequest += "Connection: close\r\n"
+                forwardedRequest += "Content-Length: \(body.utf8.count)\r\n\r\n"
+                forwardedRequest += body
+
+                ThinkingProxy.fileLog("FORWARD GROK: \(method) \(upstreamPath) -> \(host)")
+
+                if let requestData = forwardedRequest.data(using: .utf8) {
+                    targetConnection.send(content: requestData, completion: .contentProcessed({ error in
+                        if let error = error {
+                            NSLog("[ThinkingProxy] Send error to \(host): \(error)")
+                            targetConnection.cancel()
+                            originalConnection.cancel()
+                        } else {
+                            self.receiveGrokResponse(from: targetConnection, originalConnection: originalConnection)
+                        }
+                    }))
+                } else {
+                    NSLog("[ThinkingProxy] Failed to encode Grok upstream request as UTF-8")
+                    self.sendError(to: originalConnection, statusCode: 500, message: "Failed to encode Grok request.")
+                    targetConnection.cancel()
+                }
+
+            case .failed(let error):
+                NSLog("[ThinkingProxy] Connection to \(host) failed: \(error)")
+                self.sendError(to: originalConnection, statusCode: 502, message: "Bad Gateway - Could not connect to \(host)")
+                targetConnection.cancel()
+
+            default:
+                break
+            }
+        }
+
+        targetConnection.start(queue: .global(qos: .userInitiated))
+    }
+
+    private func receiveGrokResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
+        relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Grok")
+    }
+
+    /// Shared TLS upstream → client relay used by Cursor / Junie / Grok paths.
+    private func relayUpstreamResponse(from targetConnection: NWConnection, originalConnection: NWConnection, label: String) {
         targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
 
             if let error = error {
-                NSLog("[ThinkingProxy] Receive Junie response error: \(error)")
+                NSLog("[ThinkingProxy] Receive \(label) response error: \(error)")
                 targetConnection.cancel()
                 originalConnection.cancel()
                 return
@@ -1285,15 +1404,16 @@ class ThinkingProxy {
 
             originalConnection.send(content: data, completion: .contentProcessed({ sendError in
                 if let sendError = sendError {
-                    NSLog("[ThinkingProxy] Send Junie response error: \(sendError)")
+                    NSLog("[ThinkingProxy] Send \(label) response error: \(sendError)")
                 }
 
                 if isComplete {
                     self.finishStreaming(target: targetConnection, client: originalConnection)
                 } else {
-                    self.receiveJunieResponse(from: targetConnection, originalConnection: originalConnection)
+                    self.relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: label)
                 }
             }))
         }
     }
 }
+
