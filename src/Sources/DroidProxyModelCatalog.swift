@@ -86,6 +86,7 @@ struct DroidProxyModelDefinition: Equatable {
 }
 
 enum DroidProxyModelCatalog {
+    private static let none = DroidProxyThinkingLevel(value: "none", displayName: "None")
     private static let low = DroidProxyThinkingLevel(value: "low", displayName: "Low")
     private static let medium = DroidProxyThinkingLevel(value: "medium", displayName: "Medium")
     private static let high = DroidProxyThinkingLevel(value: "high", displayName: "High")
@@ -94,6 +95,7 @@ enum DroidProxyModelCatalog {
 
     private static let claudeAdvancedLevels = [low, medium, high, xhigh, max]
     private static let codexLevels = [low, medium, high, xhigh]
+    private static let gpt56Levels = [none, low, medium, high, xhigh, max]
 
     private static func antigravityModel(
         baseModel: String,
@@ -179,6 +181,18 @@ enum DroidProxyModelCatalog {
                 kind: .codex,
                 levels: codexLevels,
                 defaultLevelValue: "high"
+            ),
+            DroidProxyModelDefinition(
+                baseModel: "gpt-5.6-terra",
+                idSlug: "gpt-5.6-terra",
+                displayName: "GPT 5.6 Terra",
+                maxOutputTokens: 128000,
+                provider: "openai",
+                providerKey: "codex",
+                baseURL: "http://localhost:8317/v1",
+                kind: .codex,
+                levels: gpt56Levels,
+                defaultLevelValue: "medium"
             ),
             // Antigravity subscription models routed through the antigravity executor via
             // OpenAI-compatible chat-completions. provider="openai" + baseURL ending in
