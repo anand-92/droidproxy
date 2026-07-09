@@ -347,6 +347,8 @@ struct SettingsView: View {
     @State private var cursorApiKey = ""
     @State private var showingJunieApiKeyAlert = false
     @State private var junieApiKey = ""
+    @State private var grokLoginSession: GrokAuth.LoginSession?
+    @State private var grokUserCode: String?
     @State private var authDirectoryMonitor: AuthDirectoryMonitor?
     @State private var expandedRowCount = 0
     @State private var factoryModelsInstalled = false
@@ -358,6 +360,7 @@ struct SettingsView: View {
     private let kimiEffortSelectionColor = Color(red: 0x00/255, green: 0xBF/255, blue: 0x91/255)
     private let cursorEffortSelectionColor = Color(red: 0x5E/255, green: 0x5C/255, blue: 0xFA/255)
     private let junieEffortSelectionColor = Color(red: 0x48/255, green: 0xE0/255, blue: 0x54/255)
+    private let grokEffortSelectionColor = Color(red: 0x1D/255, green: 0x9B/255, blue: 0xF0/255)
     private let oledFooterText = Color(red: 0xA8/255, green: 0xA8/255, blue: 0xA8/255)
 
     private var oauthUsageDashboard: some View {
@@ -809,6 +812,13 @@ struct SettingsView: View {
                         helpText: "Enter your JetBrains Junie API key to use your JetBrains AI subscription for Junie Sonnet 5, Opus 4.8, and Fable 5."
                     )
 
+                    providerServiceRow(
+                        .grok,
+                        iconName: "icon-grok.svg",
+                        toggleTint: grokEffortSelectionColor,
+                        helpText: "Log in with SuperGrok / X Premium+ to use Grok 4.5 via api.x.ai (supported tiers; no xAI API key)."
+                    )
+
                     if betaFlag {
                         providerServiceRow(
                             .cursor,
@@ -1058,6 +1068,11 @@ struct SettingsView: View {
             return
         }
 
+        if serviceType == .grok {
+            startGrokOAuthLogin()
+            return
+        }
+
         authenticatingService = serviceType
         NSLog("[SettingsView] Starting %@ authentication", serviceType.displayName)
         
@@ -1069,6 +1084,7 @@ struct SettingsView: View {
         case .kimi: command = .kimiLogin
         case .cursor: return // handled by the early-return above; defensive
         case .junie: return // handled by the early-return above; defensive
+        case .grok: return // handled by the early-return above; defensive
         }
         
         serverManager.runAuthCommand(command) { success, output in
@@ -1100,7 +1116,67 @@ struct SettingsView: View {
             return "✓ Successfully saved Cursor API Key."
         case .junie:
             return "✓ Successfully saved Junie API Key."
+        case .grok:
+            return "🌐 Browser opened for Grok (xAI) authentication.\n\nApprove access for SuperGrok / X Premium+, then DroidProxy will save credentials automatically."
         }
+    }
+
+    private func startGrokOAuthLogin() {
+        grokLoginSession?.cancel()
+        // Drop the old reference immediately so a stale `.cancelled` completion
+        // cannot identity-match and clobber the replacement session.
+        grokLoginSession = nil
+        authenticatingService = .grok
+        grokUserCode = nil
+        NSLog("[SettingsView] Starting Grok xAI OAuth device login")
+
+        // Holder so closures can identity-check after `startDeviceLogin` returns
+        // (Swift forbids capturing the binding before it is declared).
+        final class SessionRef {
+            var value: GrokAuth.LoginSession?
+        }
+        let sessionRef = SessionRef()
+
+        let session = GrokAuth.startDeviceLogin(
+            onPrompt: { auth in
+                DispatchQueue.main.async {
+                    guard self.grokLoginSession === sessionRef.value else { return }
+                    self.grokUserCode = auth.userCode
+                    self.authResultMessage = "🌐 Browser opened for Grok login.\n\nIf prompted, enter code: \(auth.userCode)\n\nWaiting for approval…"
+                    self.showingAuthResult = true
+                }
+            },
+            completion: { result in
+                DispatchQueue.main.async {
+                    // Ignore stale completions from a cancelled/replaced session.
+                    guard self.grokLoginSession === sessionRef.value else { return }
+                    switch result {
+                    case .success(let creds):
+                        self.authenticatingService = nil
+                        self.grokLoginSession = nil
+                        self.authManager.checkAuthStatus()
+                        let who = creds.email ?? "grok-user"
+                        self.authResultMessage = "✓ Grok OAuth connected as \(who).\n\nSelect DroidProxy: Grok 4.5 in Droid with `/model`."
+                        self.showingAuthResult = true
+                    case .failure(.cancelled):
+                        // Replaced session already cleared `grokLoginSession` above.
+                        break
+                    case .failure(.reauthRequired):
+                        self.authenticatingService = nil
+                        self.grokLoginSession = nil
+                        self.authResultMessage = "Grok session expired. Reconnect Grok in Settings."
+                        self.showingAuthResult = true
+                    case .failure(let error):
+                        self.authenticatingService = nil
+                        self.grokLoginSession = nil
+                        self.authResultMessage = "Grok login failed: \(error.localizedDescription)"
+                        self.showingAuthResult = true
+                    }
+                }
+            }
+        )
+        sessionRef.value = session
+        grokLoginSession = session
     }
 
     private func saveCursorApiKey(_ apiKey: String) {
