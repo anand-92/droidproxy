@@ -48,6 +48,14 @@ const models = [
     provider: 'OpenAI',
   },
   {
+    icon: '/assets/icon-codex.png',
+    name: 'GPT 5.6 Sol',
+    id: 'gpt-5.6-sol',
+    levels: ['dynamic', 'low', 'medium', 'high', 'xhigh', 'max'],
+    max: '128,000',
+    provider: 'OpenAI',
+  },
+  {
     icon: '/assets/icon-gemini.png',
     name: 'Gemini 3.1 Pro',
     id: 'gemini-3.1-pro-preview',
