@@ -35,8 +35,10 @@ enum GrokAuth {
     ]
 
     /// Refresh this many ms before access-token expiry so long Droid sessions
-    /// stay warm. Applied at check time — not baked into stored `expires`.
-    static let refreshSkewMs: Double = 3_600_000
+    /// stay warm without mid-turn 401s. Kept well below typical `expires_in`
+    /// (often 1h) so a fresh token is not treated as expired immediately.
+    /// Applied at check time — not baked into stored `expires`.
+    static let refreshSkewMs: Double = 300_000
 
     // MARK: - Models
 
@@ -333,6 +335,7 @@ enum GrokAuth {
         do {
             let out = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted])
             try out.write(to: url, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
             NSLog("[GrokAuth] Quarantined Grok credentials (disabled=true) at %@", url.path)
         } catch {
             NSLog("[GrokAuth] Failed to quarantine credentials: %@", error.localizedDescription)
@@ -615,10 +618,16 @@ enum GrokAuth {
         return request
     }
 
-    private static func formBody(_ params: [String: String]) -> Data {
+    /// Builds an `application/x-www-form-urlencoded` body.
+    ///
+    /// `URLComponents.percentEncodedQuery` leaves `+` unencoded (RFC 3986), but
+    /// form-urlencoded treats `+` as space — so `device_code` / `refresh_token`
+    /// values containing `+` must be rewritten to `%2B`.
+    static func formBody(_ params: [String: String]) -> Data {
         var components = URLComponents()
         components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
-        // URLComponents encodes spaces as %20 (not "+"); token endpoint accepts that.
-        return (components.percentEncodedQuery ?? "").data(using: .utf8) ?? Data()
+        let query = (components.percentEncodedQuery ?? "")
+            .replacingOccurrences(of: "+", with: "%2B")
+        return query.data(using: .utf8) ?? Data()
     }
 }

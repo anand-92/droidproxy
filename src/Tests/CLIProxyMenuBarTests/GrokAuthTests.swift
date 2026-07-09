@@ -50,21 +50,22 @@ final class GrokAuthTests: XCTestCase {
         )
 
         XCTAssertFalse(creds.isAccessExpired(now: now))
-        // Exactly at the 1h skew threshold → expired (>=).
-        XCTAssertTrue(creds.isAccessExpired(now: now.addingTimeInterval(3600)))
+        // Exactly at the 5m skew threshold → expired (>=).
+        XCTAssertTrue(creds.isAccessExpired(now: now.addingTimeInterval(7200 - 300)))
         // One ms before the skew threshold → still valid.
-        XCTAssertFalse(creds.isAccessExpired(now: now.addingTimeInterval(3600 - 0.001)))
-        // Absolute expiry with skew disabled.
+        XCTAssertFalse(creds.isAccessExpired(now: now.addingTimeInterval(7200 - 300 - 0.001)))
+        // Absolute expiry boundary with skew disabled.
         XCTAssertTrue(creds.isAccessExpired(now: now.addingTimeInterval(7200), skewMs: 0))
         XCTAssertFalse(creds.isAccessExpired(now: now.addingTimeInterval(7200 - 0.001), skewMs: 0))
     }
 
     func testShortLivedTokenIsExpiredImmediatelyUnderDefaultSkew() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
+        // Lifetime shorter than refreshSkewMs (5m) → expired as soon as issued.
         let creds = GrokAuth.Credentials(
             access: "a",
             refresh: "r",
-            expiresAtMs: now.timeIntervalSince1970 * 1000 + 1800 * 1000,
+            expiresAtMs: now.timeIntervalSince1970 * 1000 + 240 * 1000,
             email: nil
         )
         XCTAssertTrue(creds.isAccessExpired(now: now))
@@ -231,6 +232,30 @@ final class GrokAuthTests: XCTestCase {
 
     func testApiHostIsPublicXAI() {
         XCTAssertEqual(GrokAuth.apiHost, "api.x.ai")
+    }
+
+    func testFormBodyPercentEncodesPlusAsFormUrlEncoded() {
+        let body = String(data: GrokAuth.formBody([
+            "refresh_token": "abc+def/ghi=",
+            "grant_type": "refresh_token"
+        ]), encoding: .utf8)!
+        // `+` must become %2B (form-urlencoded space trap); `=` may be %3D.
+        XCTAssertTrue(body.contains("refresh_token=abc%2Bdef"), body)
+        XCTAssertTrue(body.contains("%2B"), body)
+        XCTAssertFalse(body.contains("abc+def"), body)
+        XCTAssertTrue(body.contains("grant_type=refresh_token"), body)
+    }
+
+    func testOneHourTokenIsNotExpiredImmediatelyUnderDefaultSkew() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let creds = GrokAuth.Credentials(
+            access: "a",
+            refresh: "r",
+            expiresAtMs: now.timeIntervalSince1970 * 1000 + 3600 * 1000,
+            email: nil
+        )
+        XCTAssertFalse(creds.isAccessExpired(now: now))
+        XCTAssertTrue(creds.isAccessExpired(now: now.addingTimeInterval(3600 - 300)))
     }
 
     func testTerminalRefreshFailureDetection() {

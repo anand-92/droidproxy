@@ -1117,13 +1117,24 @@ struct SettingsView: View {
 
     private func startGrokOAuthLogin() {
         grokLoginSession?.cancel()
+        // Drop the old reference immediately so a stale `.cancelled` completion
+        // cannot identity-match and clobber the replacement session.
+        grokLoginSession = nil
         authenticatingService = .grok
         grokUserCode = nil
         NSLog("[SettingsView] Starting Grok xAI OAuth device login")
 
-        grokLoginSession = GrokAuth.startDeviceLogin(
+        // Holder so closures can identity-check after `startDeviceLogin` returns
+        // (Swift forbids capturing the binding before it is declared).
+        final class SessionRef {
+            var value: GrokAuth.LoginSession?
+        }
+        let sessionRef = SessionRef()
+
+        let session = GrokAuth.startDeviceLogin(
             onPrompt: { auth in
                 DispatchQueue.main.async {
+                    guard self.grokLoginSession === sessionRef.value else { return }
                     self.grokUserCode = auth.userCode
                     self.authResultMessage = "🌐 Browser opened for Grok login.\n\nIf prompted, enter code: \(auth.userCode)\n\nWaiting for approval…"
                     self.showingAuthResult = true
@@ -1131,26 +1142,35 @@ struct SettingsView: View {
             },
             completion: { result in
                 DispatchQueue.main.async {
-                    self.authenticatingService = nil
-                    self.grokLoginSession = nil
+                    // Ignore stale completions from a cancelled/replaced session.
+                    guard self.grokLoginSession === sessionRef.value else { return }
                     switch result {
                     case .success(let creds):
+                        self.authenticatingService = nil
+                        self.grokLoginSession = nil
                         self.authManager.checkAuthStatus()
                         let who = creds.email ?? "grok-user"
                         self.authResultMessage = "✓ Grok OAuth connected as \(who).\n\nSelect DroidProxy: Grok 4.5 in Droid with `/model`."
                         self.showingAuthResult = true
                     case .failure(.cancelled):
+                        // Replaced session already cleared `grokLoginSession` above.
                         break
                     case .failure(.reauthRequired):
+                        self.authenticatingService = nil
+                        self.grokLoginSession = nil
                         self.authResultMessage = "Grok session expired. Reconnect Grok in Settings."
                         self.showingAuthResult = true
                     case .failure(let error):
+                        self.authenticatingService = nil
+                        self.grokLoginSession = nil
                         self.authResultMessage = "Grok login failed: \(error.localizedDescription)"
                         self.showingAuthResult = true
                     }
                 }
             }
         )
+        sessionRef.value = session
+        grokLoginSession = session
     }
 
     private func saveCursorApiKey(_ apiKey: String) {

@@ -1115,35 +1115,7 @@ class ThinkingProxy {
     }
 
     private func receiveCursorResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
-        targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                NSLog("[ThinkingProxy] Receive Cursor response error: \(error)")
-                targetConnection.cancel()
-                originalConnection.cancel()
-                return
-            }
-
-            guard let data = data, !data.isEmpty else {
-                if isComplete {
-                    self.finishStreaming(target: targetConnection, client: originalConnection)
-                }
-                return
-            }
-
-            originalConnection.send(content: data, completion: .contentProcessed({ sendError in
-                if let sendError = sendError {
-                    NSLog("[ThinkingProxy] Send Cursor response error: \(sendError)")
-                }
-
-                if isComplete {
-                    self.finishStreaming(target: targetConnection, client: originalConnection)
-                } else {
-                    self.receiveCursorResponse(from: targetConnection, originalConnection: originalConnection)
-                }
-            }))
-        }
+        relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Cursor")
     }
 
     // MARK: - Junie (JetBrains AI) API Proxying
@@ -1275,35 +1247,7 @@ class ThinkingProxy {
     }
 
     private func receiveJunieResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
-        targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                NSLog("[ThinkingProxy] Receive Junie response error: \(error)")
-                targetConnection.cancel()
-                originalConnection.cancel()
-                return
-            }
-
-            guard let data = data, !data.isEmpty else {
-                if isComplete {
-                    self.finishStreaming(target: targetConnection, client: originalConnection)
-                }
-                return
-            }
-
-            originalConnection.send(content: data, completion: .contentProcessed({ sendError in
-                if let sendError = sendError {
-                    NSLog("[ThinkingProxy] Send Junie response error: \(sendError)")
-                }
-
-                if isComplete {
-                    self.finishStreaming(target: targetConnection, client: originalConnection)
-                } else {
-                    self.receiveJunieResponse(from: targetConnection, originalConnection: originalConnection)
-                }
-            }))
-        }
+        relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Junie")
     }
 
     // MARK: - Grok (OAuth → api.x.ai)
@@ -1432,11 +1376,16 @@ class ThinkingProxy {
     }
 
     private func receiveGrokResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
+        relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Grok")
+    }
+
+    /// Shared TLS upstream → client relay used by Cursor / Junie / Grok paths.
+    private func relayUpstreamResponse(from targetConnection: NWConnection, originalConnection: NWConnection, label: String) {
         targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
 
             if let error = error {
-                NSLog("[ThinkingProxy] Receive Grok response error: \(error)")
+                NSLog("[ThinkingProxy] Receive \(label) response error: \(error)")
                 targetConnection.cancel()
                 originalConnection.cancel()
                 return
@@ -1451,13 +1400,13 @@ class ThinkingProxy {
 
             originalConnection.send(content: data, completion: .contentProcessed({ sendError in
                 if let sendError = sendError {
-                    NSLog("[ThinkingProxy] Send Grok response error: \(sendError)")
+                    NSLog("[ThinkingProxy] Send \(label) response error: \(sendError)")
                 }
 
                 if isComplete {
                     self.finishStreaming(target: targetConnection, client: originalConnection)
                 } else {
-                    self.receiveGrokResponse(from: targetConnection, originalConnection: originalConnection)
+                    self.relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: label)
                 }
             }))
         }
