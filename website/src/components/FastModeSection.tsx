@@ -17,7 +17,7 @@ export default function FastModeSection() {
             <dt>What it does</dt>
             <dd>Adds <span className="mono">service_tier: priority</span> to GPT requests on the Responses API for lower-latency responses</dd>
             <dt>Works with</dt>
-            <dd>GPT 5.3 Codex, GPT 5.4, and GPT 5.5 — toggle each one in the Settings window</dd>
+            <dd>GPT 5.4, GPT 5.5, and GPT 5.6 Terra — toggle each one in the Settings window</dd>
             <dt>When to use</dt>
             <dd>Interactive sessions where responsiveness matters more than conserving priority capacity</dd>
             <dt>Reasoning effort</dt>

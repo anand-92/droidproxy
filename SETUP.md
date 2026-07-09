@@ -76,9 +76,20 @@ Open `~/.factory/settings.json` and add the following to the `customModels` arra
       "provider": "openai"
     },
     {
+      "model": "gpt-5.6-terra",
+      "id": "custom:droidproxy:gpt-5.6-terra",
+      "index": 5,
+      "baseUrl": "http://localhost:8317/v1",
+      "apiKey": "dummy-not-used",
+      "displayName": "DroidProxy: GPT 5.6 Terra",
+      "maxOutputTokens": 128000,
+      "noImageSupport": false,
+      "provider": "openai"
+    },
+    {
       "model": "gemini-3.1-pro-preview",
       "id": "custom:droidproxy:gemini-3.1-pro",
-      "index": 5,
+      "index": 6,
       "baseUrl": "http://localhost:8317",
       "apiKey": "dummy-not-used",
       "displayName": "DroidProxy: Gemini 3.1 Pro",
@@ -89,7 +100,7 @@ Open `~/.factory/settings.json` and add the following to the `customModels` arra
     {
       "model": "gemini-3-flash-preview",
       "id": "custom:droidproxy:gemini-3-flash",
-      "index": 6,
+      "index": 7,
       "baseUrl": "http://localhost:8317",
       "apiKey": "dummy-not-used",
       "displayName": "DroidProxy: Gemini 3 Flash",
@@ -111,6 +122,7 @@ Reasoning effort is selected per session in Droid CLI's model picker — DroidPr
 - Sonnet 4.6: `low`, `medium`, `high`, or `max`
 - GPT 5.4: `low`, `medium`, `high`, or `xhigh`
 - GPT 5.5: `low`, `medium`, `high`, or `xhigh`
+- GPT 5.6 Terra: `none`, `low`, `medium`, `high`, `xhigh`, or `max`
 - Gemini 3.1 Pro: `low`, `medium`, or `high`
 - Gemini 3 Flash: `minimal`, `low`, `medium`, or `high`
 
