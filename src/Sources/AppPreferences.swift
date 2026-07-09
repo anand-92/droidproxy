@@ -3,6 +3,7 @@ import Foundation
 enum AppPreferences {
     static let gpt54FastModeKey = "gpt54FastMode"
     static let gpt55FastModeKey = "gpt55FastMode"
+    static let gpt56TerraFastModeKey = "gpt56TerraFastMode"
     static let allowRemoteKey = "allowRemote"
     static let secretKeyKey = "secretKey"
     static let bindAddressKey = "bindAddress"
@@ -13,6 +14,7 @@ enum AppPreferences {
 
     static let defaultGpt54FastMode = false
     static let defaultGpt55FastMode = false
+    static let defaultGpt56TerraFastMode = false
     static let defaultAllowRemote = false
     static let defaultSecretKey = ""
     static let defaultBindAddress = "127.0.0.1"
@@ -27,6 +29,10 @@ enum AppPreferences {
 
     static var gpt55FastMode: Bool {
         UserDefaults.standard.bool(forKey: gpt55FastModeKey)
+    }
+
+    static var gpt56TerraFastMode: Bool {
+        UserDefaults.standard.bool(forKey: gpt56TerraFastModeKey)
     }
 
     static var allowRemote: Bool {
