@@ -16,13 +16,26 @@ const DEFAULT_SETTINGS = {
   requestTimeout: "10m",
   requestRetry: 3,
   debug: false,
-  model: "gpt-5.5",
+  model: "gpt-5.6-terra",
   maxOutputTokens: 128000,
   enableThinking: true,
-  reasoningEffort: "high"
+  reasoningEffort: "medium"
 };
 
-const REASONING_EFFORTS = ["low", "medium", "high", "xhigh"];
+const FACTORY_MODELS = [
+  {
+    model: "gpt-5.6-terra",
+    displayName: "DroidProxy: GPT 5.6 Terra",
+    supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    defaultReasoningEffort: "medium"
+  },
+  {
+    model: "gpt-5.6-sol",
+    displayName: "DroidProxy: GPT 5.6 Sol",
+    supportedReasoningEfforts: ["dynamic", "low", "medium", "high", "xhigh", "max"],
+    defaultReasoningEffort: "medium"
+  }
+];
 const DROIDPROXY_MODEL_PREFIXES = ["custom:droidproxy:", "custom:CC:"];
 
 let mainWindow;
@@ -68,8 +81,11 @@ function sanitizeSettings(value) {
   const maxOutputTokens = Number(value.maxOutputTokens);
   const host = String(value.host || DEFAULT_SETTINGS.host).trim();
   const timeout = String(value.requestTimeout || DEFAULT_SETTINGS.requestTimeout).trim();
-  const model = ["gpt-5.4", "gpt-5.5"].includes(value.model) ? value.model : DEFAULT_SETTINGS.model;
-  const reasoningEffort = REASONING_EFFORTS.includes(value.reasoningEffort) ? value.reasoningEffort : DEFAULT_SETTINGS.reasoningEffort;
+  const modelDefinition = FACTORY_MODELS.find((item) => item.model === value.model) || FACTORY_MODELS[0];
+  const model = modelDefinition.model;
+  const reasoningEffort = modelDefinition.supportedReasoningEfforts.includes(value.reasoningEffort)
+    ? value.reasoningEffort
+    : modelDefinition.defaultReasoningEffort;
 
   return {
     host: /^[a-zA-Z0-9.:-]+$/.test(host) ? host : DEFAULT_SETTINGS.host,
@@ -332,23 +348,23 @@ function formatReset(date) {
 
 function factoryModels() {
   const baseUrl = `http://${settings.host}:${settings.port}/v1`;
-  return ["gpt-5.4", "gpt-5.5"].map((model, index) => {
+  return FACTORY_MODELS.map((modelDefinition, index) => {
     const entry = {
-      model,
-      id: `custom:droidproxy:${model}`,
+      model: modelDefinition.model,
+      id: `custom:droidproxy:${modelDefinition.model}`,
       index,
       baseUrl,
       apiKey: "dummy-not-used",
-      displayName: `DroidProxy: ${model.toUpperCase()}`,
+      displayName: modelDefinition.displayName,
       maxOutputTokens: settings.maxOutputTokens,
       noImageSupport: false,
       provider: "openai"
     };
     if (settings.enableThinking) {
       entry.enableThinking = true;
-      entry.supportedReasoningEfforts = REASONING_EFFORTS;
-      entry.defaultReasoningEffort = settings.reasoningEffort;
-      entry.reasoningEffort = settings.reasoningEffort;
+      entry.supportedReasoningEfforts = modelDefinition.supportedReasoningEfforts;
+      entry.defaultReasoningEffort = modelDefinition.defaultReasoningEffort;
+      entry.reasoningEffort = modelDefinition.defaultReasoningEffort;
     }
     return entry;
   });
