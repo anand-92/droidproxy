@@ -23,6 +23,20 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(sonnet["supportedReasoningEfforts"] as? [String], ["low", "medium", "high", "xhigh", "max"])
     }
 
+    func testGpt56LunaUsesNativeModelMetadata() throws {
+        let luna = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:gpt-5.6-luna"))
+
+        XCTAssertEqual(luna["model"] as? String, "gpt-5.6-luna")
+        XCTAssertEqual(luna["provider"] as? String, "openai")
+        XCTAssertEqual(luna["baseUrl"] as? String, "http://localhost:8317/v1")
+        XCTAssertEqual(luna["displayName"] as? String, "DroidProxy: GPT 5.6 Luna")
+        XCTAssertEqual(luna["maxOutputTokens"] as? Int, 128000)
+        XCTAssertEqual(luna["enableThinking"] as? Bool, true)
+        XCTAssertEqual(luna["reasoningEffort"] as? String, "medium")
+        XCTAssertEqual(luna["defaultReasoningEffort"] as? String, "medium")
+        XCTAssertEqual(luna["supportedReasoningEfforts"] as? [String], ["none", "low", "medium", "high", "xhigh", "max"])
+    }
+
     func testGrok45UsesOpenAIProviderAndApiXAIProxy() throws {
         let grok = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.5"))
 
