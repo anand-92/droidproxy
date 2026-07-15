@@ -7,6 +7,7 @@ enum AppPreferences {
     static let gpt56SolFastModeKey = "gpt56SolFastMode"
     static let gpt56LunaFastModeKey = "gpt56LunaFastMode"
     /// Grok 4.5 Fast Mode (model-id rewrite to grok-4.5-fast via Cursor API).
+    /// Default is off — same opt-in pattern as Codex GPT Fast Mode keys.
     static let grok45FastModeKey = "grok45FastMode"
     static let allowRemoteKey = "allowRemote"
     static let secretKeyKey = "secretKey"
