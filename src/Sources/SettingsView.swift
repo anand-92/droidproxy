@@ -1398,7 +1398,8 @@ struct SettingsView: View {
             perModel[modelID] = limit
         }
         settings["compactionTokenLimitPerModel"] = perModel
-        if settings["compactionModelMode"] == nil {
+        // JSON null becomes NSNull, so `== nil` is not enough.
+        if !(settings["compactionModelMode"] is String) {
             settings["compactionModelMode"] = "same"
         }
     }

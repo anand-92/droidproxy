@@ -1134,7 +1134,7 @@ class ThinkingProxy {
                 if let requestData = forwardedRequest.data(using: .utf8) {
                     targetConnection.send(content: requestData, completion: .contentProcessed({ error in
                         if let error = error {
-                            NSLog("[ThinkingProxy] Send error to \(cursorHost): \(error)")
+                            NSLog("[ThinkingProxy] Send error to %@: %@", cursorHost, "\(error)")
                             targetConnection.cancel()
                             originalConnection.cancel()
                         } else {
@@ -1144,7 +1144,7 @@ class ThinkingProxy {
                 }
                 
             case .failed(let error):
-                NSLog("[ThinkingProxy] Connection to \(cursorHost) failed: \(error)")
+                NSLog("[ThinkingProxy] Connection to %@ failed: %@", cursorHost, "\(error)")
                 self.sendError(to: originalConnection, statusCode: 502, message: "Bad Gateway - Could not connect to \(cursorHost)")
                 targetConnection.cancel()
                 

@@ -460,12 +460,10 @@ enum DroidProxyModelCatalog {
     /// driven by top-level `compactionTokenLimit` / `compactionTokenLimitPerModel`
     /// (custom BYOK ids resolve to infinite maxInputTokens otherwise). Thresholds sit
     /// under each provider's effective window so compaction fires before a hard 400.
-    static var factoryCompactionTokenLimitPerModel: [String: Int] {
-        [
-            // api.x.ai: grok-4.5=500k, grok-4.3=1M, grok-build-0.1=256k
-            "custom:droidproxy:grok-4.5": 400_000,
-            "custom:droidproxy:grok-4.3": 800_000,
-            "custom:droidproxy:grok-build-0.1": 200_000
-        ]
-    }
+    static let factoryCompactionTokenLimitPerModel: [String: Int] = [
+        // api.x.ai: grok-4.5=500k, grok-4.3=1M, grok-build-0.1=256k
+        "custom:droidproxy:grok-4.5": 400_000,
+        "custom:droidproxy:grok-4.3": 800_000,
+        "custom:droidproxy:grok-build-0.1": 200_000
+    ]
 }
