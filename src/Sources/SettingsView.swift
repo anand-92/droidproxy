@@ -1021,7 +1021,7 @@ struct SettingsView: View {
     @ViewBuilder
     private func codexFastModeToggleRow(_ title: String, isOn: Binding<Bool>, helpText: String) -> some View {
         HStack {
-            Text("\(title) fast mode")
+            Text(title)
                 .font(.caption)
                 .foregroundColor(.secondary)
             Spacer()
