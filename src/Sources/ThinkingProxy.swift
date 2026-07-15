@@ -464,10 +464,6 @@ class ThinkingProxy {
         "ag-c46o-thinking": "claude-opus-4-6-thinking"
     ]
 
-    private static let cursorModelAliases: [String: String] = [
-        "cursor-composer-2.5": "composer-2.5"
-    ]
-
     private func rewriteAntigravityModelAlias(jsonString: String, fields: RequestJSONFields?) -> String? {
         guard let model = fields?.model,
               let modelLocation = fields?.modelLocation,
@@ -483,14 +479,19 @@ class ThinkingProxy {
 
     private func rewriteCursorModelAlias(jsonString: String, fields: RequestJSONFields?) -> String? {
         guard let model = fields?.model,
-              let modelLocation = fields?.modelLocation,
-              let backendModel = Self.cursorModelAliases[model] else {
+              let modelLocation = fields?.modelLocation else {
             return nil
         }
 
+        let backendModel = CursorModelRewriter.resolveUpstreamModel(
+            model,
+            grok45FastMode: AppPreferences.cursorGrok45FastMode
+        )
+        guard backendModel != model else { return nil }
+
         var result = jsonString
         result.replaceSubrange(modelLocation.valueRange, with: "\"\(backendModel)\"")
-        ThinkingProxy.fileLog("REWRITE MODEL: \(model) -> \(backendModel) (Cursor alias)")
+        ThinkingProxy.fileLog("REWRITE MODEL: \(model) -> \(backendModel) (Cursor)")
         return result
     }
 
@@ -1074,7 +1075,8 @@ class ThinkingProxy {
         let tlsOptions = NWProtocolTLS.Options()
         let parameters = NWParameters(tls: tlsOptions, tcp: NWProtocolTCP.Options())
         
-        let endpoint = NWEndpoint.hostPort(host: "cursor-api.standardagents.ai", port: 443)
+        let cursorHost = CursorModelRewriter.host
+        let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(cursorHost), port: 443)
         let targetConnection = NWConnection(to: endpoint, using: parameters)
         
         targetConnection.stateUpdateHandler = { [weak self] state in
@@ -1089,7 +1091,7 @@ class ThinkingProxy {
                     }
                 }
                 
-                forwardedRequest += "Host: cursor-api.standardagents.ai\r\n"
+                forwardedRequest += "Host: \(cursorHost)\r\n"
                 forwardedRequest += "Authorization: Bearer \(apiKey)\r\n"
                 forwardedRequest += "Connection: close\r\n"
                 forwardedRequest += "Content-Length: \(body.utf8.count)\r\n\r\n"
@@ -1098,7 +1100,7 @@ class ThinkingProxy {
                 if let requestData = forwardedRequest.data(using: .utf8) {
                     targetConnection.send(content: requestData, completion: .contentProcessed({ error in
                         if let error = error {
-                            NSLog("[ThinkingProxy] Send error to cursor-api.standardagents.ai: \(error)")
+                            NSLog("[ThinkingProxy] Send error to \(cursorHost): \(error)")
                             targetConnection.cancel()
                             originalConnection.cancel()
                         } else {
@@ -1108,8 +1110,8 @@ class ThinkingProxy {
                 }
                 
             case .failed(let error):
-                NSLog("[ThinkingProxy] Connection to cursor-api.standardagents.ai failed: \(error)")
-                self.sendError(to: originalConnection, statusCode: 502, message: "Bad Gateway - Could not connect to cursor-api.standardagents.ai")
+                NSLog("[ThinkingProxy] Connection to \(cursorHost) failed: \(error)")
+                self.sendError(to: originalConnection, statusCode: 502, message: "Bad Gateway - Could not connect to \(cursorHost)")
                 targetConnection.cancel()
                 
             default:

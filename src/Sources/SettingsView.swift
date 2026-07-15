@@ -335,6 +335,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gpt56TerraFastModeKey) private var gpt56TerraFastMode = AppPreferences.defaultGpt56TerraFastMode
     @AppStorage(AppPreferences.gpt56LunaFastModeKey) private var gpt56LunaFastMode = AppPreferences.defaultGpt56LunaFastMode
     @AppStorage(AppPreferences.gpt56SolFastModeKey) private var gpt56SolFastMode = AppPreferences.defaultGpt56SolFastMode
+    @AppStorage(AppPreferences.cursorGrok45FastModeKey) private var cursorGrok45FastMode = AppPreferences.defaultCursorGrok45FastMode
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
     @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
     @AppStorage(AppPreferences.bindAddressKey) private var bindAddress = AppPreferences.defaultBindAddress
@@ -356,6 +357,7 @@ struct SettingsView: View {
     @State private var factoryModelsInstalled = false
     @State private var remoteManagementExpanded = false
     @State private var codexFastModeExpanded = true
+    @State private var cursorFastModeExpanded = true
     private let claudeEffortSelectionColor = Color(red: 0xD9/255, green: 0x77/255, blue: 0x57/255)
     private let codexEffortSelectionColor = Color(red: 0x74/255, green: 0xAA/255, blue: 0x9C/255)
     private let antigravityEffortSelectionColor = Color(red: 0x42/255, green: 0x85/255, blue: 0xF4/255)
@@ -836,8 +838,36 @@ struct SettingsView: View {
                             .cursor,
                             iconName: "icon-cursor.png",
                             toggleTint: cursorEffortSelectionColor,
-                            helpText: "Enter your Cursor API Key (from https://cursor-api.standardagents.ai/) to proxy requests directly to Cursor."
+                            helpText: "Enter your Cursor API Key (from https://api-for-cursor.standardagents.ai/) to proxy requests directly to Cursor."
                         )
+
+                        if serverManager.isProviderEnabled(.cursor) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 4) {
+                                    Text("Fast Mode")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Image(systemName: cursorFastModeExpanded ? "chevron.down" : "chevron.right")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        cursorFastModeExpanded.toggle()
+                                    }
+                                }
+                                if cursorFastModeExpanded {
+                                    codexFastModeToggleRow(
+                                        "Grok 4.5",
+                                        isOn: $cursorGrok45FastMode,
+                                        helpText: "Rewrites Cursor Grok 4.5 requests to grok-4.5-fast (model-id Fast Mode, not Codex service_tier)"
+                                    )
+                                }
+                            }
+                            .padding(.leading, 28)
+                        }
                     }
                 }
                 .listRowBackground(glassRowBackground)
@@ -1337,6 +1367,7 @@ struct SettingsView: View {
         }
 
         settings["customModels"] = models
+        mergeFactoryCompactionTokenLimits(&settings)
 
         do {
             backupFactorySettingsIfPresent(url)
@@ -1348,13 +1379,27 @@ struct SettingsView: View {
             }
             try data.write(to: url, options: .atomic)
             factoryModelsInstalled = true
-            authResultMessage = "DroidProxy models added to Factory settings.\n\nA timestamped backup was saved next to settings.json before writing. Reasoning effort is controlled from Droid CLI per session when the selected model exposes multiple levels. Restart Factory or open a new session to see them in the model picker."
+            authResultMessage = "DroidProxy models merged into Factory settings.\n\nYour other custom models were kept. Only previous DroidProxy entries were replaced. Grok compaction limits were written to compactionTokenLimitPerModel. A timestamped backup was saved next to settings.json.\n\nIn Droid CLI use /model and search for “DroidProxy:”. Restart Factory or open a new session if the picker looks stale. Reasoning effort is controlled from Droid per session when the model exposes multiple levels."
             showingAuthResult = true
             NSLog("[SettingsView] Factory custom models applied to %@", url.path)
         } catch {
             authResultMessage = "Failed to update Factory settings: \(error.localizedDescription)"
             showingAuthResult = true
             NSLog("[SettingsView] Failed to apply Factory custom models: %@", error.localizedDescription)
+        }
+    }
+
+    /// Merge BYOK compaction thresholds into Factory's root-level
+    /// `compactionTokenLimitPerModel`. Custom models accept `maxContextLimit`, but
+    /// Droid auto-compaction is driven by this documented root setting.
+    private func mergeFactoryCompactionTokenLimits(_ settings: inout [String: Any]) {
+        var perModel = (settings["compactionTokenLimitPerModel"] as? [String: Any]) ?? [:]
+        for (modelID, limit) in DroidProxyModelCatalog.factoryCompactionTokenLimitPerModel {
+            perModel[modelID] = limit
+        }
+        settings["compactionTokenLimitPerModel"] = perModel
+        if settings["compactionModelMode"] == nil {
+            settings["compactionModelMode"] = "same"
         }
     }
 

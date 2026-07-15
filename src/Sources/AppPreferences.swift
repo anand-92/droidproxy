@@ -6,6 +6,7 @@ enum AppPreferences {
     static let gpt56TerraFastModeKey = "gpt56TerraFastMode"
     static let gpt56SolFastModeKey = "gpt56SolFastMode"
     static let gpt56LunaFastModeKey = "gpt56LunaFastMode"
+    static let cursorGrok45FastModeKey = "cursorGrok45FastMode"
     static let allowRemoteKey = "allowRemote"
     static let secretKeyKey = "secretKey"
     static let bindAddressKey = "bindAddress"
@@ -19,6 +20,7 @@ enum AppPreferences {
     static let defaultGpt56TerraFastMode = false
     static let defaultGpt56SolFastMode = false
     static let defaultGpt56LunaFastMode = false
+    static let defaultCursorGrok45FastMode = false
     static let defaultAllowRemote = false
     static let defaultSecretKey = ""
     static let defaultBindAddress = "127.0.0.1"
@@ -45,6 +47,10 @@ enum AppPreferences {
 
     static var gpt56LunaFastMode: Bool {
         UserDefaults.standard.bool(forKey: gpt56LunaFastModeKey)
+    }
+
+    static var cursorGrok45FastMode: Bool {
+        UserDefaults.standard.bool(forKey: cursorGrok45FastModeKey)
     }
 
     static var allowRemote: Bool {

@@ -46,6 +46,7 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(grok["displayName"] as? String, "DroidProxy: Grok 4.5")
         XCTAssertEqual(grok["supportedReasoningEfforts"] as? [String], ["low", "medium", "high", "xhigh"])
         XCTAssertEqual(grok["defaultReasoningEffort"] as? String, "high")
+        XCTAssertEqual(grok["maxContextLimit"] as? Int, 500_000)
     }
 
     func testGrokProviderModelsAreRegistered() {
@@ -53,6 +54,38 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertTrue(ids.contains("custom:droidproxy:grok-4.5"))
         XCTAssertTrue(ids.contains("custom:droidproxy:grok-4.3"))
         XCTAssertTrue(ids.contains("custom:droidproxy:grok-build-0.1"))
+    }
+
+    func testGrokContextLimitsMatchXAIDocs() throws {
+        let grok45 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.5"))
+        let grok43 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.3"))
+        let build = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-build-0.1"))
+
+        XCTAssertEqual(grok45["maxContextLimit"] as? Int, 500_000)
+        XCTAssertEqual(grok43["maxContextLimit"] as? Int, 1_000_000)
+        XCTAssertEqual(build["maxContextLimit"] as? Int, 256_000)
+    }
+
+    func testFactoryCompactionLimitsSitUnderGrokWindows() {
+        let limits = DroidProxyModelCatalog.factoryCompactionTokenLimitPerModel
+        XCTAssertEqual(limits["custom:droidproxy:grok-4.5"], 400_000)
+        XCTAssertEqual(limits["custom:droidproxy:grok-4.3"], 800_000)
+        XCTAssertEqual(limits["custom:droidproxy:grok-build-0.1"], 200_000)
+    }
+
+    func testCursorGrokModelsAppearWhenBetaEnabled() throws {
+        let previous = BETA_FLAG
+        BETA_FLAG = true
+        defer { BETA_FLAG = previous }
+
+        let standard = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:cursor-grok-4.5"))
+        let fast = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:cursor-grok-4.5-fast"))
+
+        XCTAssertEqual(standard["model"] as? String, "cursor-grok-4.5")
+        XCTAssertEqual(standard["provider"] as? String, "generic-chat-completion-api")
+        XCTAssertEqual(standard["displayName"] as? String, "DroidProxy: Cursor Grok 4.5")
+        XCTAssertEqual(fast["model"] as? String, "cursor-grok-4.5-fast")
+        XCTAssertEqual(fast["displayName"] as? String, "DroidProxy: Cursor Grok 4.5 Fast")
     }
 
     private func settingsEntry(id: String) -> [String: Any]? {
