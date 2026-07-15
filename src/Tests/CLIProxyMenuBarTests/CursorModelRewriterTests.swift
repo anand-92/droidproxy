@@ -22,6 +22,10 @@ final class CursorModelRewriterTests: XCTestCase {
             CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5", grok45FastMode: true),
             "grok-4.5-fast"
         )
+        XCTAssertEqual(
+            CursorModelRewriter.resolveUpstreamModel("grok-4.5", grok45FastMode: true),
+            "grok-4.5-fast"
+        )
         // Explicit Fast catalog entry stays fast regardless of the checkbox.
         XCTAssertEqual(
             CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5-fast", grok45FastMode: true),
@@ -30,6 +34,18 @@ final class CursorModelRewriterTests: XCTestCase {
         XCTAssertEqual(
             CursorModelRewriter.resolveUpstreamModel("cursor-composer-2.5", grok45FastMode: true),
             "composer-2.5"
+        )
+    }
+
+    func testGrokOAuthFastDivertPredicate() {
+        XCTAssertTrue(
+            CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(model: "grok-4.5", grok45FastMode: true)
+        )
+        XCTAssertFalse(
+            CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(model: "grok-4.5", grok45FastMode: false)
+        )
+        XCTAssertFalse(
+            CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(model: "grok-4.3", grok45FastMode: true)
         )
     }
 
