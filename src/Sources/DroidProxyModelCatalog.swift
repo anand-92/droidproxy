@@ -20,6 +20,9 @@ struct DroidProxyModelDefinition: Equatable {
     let idSlug: String
     let displayName: String
     let maxOutputTokens: Int
+    /// Optional Factory `maxContextLimit` (accepted by customModels schema).
+    /// Compaction still primarily uses root `compactionTokenLimitPerModel`.
+    let maxContextLimit: Int?
     let provider: String
     let providerKey: String
     let baseURL: String
@@ -31,6 +34,7 @@ struct DroidProxyModelDefinition: Equatable {
          idSlug: String,
          displayName: String,
          maxOutputTokens: Int,
+         maxContextLimit: Int? = nil,
          provider: String,
          providerKey: String,
          baseURL: String,
@@ -41,6 +45,7 @@ struct DroidProxyModelDefinition: Equatable {
         self.idSlug = idSlug
         self.displayName = displayName
         self.maxOutputTokens = maxOutputTokens
+        self.maxContextLimit = maxContextLimit
         self.provider = provider
         self.providerKey = providerKey
         self.baseURL = baseURL
@@ -77,6 +82,9 @@ struct DroidProxyModelDefinition: Equatable {
             "noImageSupport": false,
             "provider": provider
         ]
+        if let maxContextLimit {
+            entry["maxContextLimit"] = maxContextLimit
+        }
         guard !levels.isEmpty else { return entry }
         entry["enableThinking"] = true
         entry["supportedReasoningEfforts"] = levels.map(\.value)
@@ -351,11 +359,13 @@ enum DroidProxyModelCatalog {
 
             // Grok OAuth (SuperGrok / X Premium+) via api.x.ai.
             // provider="openai" + /v1 → Responses API; ThinkingProxy attaches the bearer.
+            // Context windows from docs.x.ai (Jul 2026): 4.5=500k, 4.3=1M, Build=256k.
             DroidProxyModelDefinition(
                 baseModel: "grok-4.5",
                 idSlug: "grok-4.5",
                 displayName: "Grok 4.5",
                 maxOutputTokens: 128000,
+                maxContextLimit: 500_000,
                 provider: "openai",
                 providerKey: "grok",
                 baseURL: "http://localhost:8317/v1",
@@ -368,6 +378,7 @@ enum DroidProxyModelCatalog {
                 idSlug: "grok-4.3",
                 displayName: "Grok 4.3",
                 maxOutputTokens: 128000,
+                maxContextLimit: 1_000_000,
                 provider: "openai",
                 providerKey: "grok",
                 baseURL: "http://localhost:8317/v1",
@@ -380,6 +391,7 @@ enum DroidProxyModelCatalog {
                 idSlug: "grok-build-0.1",
                 displayName: "Grok Build",
                 maxOutputTokens: 128000,
+                maxContextLimit: 256_000,
                 provider: "openai",
                 providerKey: "grok",
                 baseURL: "http://localhost:8317/v1",
@@ -395,6 +407,30 @@ enum DroidProxyModelCatalog {
                     baseModel: "cursor-composer-2.5",
                     idSlug: "cursor-composer-2.5",
                     displayName: "Cursor Composer 2.5",
+                    maxOutputTokens: 128000,
+                    provider: "generic-chat-completion-api",
+                    providerKey: "cursor",
+                    baseURL: "http://localhost:8317/v1",
+                    kind: .cursor,
+                    levels: [high],
+                    defaultLevelValue: "high"
+                ),
+                DroidProxyModelDefinition(
+                    baseModel: "cursor-grok-4.5",
+                    idSlug: "cursor-grok-4.5",
+                    displayName: "Cursor Grok 4.5",
+                    maxOutputTokens: 128000,
+                    provider: "generic-chat-completion-api",
+                    providerKey: "cursor",
+                    baseURL: "http://localhost:8317/v1",
+                    kind: .cursor,
+                    levels: [high],
+                    defaultLevelValue: "high"
+                ),
+                DroidProxyModelDefinition(
+                    baseModel: "cursor-grok-4.5-fast",
+                    idSlug: "cursor-grok-4.5-fast",
+                    displayName: "Cursor Grok 4.5 Fast",
                     maxOutputTokens: 128000,
                     provider: "generic-chat-completion-api",
                     providerKey: "cursor",
@@ -431,4 +467,17 @@ enum DroidProxyModelCatalog {
     static var allSettingsIDs: Set<String> {
         Set(definitions.map(\.simpleID))
     }
+
+    /// Factory root-level `compactionTokenLimitPerModel` entries for BYOK models.
+    ///
+    /// Custom models also accept `maxContextLimit`, but Droid's auto-compaction is
+    /// driven by top-level `compactionTokenLimit` / `compactionTokenLimitPerModel`
+    /// (custom BYOK ids resolve to infinite maxInputTokens otherwise). Thresholds sit
+    /// under each provider's effective window so compaction fires before a hard 400.
+    static let factoryCompactionTokenLimitPerModel: [String: Int] = [
+        // api.x.ai: grok-4.5=500k, grok-4.3=1M, grok-build-0.1=256k
+        "custom:droidproxy:grok-4.5": 400_000,
+        "custom:droidproxy:grok-4.3": 800_000,
+        "custom:droidproxy:grok-build-0.1": 200_000
+    ]
 }
