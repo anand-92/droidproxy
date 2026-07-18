@@ -37,6 +37,23 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(luna["supportedReasoningEfforts"] as? [String], ["none", "low", "medium", "high", "xhigh", "max"])
     }
 
+    func testKimiK3UsesMaxReasoningMetadata() throws {
+        let kimiK3 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:kimi-k3"))
+
+        XCTAssertEqual(kimiK3["model"] as? String, "kimi-k3")
+        XCTAssertEqual(kimiK3["provider"] as? String, "openai")
+        XCTAssertEqual(kimiK3["baseUrl"] as? String, "http://localhost:8317/v1")
+        XCTAssertEqual(kimiK3["displayName"] as? String, "DroidProxy: Kimi K3")
+        XCTAssertEqual(kimiK3["maxOutputTokens"] as? Int, 65536)
+        XCTAssertEqual(kimiK3["enableThinking"] as? Bool, true)
+        XCTAssertEqual(kimiK3["reasoningEffort"] as? String, "max")
+        XCTAssertEqual(kimiK3["defaultReasoningEffort"] as? String, "max")
+        XCTAssertEqual(kimiK3["supportedReasoningEfforts"] as? [String], ["max"])
+
+        let modelsWithoutKimi = DroidProxyModelCatalog.settingsModels { $0 != "kimi" }
+        XCTAssertFalse(modelsWithoutKimi.contains { ($0["id"] as? String) == "custom:droidproxy:kimi-k3" })
+    }
+
     func testGrok45UsesOpenAIProviderAndApiXAIProxy() throws {
         let grok = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.5"))
 

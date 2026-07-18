@@ -118,15 +118,30 @@ Open `~/.factory/settings.json` and add the following to the `customModels` arra
       "maxOutputTokens": 65536,
       "noImageSupport": false,
       "provider": "google"
+    },
+    {
+      "model": "kimi-k3",
+      "id": "custom:droidproxy:kimi-k3",
+      "index": 9,
+      "baseUrl": "http://localhost:8317/v1",
+      "apiKey": "dummy-not-used",
+      "displayName": "DroidProxy: Kimi K3",
+      "maxOutputTokens": 65536,
+      "noImageSupport": false,
+      "provider": "openai",
+      "enableThinking": true,
+      "supportedReasoningEfforts": ["max"],
+      "defaultReasoningEffort": "max",
+      "reasoningEffort": "max"
     }
 ]
 ```
 
-Use the standard Claude, Codex, and Gemini model aliases in the `model` field. Claude and Gemini entries use `http://localhost:8317` (with `provider: "anthropic"` and `provider: "google"` respectively); GPT/Codex entries use `provider: "openai"` with `http://localhost:8317/v1`. Reasoning effort is chosen per session from Droid CLI's model selector — DroidProxy registers each model with its native reasoning levels and forwards the chosen value upstream unchanged.
+Use the standard Claude, Codex, Gemini, and Kimi model aliases in the `model` field. Claude and Gemini entries use `http://localhost:8317` (with `provider: "anthropic"` and `provider: "google"` respectively); GPT/Codex and Kimi entries use `provider: "openai"` with `http://localhost:8317/v1`. Reasoning effort is chosen per session from Droid CLI's model selector. DroidProxy preserves that selection, and CLIProxyAPI translates it to the provider-native request format.
 
 ## 3. Choose Reasoning Effort
 
-Reasoning effort is selected per session in Droid CLI's model picker — DroidProxy registers each model with its native reasoning levels, so the level you pick in Droid is forwarded upstream unchanged. Supported levels per model:
+Reasoning effort is selected per session in Droid CLI's model picker. DroidProxy registers each model with its native reasoning levels, preserves the selected value, and lets CLIProxyAPI translate it to the upstream provider format. Supported levels per model:
 
 - Fable 5: `low`, `medium`, `high`, `xhigh`, or `max`
 - Opus 4.8: `low`, `medium`, `high`, `xhigh`, or `max`
@@ -137,6 +152,8 @@ Reasoning effort is selected per session in Droid CLI's model picker — DroidPr
 - GPT 5.6 Sol: `dynamic`, `low`, `medium`, `high`, `xhigh`, or `max`
 - Gemini 3.1 Pro: `low`, `medium`, or `high`
 - Gemini 3 Flash: `minimal`, `low`, `medium`, or `high`
+- Kimi K3: `max` (the only currently supported effort)
+- Kimi K2.6: `high`
 
 ## 4. Enable Thinking Output
 

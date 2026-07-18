@@ -281,6 +281,20 @@ enum DroidProxyModelCatalog {
                 levels: [medium],
                 defaultLevelValue: "medium"
             ),
+            // CLIProxyAPI recognizes this catalog ID and removes the `kimi-` prefix,
+            // sending Kimi Code's native `k3` model ID upstream.
+            DroidProxyModelDefinition(
+                baseModel: "kimi-k3",
+                idSlug: "kimi-k3",
+                displayName: "Kimi K3",
+                maxOutputTokens: 65536,
+                provider: "openai",
+                providerKey: "kimi",
+                baseURL: "http://localhost:8317/v1",
+                kind: .kimi,
+                levels: [max],
+                defaultLevelValue: "max"
+            ),
             DroidProxyModelDefinition(
                 baseModel: "kimi-k2.6",
                 idSlug: "kimi-k2.6",

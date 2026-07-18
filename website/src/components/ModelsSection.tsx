@@ -72,7 +72,15 @@ const models = [
     provider: 'Google',
   },
   {
-    icon: '/assets/icon-codex.png',
+    icon: '/assets/icon-kimi.svg',
+    name: 'Kimi K3',
+    id: 'kimi-k3',
+    levels: ['max'],
+    max: '65,536',
+    provider: 'Moonshot AI',
+  },
+  {
+    icon: '/assets/icon-kimi.svg',
     name: 'Kimi K2.6',
     id: 'kimi-k2.6',
     levels: ['high'],
