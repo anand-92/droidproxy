@@ -18,7 +18,7 @@ const cases = [
   {
     tag: '03 — Pick your lab',
     title: 'Mix and match Claude, ChatGPT & Gemini.',
-    body: 'Got a Claude Pro plan? Use Fable 5, Opus 4.8, and Sonnet 4.6. ChatGPT Plus? Run GPT-5 inside Droid. Gemini Advanced? Same. Sign in to whichever ones you have — the rest just stay disabled.',
+    body: 'Got a Claude Pro plan? Use Fable 5, Opus 5, and Sonnet 4.6. ChatGPT Plus? Run GPT-5 inside Droid. Gemini Advanced? Same. Sign in to whichever ones you have — the rest just stay disabled.',
     footLabel: 'Models',
     footValue: '8 supported · all optional',
     footRight: '3 labs',

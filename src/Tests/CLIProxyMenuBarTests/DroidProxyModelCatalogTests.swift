@@ -13,6 +13,29 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(fable["maxOutputTokens"] as? Int, 128000)
     }
 
+    func testApplyWritesBothOpus5AndOpus48ForClaudeProvider() throws {
+        // Apply/Re-apply serializes every enabled definition via settingsModels();
+        // both Opus entries are providerKey "claude", so enabling Claude writes both.
+        let claudeModels = DroidProxyModelCatalog.settingsModels { $0 == "claude" }
+        let ids = Set(claudeModels.compactMap { $0["id"] as? String })
+        XCTAssertTrue(ids.contains("custom:droidproxy:opus-5"))
+        XCTAssertTrue(ids.contains("custom:droidproxy:opus-4-8"))
+
+        let opus5 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:opus-5"))
+        XCTAssertEqual(opus5["model"] as? String, "claude-opus-5")
+        XCTAssertEqual(opus5["displayName"] as? String, "DroidProxy: Opus 5")
+
+        let opus48 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:opus-4-8"))
+        XCTAssertEqual(opus48["model"] as? String, "claude-opus-4-8")
+        XCTAssertEqual(opus48["displayName"] as? String, "DroidProxy: Opus 4.8")
+
+        // Non-Junie only: the junie provider exposes Opus 5 but not Opus 4.8.
+        let junieIds = Set(DroidProxyModelCatalog.settingsModels { $0 == "junie" }
+            .compactMap { $0["id"] as? String })
+        XCTAssertTrue(junieIds.contains("custom:droidproxy:junie-claude-opus-5"))
+        XCTAssertFalse(junieIds.contains("custom:droidproxy:junie-claude-opus-4-8"))
+    }
+
     func testSonnet5UsesNativeModelIDAndExposesFullLevels() throws {
         let sonnet = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:sonnet-5"))
 

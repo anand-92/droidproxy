@@ -78,21 +78,21 @@ index 4c398fb..2600c0c 100644
  	if data == nil {
  		return fmt.Errorf("catalog is nil")
 diff --git a/internal/registry/models/models.json b/internal/registry/models/models.json
-index 5725cae..cc1c190 100644
+index 9060798..8e07fdf 100644
 --- a/internal/registry/models/models.json
 +++ b/internal/registry/models/models.json
-@@ -51,6 +51,29 @@
+@@ -119,6 +119,29 @@
          ]
        }
      },
 +    {
-+      "id": "claude-sonnet-5",
++      "id": "claude-opus-5",
 +      "object": "model",
-+      "created": 1782777600,
++      "created": 1784044800,
 +      "owned_by": "anthropic",
 +      "type": "claude",
-+      "display_name": "Claude Sonnet 5",
-+      "description": "Anthropic's most capable Sonnet-class model, with frontier performance across coding, agents, and professional work",
++      "display_name": "Claude Opus 5",
++      "description": "Premium model combining maximum intelligence with practical performance",
 +      "context_length": 1000000,
 +      "max_completion_tokens": 128000,
 +      "thinking": {
@@ -109,5 +109,5 @@ index 5725cae..cc1c190 100644
 +      }
 +    },
      {
-       "id": "claude-opus-4-6",
+       "id": "claude-sonnet-5",
        "object": "model",
