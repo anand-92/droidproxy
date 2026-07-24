@@ -6,7 +6,7 @@ upstream release, bumped by `.github/workflows/update-cliproxyapi.yml`.
 When a model ships before the upstream `router-for-me/models` registry lists it,
 CLIProxyAPI returns `unknown provider for model <id>` because provider resolution
 is registry-only. To unblock those models without disabling auto-refresh, the
-bundled binary for the current release carries `cliproxy-sonnet5-overlay.patch`.
+bundled binary for the current release carries `cliproxy-opus5-overlay.patch`.
 
 ## What the patch does
 
@@ -28,11 +28,11 @@ model is again needed ahead of the registry.
 ## Rebuild
 
 ```bash
-git clone --depth 1 --branch v7.2.47 https://github.com/router-for-me/CLIProxyAPI.git
+git clone --depth 1 --branch v7.2.98 https://github.com/router-for-me/CLIProxyAPI.git
 cd CLIProxyAPI
-git apply /path/to/patches/cliproxy-sonnet5-overlay.patch
+git apply /path/to/patches/cliproxy-opus5-overlay.patch
 COMMIT=$(git rev-parse --short HEAD)
 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build \
-  -ldflags="-s -w -X main.Version=7.2.47 -X main.Commit=${COMMIT} -X main.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -ldflags="-s -w -X main.Version=7.2.98 -X main.Commit=${COMMIT} -X main.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o cli-proxy-api ./cmd/server/
 ```

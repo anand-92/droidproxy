@@ -32,12 +32,12 @@ Open `~/.factory/settings.json` and add the following to the `customModels` arra
       "provider": "anthropic"
     },
     {
-      "model": "claude-opus-4-8",
-      "id": "custom:droidproxy:opus-4-8",
+      "model": "claude-opus-5",
+      "id": "custom:droidproxy:opus-5",
       "index": 1,
       "baseUrl": "http://localhost:8317",
       "apiKey": "dummy-not-used",
-      "displayName": "DroidProxy: Opus 4.8",
+      "displayName": "DroidProxy: Opus 5",
       "maxOutputTokens": 128000,
       "noImageSupport": false,
       "provider": "anthropic"
@@ -144,7 +144,7 @@ Use the standard Claude, Codex, Gemini, and Kimi model aliases in the `model` fi
 Reasoning effort is selected per session in Droid CLI's model picker. DroidProxy registers each model with its native reasoning levels, preserves the selected value, and lets CLIProxyAPI translate it to the upstream provider format. Supported levels per model:
 
 - Fable 5: `low`, `medium`, `high`, `xhigh`, or `max`
-- Opus 4.8: `low`, `medium`, `high`, `xhigh`, or `max`
+- Opus 5: `low`, `medium`, `high`, `xhigh`, or `max`
 - Sonnet 4.6: `low`, `medium`, `high`, or `max`
 - GPT 5.4: `low`, `medium`, `high`, or `xhigh`
 - GPT 5.5: `low`, `medium`, `high`, or `xhigh`

@@ -14,12 +14,12 @@ const codePlain = `// What "Apply" writes for you — no need to touch this your
     "provider": "anthropic"
   },
   {
-    "model": "claude-opus-4-8",
-    "id": "custom:droidproxy:opus-4-8",
+    "model": "claude-opus-5",
+    "id": "custom:droidproxy:opus-5",
     "index": 1,
     "baseUrl": "http://localhost:8317",
     "apiKey": "***",
-    "displayName": "DroidProxy: Opus 4.8",
+    "displayName": "DroidProxy: Opus 5",
     "maxOutputTokens": 128000,
     "provider": "anthropic"
   },
@@ -49,12 +49,12 @@ const codeHtml = `<span class="c">// What "Apply" writes for you — no need to 
     <span class="k">"provider"</span>: <span class="s">"anthropic"</span>
   },
   {
-    <span class="k">"model"</span>: <span class="s">"claude-opus-4-8"</span>,
-    <span class="k">"id"</span>: <span class="s">"custom:droidproxy:opus-4-8"</span>,
+    <span class="k">"model"</span>: <span class="s">"claude-opus-5"</span>,
+    <span class="k">"id"</span>: <span class="s">"custom:droidproxy:opus-5"</span>,
     <span class="k">"index"</span>: <span class="n">1</span>,
     <span class="k">"baseUrl"</span>: <span class="s">"http://localhost:8317"</span>,
     <span class="k">"apiKey"</span>: <span class="s">"***"</span>,
-    <span class="k">"displayName"</span>: <span class="s">"DroidProxy: Opus 4.8"</span>,
+    <span class="k">"displayName"</span>: <span class="s">"DroidProxy: Opus 5"</span>,
     <span class="k">"maxOutputTokens"</span>: <span class="n">128000</span>,
     <span class="k">"provider"</span>: <span class="s">"anthropic"</span>
   },
@@ -117,7 +117,7 @@ export default function InstallSection() {
               <span className="step-n">03</span>
               <div>
                 <h4>Click <em style={{ fontStyle: 'normal', color: 'var(--accent)' }}>Apply Factory Models</em></h4>
-                <p>One click adds DroidProxy's models to your Factory Droid setup. Restart your Droid session — when you pick "DroidProxy: Opus 4.8" or any of the others, your subscription handles the bill.</p>
+                <p>One click adds DroidProxy's models to your Factory Droid setup. Restart your Droid session — when you pick "DroidProxy: Opus 5" or any of the others, your subscription handles the bill.</p>
               </div>
             </div>
 
