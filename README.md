@@ -26,6 +26,7 @@ Each release also ships a `DroidProxy-arm64.zip.sha256` checksum. Unzip and drag
 - **Every model, every reasoning level** -- Fable 5, Opus 4.8, Sonnet 4.6, GPT 5.4, GPT 5.5, GPT 5.6 Terra, GPT 5.6 Sol, Gemini 3.1 Pro, Gemini 3 Flash, and Kimi K2.6 are registered as Factory custom models with their full set of native reasoning levels. Reasoning effort is chosen per session from Droid CLI's model selector and forwarded upstream unchanged.
 - **Fast Mode** -- Optional `service_tier=priority` for GPT 5.4, GPT 5.5, GPT 5.6 Terra, and GPT 5.6 Sol, toggled from the Settings window for lower-latency responses on the OpenAI Responses API.
 - **Usage tracking** -- Claude and Codex OAuth quota windows (5-hour + weekly) rendered in the **OAuth Quota Usage** section of the Settings window. Fetched directly from each provider's OAuth API (no `codex` CLI dependency) and refreshed on demand via the inline refresh button.
+- **Grok Imagine (image gen)** -- With Grok OAuth connected, DroidProxy also forwards OpenAI-compatible image requests (`POST /v1/images/generations` for `grok-imagine-*` models) to `api.x.ai` using your subscription — no `XAI_API_KEY`. Factory/Droid does not call that endpoint on its own; use the bundled skill below.
 
 <p align="center">
   <img src="settings-screenshot.png" alt="DroidProxy Settings" width="420">
@@ -34,6 +35,22 @@ Each release also ships a `DroidProxy-arm64.zip.sha256` checksum. Unzip and drag
 ## Setup
 
 See [SETUP.md](SETUP.md) for authentication and manual Factory configuration instructions. **(OR use the 1-click options in the UI!)**
+
+### Grok image generation skill
+
+If you have **Grok auth set up** in DroidProxy, you can generate images through the same proxy (subscription OAuth, not API-key billing). Grab the skill from this repo:
+
+```bash
+# From a clone of this repo, copy into your personal Factory skills
+mkdir -p ~/.factory/skills
+cp -R .factory/skills/grok-imagine ~/.factory/skills/
+```
+
+Or open [`.factory/skills/grok-imagine/SKILL.md`](.factory/skills/grok-imagine/SKILL.md) and keep it under `~/.factory/skills/grok-imagine/`.
+
+Then in Droid, ask to generate an image (or invoke the skill). The skill shells `POST http://localhost:8317/v1/images/generations` with model `grok-imagine-image` / `grok-imagine-image-quality`; ThinkingProxy injects your Grok OAuth token and forwards to xAI.
+
+**Requirements:** DroidProxy running, Grok connected in Settings. Image gen is separate from chat — selecting “DroidProxy: Grok 4.5” alone does not generate images.
 
 ## Requirements
 
