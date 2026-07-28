@@ -20,10 +20,10 @@ Chat and image generation share the same Grok OAuth session, but **Droid will no
 
 ```bash
 mkdir -p ~/.factory/skills
-cp -R .factory/skills/grok-imagine ~/.factory/skills/
+cp -R skills/grok-imagine ~/.factory/skills/
 ```
 
-See [`.factory/skills/grok-imagine/SKILL.md`](.factory/skills/grok-imagine/SKILL.md). With DroidProxy running and Grok connected, the skill posts to `http://localhost:8317/v1/images/generations` (`grok-imagine-image` / `grok-imagine-image-quality`); the proxy injects your subscription bearer and forwards to `api.x.ai`.
+See [`skills/grok-imagine/SKILL.md`](skills/grok-imagine/SKILL.md). With DroidProxy running and Grok connected, the skill posts to `http://localhost:8317/v1/images/generations` (`grok-imagine-image` / `grok-imagine-image-quality`); the proxy injects your subscription bearer and forwards to `api.x.ai`.
 
 ## 2. Configure Factory
 

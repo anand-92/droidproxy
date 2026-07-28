@@ -43,10 +43,10 @@ If you have **Grok auth set up** in DroidProxy, you can generate images through 
 ```bash
 # From a clone of this repo, copy into your personal Factory skills
 mkdir -p ~/.factory/skills
-cp -R .factory/skills/grok-imagine ~/.factory/skills/
+cp -R skills/grok-imagine ~/.factory/skills/
 ```
 
-Or open [`.factory/skills/grok-imagine/SKILL.md`](.factory/skills/grok-imagine/SKILL.md) and keep it under `~/.factory/skills/grok-imagine/`.
+Or open [`skills/grok-imagine/SKILL.md`](skills/grok-imagine/SKILL.md) and keep it under `~/.factory/skills/grok-imagine/`.
 
 Then in Droid, ask to generate an image (or invoke the skill). The skill shells `POST http://localhost:8317/v1/images/generations` with model `grok-imagine-image` / `grok-imagine-image-quality`; ThinkingProxy injects your Grok OAuth token and forwards to xAI.
 
