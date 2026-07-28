@@ -60,7 +60,7 @@ keep the JSON minimal and only use supported fields below.
 Default model: `grok-imagine-image` (faster, lower cost).  
 Higher fidelity: `grok-imagine-image-quality` (slower, higher cost).
 
-### macOS / Linux (base64 → file)
+### base64 → file
 
 ```bash
 PROMPT='A red balloon on a wooden table, soft natural light'
@@ -125,31 +125,6 @@ curl -sS http://localhost:8317/v1/images/generations \
   | jq -r '.data[] | .b64_json' | nl | while read -r i b64; do
       echo "$b64" | base64 -d > "mug-$i.jpg"
     done
-```
-
-### Windows (PowerShell)
-
-```powershell
-$prompt = "A red balloon on a wooden table, soft natural light"
-$out = ".\grok-imagine.jpg"
-$body = @{
-  model = "grok-imagine-image"
-  prompt = $prompt
-  aspect_ratio = "1:1"
-  resolution = "1k"
-  response_format = "b64_json"
-} | ConvertTo-Json
-
-$resp = Invoke-RestMethod -Method Post `
-  -Uri "http://localhost:8317/v1/images/generations" `
-  -ContentType "application/json" `
-  -Headers @{ Authorization = "Bearer dummy-not-used" } `
-  -Body $body
-
-if ($resp.error) { throw ($resp.error | ConvertTo-Json -Compress) }
-$bytes = [Convert]::FromBase64String($resp.data[0].b64_json)
-[IO.File]::WriteAllBytes((Resolve-Path .).Path + "\" + (Split-Path $out -Leaf), $bytes)
-Write-Host "Wrote $out"
 ```
 
 ## Edit an image
