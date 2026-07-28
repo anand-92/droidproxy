@@ -14,6 +14,17 @@ For **Grok 4.5** (SuperGrok / X Premium+ OAuth → `api.x.ai`):
 
 > Note: some SuperGrok tiers return HTTP 403 on the OAuth API surface even after a successful login. Fallback is an `XAI_API_KEY` via Factory BYOK.
 
+### Grok Imagine (image generation)
+
+Chat and image generation share the same Grok OAuth session, but **Droid will not call the image API by itself**. Install the skill from this repo:
+
+```bash
+mkdir -p ~/.factory/skills
+cp -R skills/grok-imagine ~/.factory/skills/
+```
+
+See [`skills/grok-imagine/SKILL.md`](skills/grok-imagine/SKILL.md). With DroidProxy running and Grok connected, the skill posts to `http://localhost:8317/v1/images/generations` (`grok-imagine-image` / `grok-imagine-image-quality`); the proxy injects your subscription bearer and forwards to `api.x.ai`.
+
 ## 2. Configure Factory
 
 Open `~/.factory/settings.json` and add the following to the `customModels` array:
