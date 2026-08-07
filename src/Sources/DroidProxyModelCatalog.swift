@@ -20,8 +20,7 @@ struct DroidProxyModelDefinition: Equatable {
     let idSlug: String
     let displayName: String
     let maxOutputTokens: Int
-    /// Optional Factory `maxContextLimit` (accepted by customModels schema).
-    /// Compaction still primarily uses root `compactionTokenLimitPerModel`.
+    /// Optional Factory `maxContextLimit` accepted by the customModels schema.
     let maxContextLimit: Int?
     let provider: String
     let providerKey: String
@@ -480,16 +479,4 @@ enum DroidProxyModelCatalog {
         Set(definitions.map(\.simpleID))
     }
 
-    /// Factory root-level `compactionTokenLimitPerModel` entries for BYOK models.
-    ///
-    /// Custom models also accept `maxContextLimit`, but Droid's auto-compaction is
-    /// driven by top-level `compactionTokenLimit` / `compactionTokenLimitPerModel`
-    /// (custom BYOK ids resolve to infinite maxInputTokens otherwise). Thresholds sit
-    /// under each provider's effective window so compaction fires before a hard 400.
-    static let factoryCompactionTokenLimitPerModel: [String: Int] = [
-        // api.x.ai: grok-4.5=500k, grok-4.3=1M, grok-build-0.1=256k
-        "custom:droidproxy:grok-4.5": 400_000,
-        "custom:droidproxy:grok-4.3": 800_000,
-        "custom:droidproxy:grok-build-0.1": 200_000
-    ]
 }

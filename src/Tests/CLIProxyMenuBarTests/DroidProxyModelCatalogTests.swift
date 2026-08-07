@@ -106,13 +106,6 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(build["maxContextLimit"] as? Int, 256_000)
     }
 
-    func testFactoryCompactionLimitsSitUnderGrokWindows() {
-        let limits = DroidProxyModelCatalog.factoryCompactionTokenLimitPerModel
-        XCTAssertEqual(limits["custom:droidproxy:grok-4.5"], 400_000)
-        XCTAssertEqual(limits["custom:droidproxy:grok-4.3"], 800_000)
-        XCTAssertEqual(limits["custom:droidproxy:grok-build-0.1"], 200_000)
-    }
-
     func testCursorGrokModelsAppearWhenBetaEnabled() throws {
         let previous = BETA_FLAG
         BETA_FLAG = true
