@@ -342,6 +342,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.backgroundOpacityKey) private var backgroundOpacity = AppPreferences.defaultBackgroundOpacity
     @AppStorage(AppPreferences.betaFlagKey) private var betaFlag = AppPreferences.defaultBetaFlag
     @AppStorage(AppPreferences.verboseLoggingKey) private var verboseLogging = AppPreferences.defaultVerboseLogging
+    @AppStorage(AppPreferences.sequentialAccountFailoverKey) private var sequentialAccountFailover = AppPreferences.defaultSequentialAccountFailover
     @State private var authenticatingService: ServiceType? = nil
     @State private var showingAuthResult = false
     @State private var authResultMessage = ""
@@ -739,6 +740,22 @@ struct SettingsView: View {
                         .droidGlassProminent()
                         .controlSize(.small)
                         .help("Opens ~/.cli-proxy-api/logs/ in Finder. Double-click any log to view it in your default text editor.")
+                    }
+                }
+                .listRowBackground(glassRowBackground)
+
+                Section("Account Routing") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle("Sequential account failover", isOn: $sequentialAccountFailover)
+                            .onChange(of: sequentialAccountFailover) { newValue in
+                                serverManager.setSequentialAccountFailover(newValue)
+                            }
+                            .help("Use one account at a time instead of spreading requests across all of them. CLIProxyAPI hot-reloads, so no restart is required.")
+
+                        Text("With multiple accounts on the same provider, requests stay on one account until its quota runs out, then move to the next automatically without surfacing an error. The exhausted account is skipped until its quota resets. Leave off to spread requests evenly across every account.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .listRowBackground(glassRowBackground)
