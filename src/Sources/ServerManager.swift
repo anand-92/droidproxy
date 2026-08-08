@@ -86,9 +86,61 @@ class ServerManager: ObservableObject {
         }
     }
 
+    /// Substitutions applied to the bundled `config.yaml` when "Sequential
+    /// account failover" is enabled. Each pair is (bundled OFF value, ON value).
+    ///
+    /// Together these switch the backend from "spread requests evenly and never
+    /// park anything" to "burn one account at a time, then park it once its
+    /// quota is gone":
+    ///
+    /// - `fill-first` consumes one account fully before moving to the next,
+    ///   keeping the remaining accounts untouched as reserve capacity.
+    /// - `disable-cooling: false` lets a quota-exhausted account be parked and
+    ///   skipped. Without it, fill-first would re-probe the depleted account
+    ///   sitting at the front of the queue on every single request.
+    /// - `transient-error-cooldown-seconds: -1` keeps issue #57 fixed: transient
+    ///   5xx failures still never park an auth, so the pool cannot black out.
+    /// - `max-retry-interval: 30` waits briefly for the soonest account to
+    ///   recover instead of failing a request while everything is cooling down.
+    ///
+    /// The `off` strings must match `Resources/config.yaml` exactly.
+    static let accountFailoverOverrides: [(off: String, on: String)] = [
+        ("max-retry-interval: 0", "max-retry-interval: 30"),
+        ("disable-cooling: true", "disable-cooling: false"),
+        ("transient-error-cooldown-seconds: 0", "transient-error-cooldown-seconds: -1"),
+        ("  strategy: \"round-robin\"", "  strategy: \"fill-first\"")
+    ]
+
+    /// Applies the sequential-account-failover overrides to raw config YAML.
+    /// Pure string transformation, kept out of `getConfigPath()` so it can be
+    /// unit tested without an app bundle.
+    static func applyAccountFailoverOverrides(to config: String, enabled: Bool) -> String {
+        guard enabled else { return config }
+        var updated = config
+        for rule in accountFailoverOverrides {
+            guard updated.range(of: rule.off) != nil else {
+                NSLog("[ServerManager] Warning: failover anchor '%@' missing from bundled config; override not applied", rule.off)
+                continue
+            }
+            updated = updated.replacingOccurrences(of: rule.off, with: rule.on)
+        }
+        return updated
+    }
+
     /// Check if a provider is enabled (defaults to true if not set)
     func isProviderEnabled(_ serviceType: ServiceType) -> Bool {
         enabledProviders[serviceType.rawValue] ?? true
+    }
+
+    /// Regenerate config after the failover setting changes. CLIProxyAPI hot
+    /// reloads routing strategy, cooldown scheduling and retry settings, so no
+    /// server restart is required.
+    func setSequentialAccountFailover(_ enabled: Bool) {
+        addLog(enabled
+            ? "✓ Sequential account failover enabled (fill-first, quota cooldowns on)"
+            : "⚠️ Sequential account failover disabled (round-robin, cooldowns off)")
+        _ = getConfigPath()
+        addLog("Config updated (hot reload)")
     }
 
     /// Set provider enabled state and regenerate config (hot reload - no restart needed)
@@ -392,6 +444,12 @@ class ServerManager: ObservableObject {
         configContent = configContent.replacingOccurrences(
             of: "logging-to-file: false",
             with: "logging-to-file: \(verboseLogging)"
+        )
+
+        // Switch routing/cooldown behavior when sequential account failover is on.
+        configContent = Self.applyAccountFailoverOverrides(
+            to: configContent,
+            enabled: AppPreferences.sequentialAccountFailover
         )
 
         // Append provider exclusions for any provider toggled off in the UI.

@@ -13,6 +13,7 @@ enum AppPreferences {
     static let backgroundOpacityKey = "backgroundOpacity"
     static let betaFlagKey = "BETA_FLAG"
     static let verboseLoggingKey = "verboseLogging"
+    static let sequentialAccountFailoverKey = "sequentialAccountFailover"
 
     static let defaultGpt54FastMode = false
     static let defaultGpt55FastMode = false
@@ -26,6 +27,9 @@ enum AppPreferences {
     static let defaultBackgroundOpacity = 0.55
     static let defaultBetaFlag = false
     static let defaultVerboseLogging = false
+    /// Opt-in. Off preserves the historical round-robin routing and globally
+    /// disabled cooldowns, so existing single-account users see no change.
+    static let defaultSequentialAccountFailover = false
 
     static var gpt54FastMode: Bool {
         UserDefaults.standard.bool(forKey: gpt54FastModeKey)
@@ -84,6 +88,10 @@ enum AppPreferences {
 
     static var verboseLogging: Bool {
         UserDefaults.standard.bool(forKey: verboseLoggingKey)
+    }
+
+    static var sequentialAccountFailover: Bool {
+        UserDefaults.standard.bool(forKey: sequentialAccountFailoverKey)
     }
 }
 
