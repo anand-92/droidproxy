@@ -9,7 +9,7 @@
 For **Grok 4.5** (SuperGrok / X Premium+ OAuth → `api.x.ai`):
 
 1. Connect **Grok** in Settings (device-code browser login)
-2. Click **Apply** / **Re-apply** under Factory models (registers `custom:droidproxy:grok-4.5`, `grok-4.3`, `grok-build-0.1`)
+2. Click **Apply** / **Re-apply** under Factory models (registers `custom:droidproxy:grok-4.5`)
 3. In Droid, `/model` → **DroidProxy: Grok 4.5**
 
 > Note: some SuperGrok tiers return HTTP 403 on the OAuth API surface even after a successful login. Fallback is an `XAI_API_KEY` via Factory BYOK.

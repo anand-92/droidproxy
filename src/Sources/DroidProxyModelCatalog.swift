@@ -257,23 +257,9 @@ enum DroidProxyModelCatalog {
                 defaultLevelValue: "low"
             ),
             antigravityModel(
-                baseModel: "gemini-3-flash",
-                idSlug: "antigravity-gemini-3-flash",
-                displayName: "Gemini 3 Flash"
-            ),
-            antigravityModel(
-                baseModel: "gemini-3-flash-agent",
-                idSlug: "gemini-3.5-flash",
-                displayName: "Gemini 3.5 Flash",
-                levels: [medium, high],
-                defaultLevelValue: "high"
-            ),
-            antigravityModel(
-                baseModel: "gemini-3.5-flash-low",
-                idSlug: "gemini-3.5-flash-low",
-                displayName: "Gemini 3.5 Flash (Low)",
-                levels: [low],
-                defaultLevelValue: "low"
+                baseModel: "gemini-3.6-flash-high",
+                idSlug: "gemini-3.6-flash-high",
+                displayName: "Gemini 3.6 Flash (High)"
             ),
             antigravityModel(
                 baseModel: "gemini-3.1-flash-lite",
@@ -370,39 +356,13 @@ enum DroidProxyModelCatalog {
 
             // Grok OAuth (SuperGrok / X Premium+) via api.x.ai.
             // provider="openai" + /v1 → Responses API; ThinkingProxy attaches the bearer.
-            // Context windows from docs.x.ai (Jul 2026): 4.5=500k, 4.3=1M, Build=256k.
+            // Context window from docs.x.ai (Jul 2026): 4.5=500k.
             DroidProxyModelDefinition(
                 baseModel: "grok-4.5",
                 idSlug: "grok-4.5",
                 displayName: "Grok 4.5",
                 maxOutputTokens: 128000,
                 maxContextLimit: 500_000,
-                provider: "openai",
-                providerKey: "grok",
-                baseURL: "http://localhost:8317/v1",
-                kind: .grok,
-                levels: codexLevels,
-                defaultLevelValue: "high"
-            ),
-            DroidProxyModelDefinition(
-                baseModel: "grok-4.3",
-                idSlug: "grok-4.3",
-                displayName: "Grok 4.3",
-                maxOutputTokens: 128000,
-                maxContextLimit: 1_000_000,
-                provider: "openai",
-                providerKey: "grok",
-                baseURL: "http://localhost:8317/v1",
-                kind: .grok,
-                levels: codexLevels,
-                defaultLevelValue: "high"
-            ),
-            DroidProxyModelDefinition(
-                baseModel: "grok-build-0.1",
-                idSlug: "grok-build-0.1",
-                displayName: "Grok Build",
-                maxOutputTokens: 128000,
-                maxContextLimit: 256_000,
                 provider: "openai",
                 providerKey: "grok",
                 baseURL: "http://localhost:8317/v1",

@@ -4,54 +4,22 @@ import XCTest
 final class CursorModelRewriterTests: XCTestCase {
     func testAliasesMapCatalogIdsToUpstreamCursorModels() {
         XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-composer-2.5", grok45FastMode: false),
+            CursorModelRewriter.resolveUpstreamModel("cursor-composer-2.5"),
             "composer-2.5"
         )
         XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5", grok45FastMode: false),
+            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5"),
             "grok-4.5"
         )
         XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5-fast", grok45FastMode: false),
+            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5-fast"),
             "grok-4.5-fast"
-        )
-    }
-
-    func testFastModeRewritesGrok45ToFast() {
-        XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5", grok45FastMode: true),
-            "grok-4.5-fast"
-        )
-        XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("grok-4.5", grok45FastMode: true),
-            "grok-4.5-fast"
-        )
-        // Explicit Fast catalog entry stays fast regardless of the checkbox.
-        XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5-fast", grok45FastMode: true),
-            "grok-4.5-fast"
-        )
-        XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-composer-2.5", grok45FastMode: true),
-            "composer-2.5"
-        )
-    }
-
-    func testGrokOAuthFastDivertPredicate() {
-        XCTAssertTrue(
-            CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(model: "grok-4.5", grok45FastMode: true)
-        )
-        XCTAssertFalse(
-            CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(model: "grok-4.5", grok45FastMode: false)
-        )
-        XCTAssertFalse(
-            CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(model: "grok-4.3", grok45FastMode: true)
         )
     }
 
     func testUnknownCursorIdsPassThrough() {
         XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-small", grok45FastMode: true),
+            CursorModelRewriter.resolveUpstreamModel("cursor-small"),
             "cursor-small"
         )
     }

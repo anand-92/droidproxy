@@ -77,6 +77,20 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertFalse(modelsWithoutKimi.contains { ($0["id"] as? String) == "custom:droidproxy:kimi-k3" })
     }
 
+    func testGemini36FlashHighUsesAntigravityModelMetadata() throws {
+        let gemini = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:gemini-3.6-flash-high"))
+
+        XCTAssertEqual(gemini["model"] as? String, "gemini-3.6-flash-high")
+        XCTAssertEqual(gemini["provider"] as? String, "openai")
+        XCTAssertEqual(gemini["baseUrl"] as? String, "http://localhost:8317/v1")
+        XCTAssertEqual(gemini["displayName"] as? String, "DroidProxy: Antigravity: Gemini 3.6 Flash (High)")
+        XCTAssertEqual(gemini["maxOutputTokens"] as? Int, 65536)
+        XCTAssertEqual(gemini["enableThinking"] as? Bool, true)
+        XCTAssertEqual(gemini["reasoningEffort"] as? String, "high")
+        XCTAssertEqual(gemini["defaultReasoningEffort"] as? String, "high")
+        XCTAssertEqual(gemini["supportedReasoningEfforts"] as? [String], ["high"])
+    }
+
     func testGrok45UsesOpenAIProviderAndApiXAIProxy() throws {
         let grok = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.5"))
 
@@ -90,20 +104,15 @@ final class DroidProxyModelCatalogTests: XCTestCase {
     }
 
     func testGrokProviderModelsAreRegistered() {
-        let ids = DroidProxyModelCatalog.allSettingsIDs
-        XCTAssertTrue(ids.contains("custom:droidproxy:grok-4.5"))
-        XCTAssertTrue(ids.contains("custom:droidproxy:grok-4.3"))
-        XCTAssertTrue(ids.contains("custom:droidproxy:grok-build-0.1"))
+        let grokModels = DroidProxyModelCatalog.settingsModels { $0 == "grok" }
+        let ids = grokModels.compactMap { $0["id"] as? String }
+        XCTAssertEqual(ids, ["custom:droidproxy:grok-4.5"])
     }
 
     func testGrokContextLimitsMatchXAIDocs() throws {
         let grok45 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.5"))
-        let grok43 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.3"))
-        let build = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-build-0.1"))
 
         XCTAssertEqual(grok45["maxContextLimit"] as? Int, 500_000)
-        XCTAssertEqual(grok43["maxContextLimit"] as? Int, 1_000_000)
-        XCTAssertEqual(build["maxContextLimit"] as? Int, 256_000)
     }
 
     func testCursorGrokModelsAppearWhenBetaEnabled() throws {

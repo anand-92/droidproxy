@@ -356,40 +356,6 @@ class ThinkingProxy {
                     sendError(to: connection, statusCode: 400, message: "Grok provider is disabled in DroidProxy settings.")
                     return
                 }
-                // Grok 4.5 Fast Mode: api.x.ai has no grok-4.5-fast (400). Divert to
-                // Cursor's hosted API when Fast Mode is on and a Cursor key exists.
-                if let model = requestFields?.model,
-                   CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(
-                    model: model,
-                    grok45FastMode: AppPreferences.grok45FastMode
-                   ) {
-                    guard loadCursorApiKey() != nil else {
-                        sendError(
-                            to: connection,
-                            statusCode: 401,
-                            message: "Grok 4.5 Fast Mode requires a Cursor API key. Enable Beta → Cursor and add your key (api.x.ai does not offer grok-4.5-fast)."
-                        )
-                        return
-                    }
-                    if let modelLocation = requestFields?.modelLocation {
-                        modifiedBody.replaceSubrange(
-                            modelLocation.valueRange,
-                            with: "\"\(CursorModelRewriter.grok45FastModel)\""
-                        )
-                        ThinkingProxy.fileLog(
-                            "REWRITE MODEL: \(model) -> \(CursorModelRewriter.grok45FastModel) (Grok Fast Mode → Cursor API)"
-                        )
-                    }
-                    forwardToCursor(
-                        method: method,
-                        path: rewrittenPath,
-                        version: httpVersion,
-                        headers: headers,
-                        body: modifiedBody,
-                        originalConnection: connection
-                    )
-                    return
-                }
                 let grokBody = GrokRequestSanitizer.sanitize(modifiedBody)
                 if grokBody != modifiedBody {
                     ThinkingProxy.fileLog("SANITIZED GROK: remapped custom tools/calls and dropped unsupported fields before api.x.ai")
@@ -417,7 +383,7 @@ class ThinkingProxy {
         // Rewrite /v1/responses to /v1/chat/completions only for OAuth Code Assist
         // Gemini models (the `-preview` suffixed ones served by the gemini-cli executor),
         // which do not support the Responses API endpoint. Antigravity-routed Gemini
-        // models (e.g. `gemini-3-flash`, `gemini-pro-agent`) DO support /v1/responses
+        // models (e.g. `gemini-3.6-flash-high`, `gemini-pro-agent`) DO support /v1/responses
         // natively, so we must NOT rewrite their path — doing so would cause the
         // backend to return chat-completions SSE that Droid CLI can't parse, hanging
         // the stream.
@@ -517,10 +483,7 @@ class ThinkingProxy {
             return nil
         }
 
-        let backendModel = CursorModelRewriter.resolveUpstreamModel(
-            model,
-            grok45FastMode: AppPreferences.grok45FastMode
-        )
+        let backendModel = CursorModelRewriter.resolveUpstreamModel(model)
         guard backendModel != model else { return nil }
 
         var result = jsonString

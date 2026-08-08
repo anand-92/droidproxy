@@ -335,7 +335,6 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gpt56TerraFastModeKey) private var gpt56TerraFastMode = AppPreferences.defaultGpt56TerraFastMode
     @AppStorage(AppPreferences.gpt56LunaFastModeKey) private var gpt56LunaFastMode = AppPreferences.defaultGpt56LunaFastMode
     @AppStorage(AppPreferences.gpt56SolFastModeKey) private var gpt56SolFastMode = AppPreferences.defaultGpt56SolFastMode
-    @AppStorage(AppPreferences.grok45FastModeKey) private var grok45FastMode = AppPreferences.defaultGrok45FastMode
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
     @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
     @AppStorage(AppPreferences.bindAddressKey) private var bindAddress = AppPreferences.defaultBindAddress
@@ -357,7 +356,6 @@ struct SettingsView: View {
     @State private var factoryModelsInstalled = false
     @State private var remoteManagementExpanded = false
     @State private var codexFastModeExpanded = true
-    @State private var grokFastModeExpanded = true
     private let claudeEffortSelectionColor = Color(red: 0xD9/255, green: 0x77/255, blue: 0x57/255)
     private let codexEffortSelectionColor = Color(red: 0x74/255, green: 0xAA/255, blue: 0x9C/255)
     private let antigravityEffortSelectionColor = Color(red: 0x42/255, green: 0x85/255, blue: 0xF4/255)
@@ -833,40 +831,12 @@ struct SettingsView: View {
                         helpText: "Log in with SuperGrok / X Premium+ to use Grok 4.5 via api.x.ai (supported tiers; no xAI API key)."
                     )
 
-                    if serverManager.isProviderEnabled(.grok) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 4) {
-                                Text("Fast Mode")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Image(systemName: grokFastModeExpanded ? "chevron.down" : "chevron.right")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    grokFastModeExpanded.toggle()
-                                }
-                            }
-                            if grokFastModeExpanded {
-                                codexFastModeToggleRow(
-                                    "Grok 4.5",
-                                    isOn: $grok45FastMode,
-                                    helpText: "Rewrites grok-4.5 → grok-4.5-fast via the Cursor API (api.x.ai has no grok-4.5-fast). Requires a Cursor API key under Beta → Cursor."
-                                )
-                            }
-                        }
-                        .padding(.leading, 28)
-                    }
-
                     if betaFlag {
                         providerServiceRow(
                             .cursor,
                             iconName: "icon-cursor.png",
                             toggleTint: cursorEffortSelectionColor,
-                            helpText: "Enter your Cursor API Key (from https://api-for-cursor.standardagents.ai/) to proxy requests directly to Cursor. Also powers Grok 4.5 Fast Mode."
+                            helpText: "Enter your Cursor API Key (from https://api-for-cursor.standardagents.ai/) to proxy requests directly to Cursor."
                         )
                     }
                 }
