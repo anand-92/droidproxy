@@ -28,7 +28,18 @@ final class AccountFailoverConfigTests: XCTestCase {
     func testDefaultIsOff() {
         XCTAssertFalse(AppPreferences.defaultSequentialAccountFailover)
 
-        UserDefaults.standard.removeObject(forKey: AppPreferences.sequentialAccountFailoverKey)
+        let defaults = UserDefaults.standard
+        let key = AppPreferences.sequentialAccountFailoverKey
+        let previousValue = defaults.object(forKey: key)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+        }
+
+        defaults.removeObject(forKey: key)
         XCTAssertFalse(AppPreferences.sequentialAccountFailover)
     }
 
