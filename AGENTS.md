@@ -51,10 +51,15 @@ DroidProxy is a macOS menu bar app (`LSUIElement`) with:
 
 1. `ThinkingProxy` on `localhost:8317`, the user-facing TCP proxy.
 2. Bundled `CLIProxyAPI` on `127.0.0.1:8318`, managed as a child process by `ServerManager`.
+3. A separate localhost-only Copilot API gateway on `127.0.0.1:8319`, managed by `CopilotGatewayManager`.
 
 Typical request flow:
 
 `Client -> :8317 ThinkingProxy -> :8318 CLIProxyAPI -> upstream provider`
+
+Selected GitHub Copilot models instead use:
+
+`Client -> :8319 Copilot API gateway -> GitHub Copilot`
 
 ### Current ThinkingProxy behavior
 
@@ -88,6 +93,7 @@ The current app/UI exposes these provider types:
 - `gemini`
 - `kimi`
 - `grok` (device-flow OAuth; credentials in `~/.cli-proxy-api/grok-cli.json`; ThinkingProxy forwards `grok-*` to `api.x.ai` and bypasses CLIProxyAPI)
+- `copilot` (device-code OAuth; credentials stay in `~/.droidproxy/copilot-api/`; the separate local Copilot API gateway serves only the user-selected models)
 
 Auth data lives in `~/.cli-proxy-api/` as JSON files. `AuthManager` scans that directory and reads fields like:
 
@@ -118,6 +124,7 @@ Behavior to know:
 | `src/Sources/GrokAuth.swift` | Grok device-flow OAuth, token refresh (single-flight + terminal-refresh quarantine), path/header helpers for api.x.ai. |
 | `src/Sources/GrokRequestSanitizer.swift` | Remaps Factory `custom` tools to `function` (and drops unsupported types) before Grok upstream. |
 | `src/Sources/DroidProxyModelCatalog.swift` | Authoritative catalog of DroidProxy-exposed models. Each `DroidProxyModelDefinition` carries its supported `levels` plus a `defaultLevelValue`, and `settingsEntry` always embeds Factory's native reasoning metadata (`enableThinking`, `supportedReasoningEfforts`, `defaultReasoningEffort`, `reasoningEffort`) so Droid CLI's per-session selector can expose the full level set. |
+| `src/Sources/CopilotSupport.swift` | Local `@jeffreycao/copilot-api` gateway lifecycle, device-code authentication, account-specific model discovery, and persistence for at most three Factory-selected Copilot models. |
 | `src/Sources/SettingsView.swift` | SwiftUI settings UI for server status, launch-at-login, provider toggles, auth flows, the Codex fast-mode (`service_tier=priority`) subsection, the Factory custom-models Apply button, OLED theme, background opacity, and remote-access settings. No thinking/reasoning selectors — those live in Droid CLI. |
 | `src/Sources/AuthStatus.swift` | `AuthManager`, account parsing, expiry detection, file deletion, and per-account disabled-state updates. |
 | `src/Sources/AppPreferences.swift` | UserDefaults-backed preferences: fast-mode toggles for GPT 5.4/5.5/5.6-terra/5.6-sol; `allowRemote`, `secretKey`, `oledTheme`, `backgroundOpacity`, `verboseLogging`. No thinking-effort keys — reasoning is driven entirely by Droid CLI. |
