@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import CLIProxyMenuBar
 
@@ -130,9 +131,175 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(fast["displayName"] as? String, "DroidProxy: Cursor Grok 4.5 Fast")
     }
 
+    func testCopilotModelParserKeepsSelectableChatModels() throws {
+        let payload: [String: Any] = [
+            "data": [
+                [
+                    "id": "claude-opus-4-8",
+                    "name": "Claude Opus 4.8",
+                    "model_picker_enabled": true,
+                    "supported_endpoints": ["/responses"],
+                    "capabilities": [
+                        "type": "chat",
+                        "limits": [
+                            "max_output_tokens": 32_000,
+                            "max_context_window_tokens": 200_000
+                        ],
+                        "supports": [
+                            "vision": true,
+                            "reasoning_effort": ["xhigh", "low", "ultra", "high"]
+                        ]
+                    ]
+                ],
+                [
+                    "id": "hidden-model",
+                    "name": "Hidden Model",
+                    "model_picker_enabled": false,
+                    "supported_endpoints": ["/responses"],
+                    "capabilities": ["type": "chat"]
+                ],
+                [
+                    "id": "embedding-model",
+                    "name": "Embedding Model",
+                    "model_picker_enabled": true,
+                    "supported_endpoints": ["/responses"],
+                    "capabilities": ["type": "embeddings"]
+                ],
+                [
+                    "id": "disabled-model",
+                    "name": "Disabled Model",
+                    "model_picker_enabled": true,
+                    "policy": ["state": "disabled"],
+                    "supported_endpoints": ["/responses"],
+                    "capabilities": ["type": "chat"]
+                ]
+            ]
+        ]
+
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        let models = try XCTUnwrap(CopilotGatewayManager.parseModels(from: data))
+
+        XCTAssertEqual(models.map(\.id), ["claude-opus-4-8"])
+        let opus = try XCTUnwrap(models.first)
+        XCTAssertEqual(opus.displayName, "Claude Opus 4.8")
+        XCTAssertEqual(opus.maxOutputTokens, 32_000)
+        XCTAssertEqual(opus.maxContextLimit, 200_000)
+        XCTAssertTrue(opus.supportsVision)
+        XCTAssertEqual(opus.reasoningEfforts, ["low", "high", "xhigh"])
+    }
+
+    func testCopilotDeviceCodeParserHandlesAnsiFormattedOutput() throws {
+        let output = "\u{001B}[36mℹ\u{001B}[0m Please enter the code \"ABCD-EFGH\" in https://github.com/login/device"
+        let prompt = try XCTUnwrap(DeviceCodeCapture.parsePrompt(in: output))
+
+        XCTAssertEqual(prompt.code, "ABCD-EFGH")
+        XCTAssertEqual(prompt.url.absoluteString, "https://github.com/login/device")
+    }
+
+    func testCopilotDeviceCodeParserFallsBackToCodeAndURL() throws {
+        let output = "Open https://github.com/login/device, then use device code: WXYZ-1234."
+        let prompt = try XCTUnwrap(DeviceCodeCapture.parsePrompt(in: output))
+
+        XCTAssertEqual(prompt.code, "WXYZ-1234")
+        XCTAssertEqual(prompt.url.absoluteString, "https://github.com/login/device")
+    }
+
+    func testCopilotSelectionIsCappedAtThreeFactoryModels() throws {
+        let defaults = UserDefaults.standard
+        let oldSelected = defaults.object(forKey: CopilotModelPreferences.selectedModelIDsKey)
+        let oldCached = defaults.object(forKey: CopilotModelPreferences.cachedModelsKey)
+        defer {
+            restore(oldSelected, key: CopilotModelPreferences.selectedModelIDsKey)
+            restore(oldCached, key: CopilotModelPreferences.cachedModelsKey)
+        }
+
+        let models = [
+            CopilotModelDescriptor(
+                id: "claude-opus-4.8",
+                displayName: "Claude Opus 4.8",
+                maxOutputTokens: 32_000,
+                maxContextLimit: 200_000,
+                supportsVision: true,
+                reasoningEfforts: ["low", "high", "xhigh"]
+            ),
+            CopilotModelDescriptor(
+                id: "gpt-5",
+                displayName: "GPT-5",
+                maxOutputTokens: 16_000,
+                maxContextLimit: 128_000,
+                supportsVision: false,
+                reasoningEfforts: ["low", "medium", "high"]
+            ),
+            CopilotModelDescriptor(
+                id: "gemini-3-pro",
+                displayName: "Gemini 3 Pro",
+                maxOutputTokens: 8_000,
+                maxContextLimit: nil,
+                supportsVision: true,
+                reasoningEfforts: []
+            ),
+            CopilotModelDescriptor(
+                id: "fourth-model",
+                displayName: "Fourth",
+                maxOutputTokens: 4_000,
+                maxContextLimit: nil,
+                supportsVision: false,
+                reasoningEfforts: []
+            )
+        ]
+        CopilotModelPreferences.saveCachedModels(models)
+        CopilotModelPreferences.saveSelectedModelIDs(models.map(\.id))
+
+        XCTAssertEqual(CopilotModelPreferences.selectedModelIDs, models.prefix(3).map(\.id))
+
+        let entries = DroidProxyModelCatalog.settingsModels { $0 == "copilot" }
+        XCTAssertEqual(entries.count, CopilotModelPreferences.maximumSelectedModels)
+        XCTAssertEqual(
+            entries.compactMap { $0["model"] as? String },
+            models.prefix(3).map(\.id)
+        )
+
+        let opus = try XCTUnwrap(entries.first)
+        XCTAssertEqual(opus["provider"] as? String, "openai")
+        XCTAssertEqual(opus["baseUrl"] as? String, CopilotGatewayManager.gatewayBaseURL)
+        XCTAssertEqual(opus["displayName"] as? String, "DroidProxy: GitHub Copilot: Claude Opus 4.8")
+        XCTAssertEqual(opus["noImageSupport"] as? Bool, false)
+        XCTAssertEqual(opus["supportedReasoningEfforts"] as? [String], ["low", "high", "xhigh"])
+        XCTAssertEqual(opus["defaultReasoningEffort"] as? String, "xhigh")
+
+        let gpt = try XCTUnwrap(entries.first { ($0["model"] as? String) == "gpt-5" })
+        XCTAssertEqual(gpt["noImageSupport"] as? Bool, true)
+        XCTAssertEqual(gpt["supportedReasoningEfforts"] as? [String], ["low", "medium", "high"])
+
+        let gemini = try XCTUnwrap(entries.first { ($0["model"] as? String) == "gemini-3-pro" })
+        XCTAssertNil(gemini["enableThinking"])
+        XCTAssertNil(gemini["supportedReasoningEfforts"])
+        XCTAssertNil(gemini["defaultReasoningEffort"])
+
+        let maxReasoningModel = DroidProxyModelCatalog.copilotModel(
+            CopilotModelDescriptor(
+                id: "reasoning-max",
+                displayName: "Reasoning Max",
+                maxOutputTokens: 4_000,
+                maxContextLimit: nil,
+                supportsVision: false,
+                reasoningEfforts: ["high", "max"]
+            )
+        ).settingsEntry
+        XCTAssertEqual(maxReasoningModel["defaultReasoningEffort"] as? String, "max")
+    }
+
     private func settingsEntry(id: String) -> [String: Any]? {
         DroidProxyModelCatalog
             .settingsModels()
             .first { ($0["id"] as? String) == id }
+    }
+
+    private func restore(_ value: Any?, key: String) {
+        if let value {
+            UserDefaults.standard.set(value, forKey: key)
+        } else {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
 }

@@ -10,6 +10,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
     weak var settingsWindow: NSWindow?
     var serverManager: ServerManager!
     var thinkingProxy: ThinkingProxy!
+    var copilotGateway: CopilotGatewayManager!
     private let notificationCenter = UNUserNotificationCenter.current()
     private let updaterController: SPUStandardUpdaterController
     private var authDirectoryMonitor: AuthDirectoryMonitor?
@@ -41,6 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         // Initialize managers
         serverManager = ServerManager()
         thinkingProxy = ThinkingProxy()
+        copilotGateway = CopilotGatewayManager()
 
         // Warm commonly used icons to avoid first-use disk hits
         preloadIcons()
@@ -49,6 +51,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
 
         // Start server automatically
         startServer()
+        if copilotGateway.hasCredentials, serverManager.isProviderEnabled(.copilot) {
+            copilotGateway.start()
+        }
 
         // Register for notifications
         NotificationCenter.default.addObserver(
@@ -75,6 +80,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
             ("icon-inactive.png", Self.menuBarIconSize),
             ("icon-claude.png", serviceIconSize),
             ("icon-codex.png", serviceIconSize),
+            ("icon-copilot.png", serviceIconSize),
             ("icon-gemini.png", serviceIconSize)
         ]
 
@@ -223,7 +229,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
             self?.applyTheme(to: win)
         }
 
-        let contentView = SettingsView(serverManager: serverManager)
+        let contentView = SettingsView(serverManager: serverManager, copilotGateway: copilotGateway)
         window.contentView = NSHostingView(rootView: contentView)
 
         settingsWindow = window
@@ -370,6 +376,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
     @objc func quit() {
         // Stop servers and give cleanup a moment before actually terminating.
         stopServersIfRunning()
+        copilotGateway.stop()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApp.terminate(nil)
         }
@@ -382,10 +389,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         authDirectoryMonitor?.stop()
         authDirectoryMonitor = nil
         stopServersIfRunning()
+        copilotGateway.stop()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         stopServersIfRunning()
+        copilotGateway.stop()
         return .terminateNow
     }
 

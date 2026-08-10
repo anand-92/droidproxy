@@ -327,6 +327,7 @@ struct ServiceRow<ExtraContent: View>: View {
 
 struct SettingsView: View {
     @ObservedObject var serverManager: ServerManager
+    @ObservedObject var copilotGateway: CopilotGatewayManager
     @StateObject private var authManager = AuthManager()
     @StateObject private var oauthUsageTracker = OAuthUsageTracker()
     @State private var launchAtLogin = false
@@ -352,11 +353,15 @@ struct SettingsView: View {
     @State private var junieApiKey = ""
     @State private var grokLoginSession: GrokAuth.LoginSession?
     @State private var grokUserCode: String?
+    @State private var copilotDeviceCode: String?
+    @State private var copilotVerificationURL: URL?
     @State private var authDirectoryMonitor: AuthDirectoryMonitor?
     @State private var expandedRowCount = 0
     @State private var factoryModelsInstalled = false
     @State private var remoteManagementExpanded = false
     @State private var codexFastModeExpanded = true
+    @State private var copilotModelsExpanded = true
+    @State private var copilotModelSlots: [String]
     private let claudeEffortSelectionColor = Color(red: 0xD9/255, green: 0x77/255, blue: 0x57/255)
     private let codexEffortSelectionColor = Color(red: 0x74/255, green: 0xAA/255, blue: 0x9C/255)
     private let antigravityEffortSelectionColor = Color(red: 0x42/255, green: 0x85/255, blue: 0xF4/255)
@@ -364,7 +369,20 @@ struct SettingsView: View {
     private let cursorEffortSelectionColor = Color(red: 0x5E/255, green: 0x5C/255, blue: 0xFA/255)
     private let junieEffortSelectionColor = Color(red: 0x48/255, green: 0xE0/255, blue: 0x54/255)
     private let grokEffortSelectionColor = Color(red: 0x1D/255, green: 0x9B/255, blue: 0xF0/255)
+    private let copilotSelectionColor = Color(red: 0x77/255, green: 0xB9/255, blue: 0xFF/255)
     private let oledFooterText = Color(red: 0xA8/255, green: 0xA8/255, blue: 0xA8/255)
+
+    init(serverManager: ServerManager, copilotGateway: CopilotGatewayManager) {
+        self.serverManager = serverManager
+        self.copilotGateway = copilotGateway
+        let selected = CopilotModelPreferences.selectedModelIDs
+        _copilotModelSlots = State(
+            initialValue: selected + Array(
+                repeating: "",
+                count: max(0, CopilotModelPreferences.maximumSelectedModels - selected.count)
+            )
+        )
+    }
 
     private var oauthUsageDashboard: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -773,6 +791,8 @@ struct SettingsView: View {
                         toggleTint: codexEffortSelectionColor
                     )
 
+                    copilotServiceRow()
+
                     if serverManager.isProviderEnabled(.codex) {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 4) {
@@ -934,7 +954,8 @@ struct SettingsView: View {
         )
         .accentColor(AccountRowView.accent)
         .preferredColorScheme(.dark)
-        .frame(width: 480, height: 814)
+        .frame(width: 480)
+        .frame(minHeight: 600, idealHeight: 900, maxHeight: .infinity)
         .onChange(of: backgroundOpacity) { _ in
             NotificationCenter.default.post(name: .droidProxyThemeChanged, object: nil)
         }
@@ -977,6 +998,283 @@ struct SettingsView: View {
     }
 
     // MARK: - Actions
+
+    @ViewBuilder
+    private func copilotServiceRow() -> some View {
+        let isEnabled = serverManager.isProviderEnabled(.copilot)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Toggle("", isOn: Binding(
+                    get: { isEnabled },
+                    set: { setCopilotEnabled($0) }
+                ))
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .tint(copilotSelectionColor)
+                .labelsHidden()
+                .help(isEnabled ? "Disable GitHub Copilot" : "Enable GitHub Copilot")
+
+                if let nsImage = IconCatalog.shared.image(
+                    named: "icon-copilot.png",
+                    resizedTo: NSSize(width: 20, height: 20),
+                    template: true
+                ) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .renderingMode(.template)
+                        .frame(width: 20, height: 20)
+                        .opacity(isEnabled ? 1.0 : 0.4)
+                }
+                Text("GitHub Copilot")
+                    .fontWeight(.medium)
+                    .foregroundColor(isEnabled ? .primary : .secondary)
+                Spacer()
+                if copilotGateway.isAuthenticating {
+                    ProgressView()
+                        .controlSize(.small)
+                    Button("Cancel") {
+                        cancelCopilotAuthentication()
+                    }
+                    .droidGlassPlain()
+                    .controlSize(.small)
+                } else if copilotGateway.hasCredentials {
+                    Button("Disconnect") {
+                        disconnectCopilot()
+                    }
+                    .droidGlassPlain()
+                    .controlSize(.small)
+                } else if isEnabled {
+                    Button("Connect") {
+                        startCopilotAuthentication()
+                    }
+                    .droidGlassProminent()
+                    .tint(copilotSelectionColor)
+                    .controlSize(.small)
+                }
+            }
+
+            if isEnabled {
+                if copilotGateway.isAuthenticating {
+                    copilotDeviceCodeRow()
+                } else if copilotGateway.hasCredentials {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(copilotGateway.isRunning ? Color.green : Color.orange)
+                            .frame(width: 6, height: 6)
+                        Text(copilotGateway.isRunning ? "Local gateway running" : "Local gateway starting")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Button("Refresh Models") {
+                            refreshCopilotModels()
+                        }
+                        .droidGlassPlain()
+                        .controlSize(.small)
+                        .disabled(!copilotGateway.isRunning)
+                    }
+                    .padding(.leading, 28)
+
+                    copilotModelPicker()
+                } else {
+                    Text("Connect your Copilot subscription, then choose up to three account-available models for Factory.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 28)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .help("Runs the maintained Copilot API gateway locally on port \(CopilotGatewayManager.gatewayPort).")
+    }
+
+    @ViewBuilder
+    private func copilotDeviceCodeRow() -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let copilotDeviceCode {
+                Text("Complete GitHub Copilot sign-in with this device code:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    Text(copilotDeviceCode)
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(.semibold)
+                    Button("Copy") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(copilotDeviceCode, forType: .string)
+                    }
+                    .droidGlassPlain()
+                    .controlSize(.small)
+                    if let copilotVerificationURL {
+                        Link("Open GitHub", destination: copilotVerificationURL)
+                            .droidGlassPlain()
+                            .controlSize(.small)
+                            .pointingHandCursor()
+                    }
+                }
+            } else {
+                Text("Waiting for GitHub to provide a device code…")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.leading, 28)
+    }
+
+    @ViewBuilder
+    private func copilotModelPicker() -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                Text("Factory models (\(CopilotModelPreferences.selectedModelIDs.count)/\(CopilotModelPreferences.maximumSelectedModels))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Image(systemName: copilotModelsExpanded ? "chevron.down" : "chevron.right")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    copilotModelsExpanded.toggle()
+                }
+            }
+
+            if copilotModelsExpanded {
+                if copilotGateway.availableModels.isEmpty {
+                    Text("Refresh Models to load the models available to this Copilot account.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(0..<CopilotModelPreferences.maximumSelectedModels, id: \.self) { index in
+                        let selectedElsewhere = Set<String>(
+                            copilotModelSlots.enumerated().compactMap { slot in
+                                guard slot.offset != index, !slot.element.isEmpty else { return nil }
+                                return slot.element
+                            }
+                        )
+                        Picker("Model \(index + 1)", selection: copilotModelBinding(at: index)) {
+                            Text("Not selected").tag("")
+                            ForEach(copilotGateway.availableModels.filter {
+                                $0.id == copilotModelSlots[index] || !selectedElsewhere.contains($0.id)
+                            }) { model in
+                                Text(model.displayName)
+                                    .tag(model.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                Text("Only the selected models are written into Factory settings when you press Apply or Re-apply.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.leading, 28)
+    }
+
+    private func copilotModelBinding(at index: Int) -> Binding<String> {
+        Binding(
+            get: {
+                copilotModelSlots.indices.contains(index) ? copilotModelSlots[index] : ""
+            },
+            set: { modelID in
+                guard copilotModelSlots.indices.contains(index) else { return }
+                copilotModelSlots[index] = modelID
+                persistCopilotModelSelection()
+            }
+        )
+    }
+
+    private func persistCopilotModelSelection() {
+        CopilotModelPreferences.saveSelectedModelIDs(copilotModelSlots)
+        let selected = CopilotModelPreferences.selectedModelIDs
+        copilotModelSlots = selected + Array(
+            repeating: "",
+            count: max(0, CopilotModelPreferences.maximumSelectedModels - selected.count)
+        )
+        factoryModelsInstalled = checkFactoryModelsInstalled()
+    }
+
+    private func startCopilotAuthentication() {
+        copilotDeviceCode = nil
+        copilotVerificationURL = nil
+        copilotGateway.startAuthentication(
+            onDeviceCode: { code, verificationURL in
+                self.copilotDeviceCode = code
+                self.copilotVerificationURL = verificationURL
+            },
+            completion: { result in
+                self.copilotDeviceCode = nil
+                self.copilotVerificationURL = nil
+                switch result {
+                case .success:
+                    self.copilotGateway.start()
+                    self.authResultMessage = "GitHub Copilot connected.\n\nThe local gateway is starting. Select Refresh Models, choose up to three models, then Re-apply Factory custom models."
+                case .failure(let error):
+                    self.authResultMessage = "GitHub Copilot authentication failed: \(error.localizedDescription)"
+                }
+                self.showingAuthResult = true
+            }
+        )
+    }
+
+    private func cancelCopilotAuthentication() {
+        copilotGateway.cancelAuthentication()
+        copilotDeviceCode = nil
+        copilotVerificationURL = nil
+    }
+
+    private func refreshCopilotModels() {
+        copilotGateway.refreshAvailableModels { result in
+            switch result {
+            case .success(let models):
+                let availableIDs = Set(models.map(\.id))
+                let retained = CopilotModelPreferences.selectedModelIDs.filter { availableIDs.contains($0) }
+                CopilotModelPreferences.saveSelectedModelIDs(retained)
+                self.copilotModelSlots = retained + Array(
+                    repeating: "",
+                    count: max(0, CopilotModelPreferences.maximumSelectedModels - retained.count)
+                )
+                self.factoryModelsInstalled = self.checkFactoryModelsInstalled()
+                self.authResultMessage = "Loaded \(models.count) models available to this GitHub Copilot account. Choose up to three, then Re-apply Factory custom models."
+            case .failure(let error):
+                self.authResultMessage = "Could not refresh GitHub Copilot models: \(error.localizedDescription)"
+            }
+            self.showingAuthResult = true
+        }
+    }
+
+    private func disconnectCopilot() {
+        if copilotGateway.disconnect() {
+            copilotModelSlots = Array(repeating: "", count: CopilotModelPreferences.maximumSelectedModels)
+            CopilotModelPreferences.saveSelectedModelIDs([])
+            copilotDeviceCode = nil
+            copilotVerificationURL = nil
+            factoryModelsInstalled = checkFactoryModelsInstalled()
+            authResultMessage = "GitHub Copilot disconnected. Re-apply Factory custom models to remove its selected models."
+        } else {
+            authResultMessage = "Could not disconnect GitHub Copilot. Please try again."
+        }
+        showingAuthResult = true
+    }
+
+    private func setCopilotEnabled(_ enabled: Bool) {
+        serverManager.setProviderEnabled(.copilot, enabled: enabled)
+        if enabled, copilotGateway.hasCredentials {
+            copilotGateway.start()
+        } else if !enabled {
+            copilotGateway.stop()
+            copilotDeviceCode = nil
+            copilotVerificationURL = nil
+        }
+        factoryModelsInstalled = checkFactoryModelsInstalled()
+    }
 
     /// Constructs a `ServiceRow` wired up to the standard auth/server callbacks.
     /// Keeps the body's `Section("Services")` declaration compact and free of
@@ -1102,6 +1400,11 @@ struct SettingsView: View {
             return
         }
 
+        if serviceType == .copilot {
+            startCopilotAuthentication()
+            return
+        }
+
         authenticatingService = serviceType
         NSLog("[SettingsView] Starting %@ authentication", serviceType.displayName)
         
@@ -1114,6 +1417,7 @@ struct SettingsView: View {
         case .cursor: return // handled by the early-return above; defensive
         case .junie: return // handled by the early-return above; defensive
         case .grok: return // handled by the early-return above; defensive
+        case .copilot: return // handled by the early-return above; defensive
         }
         
         serverManager.runAuthCommand(command) { success, output in
@@ -1147,6 +1451,8 @@ struct SettingsView: View {
             return "✓ Successfully saved Junie API Key."
         case .grok:
             return "🌐 Browser opened for Grok (xAI) authentication.\n\nApprove access for SuperGrok / X Premium+, then DroidProxy will save credentials automatically."
+        case .copilot:
+            return "🌐 GitHub Copilot sign-in started."
         }
     }
 

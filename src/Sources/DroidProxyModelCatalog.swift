@@ -8,6 +8,7 @@ enum DroidProxyModelKind {
     case cursor
     case junie
     case grok
+    case copilot
 }
 
 struct DroidProxyThinkingLevel: Equatable {
@@ -28,6 +29,7 @@ struct DroidProxyModelDefinition: Equatable {
     let kind: DroidProxyModelKind
     let levels: [DroidProxyThinkingLevel]
     let defaultLevelValue: String
+    let noImageSupport: Bool
 
     init(baseModel: String,
          idSlug: String,
@@ -39,7 +41,8 @@ struct DroidProxyModelDefinition: Equatable {
          baseURL: String,
          kind: DroidProxyModelKind,
          levels: [DroidProxyThinkingLevel],
-         defaultLevelValue: String) {
+         defaultLevelValue: String,
+         noImageSupport: Bool = false) {
         self.baseModel = baseModel
         self.idSlug = idSlug
         self.displayName = displayName
@@ -51,6 +54,7 @@ struct DroidProxyModelDefinition: Equatable {
         self.kind = kind
         self.levels = levels
         self.defaultLevelValue = defaultLevelValue
+        self.noImageSupport = noImageSupport
     }
 
     var simpleID: String {
@@ -61,6 +65,8 @@ struct DroidProxyModelDefinition: Equatable {
         switch kind {
         case .antigravity:
             return "Antigravity: \(displayName)"
+        case .copilot:
+            return "GitHub Copilot: \(displayName)"
         default:
             return displayName
         }
@@ -78,7 +84,7 @@ struct DroidProxyModelDefinition: Equatable {
             "apiKey": "dummy-not-used",
             "displayName": "DroidProxy: \(settingsDisplayName)",
             "maxOutputTokens": maxOutputTokens,
-            "noImageSupport": false,
+            "noImageSupport": noImageSupport,
             "provider": provider
         ]
         if let maxContextLimit {
@@ -126,6 +132,36 @@ enum DroidProxyModelCatalog {
             kind: .antigravity,
             levels: levels,
             defaultLevelValue: defaultLevelValue
+        )
+    }
+
+    static func copilotModel(_ descriptor: CopilotModelDescriptor) -> DroidProxyModelDefinition {
+        let levels = descriptor.reasoningEfforts.map {
+            DroidProxyThinkingLevel(value: $0, displayName: $0.capitalized)
+        }
+        let defaultLevelValue = ["max", "xhigh", "high", "medium", "low", "minimal", "none"]
+            .first(where: { descriptor.reasoningEfforts.contains($0) })
+            ?? descriptor.reasoningEfforts.first
+            ?? "high"
+
+        return DroidProxyModelDefinition(
+            baseModel: descriptor.id,
+            idSlug: "copilot-\(descriptor.identifierSlug)",
+            displayName: descriptor.displayName,
+            maxOutputTokens: descriptor.maxOutputTokens,
+            maxContextLimit: descriptor.maxContextLimit,
+            // Route every selected Copilot model through the gateway's
+            // Responses endpoint. It resolves client-facing Claude aliases
+            // (for example `claude-opus-4-8`) back to Copilot's upstream ID
+            // and translates Responses for models that expose Messages or Chat
+            // Completions only.
+            provider: "openai",
+            providerKey: "copilot",
+            baseURL: CopilotGatewayManager.gatewayBaseURL,
+            kind: .copilot,
+            levels: levels,
+            defaultLevelValue: defaultLevelValue,
+            noImageSupport: !descriptor.supportsVision
         )
     }
 
@@ -371,6 +407,11 @@ enum DroidProxyModelCatalog {
                 defaultLevelValue: "high"
             )
         ]
+
+        // Copilot's model catalog is account-specific and changes independently
+        // of DroidProxy. Only the three models the user selected in Settings are
+        // written into Factory's customModels configuration.
+        list.append(contentsOf: CopilotModelPreferences.selectedModels.map(copilotModel))
 
         if BETA_FLAG {
             list.append(contentsOf: [
