@@ -4,7 +4,7 @@
   <img src="logo.png" alt="DroidProxy" width="128">
 </p>
 
-A native macOS menu bar app that proxies Claude Code, Codex, Gemini, Kimi, Junie, and Grok authentication for use with [<img src="factory-logo.svg" alt="Factory.ai" height="16">](https://app.factory.ai) Droids. Built on [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI).
+A native macOS menu bar app that proxies Claude Code, Codex, Gemini, Kimi, GitHub Copilot, Junie, and Grok authentication for use with [<img src="factory-logo.svg" alt="Factory.ai" height="16">](https://app.factory.ai) Droids. Built on [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI).
 
 
 
@@ -23,6 +23,7 @@ Each release also ships a `DroidProxy-arm64.zip.sha256` checksum. Unzip and drag
 ## Features
 
 - **One-click OAuth auth** -- Claude Code, Codex, Gemini, and Kimi login launched from the Settings window, with credential monitoring and automatic OAuth token refresh.
+- **GitHub Copilot** -- Sign in through the Settings window, then select up to three models available to your Copilot subscription. Only those selected models are added to Factory's custom-model configuration.
 - **Every model, every reasoning level** -- Fable 5, Opus 5, Sonnet 4.6, GPT 5.4, GPT 5.5, GPT 5.6 Terra, GPT 5.6 Sol, Gemini 3.1 Pro, Gemini 3 Flash, Kimi K3, and Kimi K2.6 are registered as Factory custom models with their full set of native reasoning levels. Reasoning effort is chosen per session from Droid CLI's model selector; DroidProxy preserves the selection and the bundled backend translates it to each provider's native request format.
 - **Fast Mode** -- Optional `service_tier=priority` for GPT 5.4, GPT 5.5, GPT 5.6 Terra, and GPT 5.6 Sol, toggled from the Settings window for lower-latency responses on the OpenAI Responses API.
 - **Usage tracking** -- Claude and Codex OAuth quota windows (5-hour + weekly) rendered in the **OAuth Quota Usage** section of the Settings window. Fetched directly from each provider's OAuth API (no `codex` CLI dependency) and refreshed on demand via the inline refresh button.
@@ -90,6 +91,7 @@ src/
 │   ├── AuthPaths.swift              # Auth directory location constant
 │   ├── AppPreferences.swift         # UserDefaults-backed preferences
 │   ├── OAuthUsageTracker.swift      # OAuth quota windows for SettingsView
+│   ├── CopilotSupport.swift          # Local Copilot API gateway, device login, and selected-model persistence
 │   ├── IconCatalog.swift            # NSImage caching for menu-bar / settings icons
 │   ├── NotificationNames.swift      # Shared Notification.Name constants
 │   ├── LogoView.swift               # Inline-SVG logo used in the settings UI
@@ -101,6 +103,7 @@ src/
 │       ├── icon-inactive.png        # Menu bar icon (inactive)
 │       ├── icon-claude.png          # Claude service icon
 │       ├── icon-codex.png           # Codex service icon
+│       ├── icon-copilot.png         # GitHub Copilot service icon
 │       ├── icon-gemini.png          # Gemini service icon
 │       ├── icon-cursor.png          # Cursor service icon
 │       ├── icon-kimi.svg            # Kimi service icon

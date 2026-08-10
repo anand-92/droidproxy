@@ -8,6 +8,7 @@ enum ServiceType: String, CaseIterable {
     case cursor
     case junie
     case grok
+    case copilot
 
     init?(authFileType: String) {
         switch authFileType.lowercased() {
@@ -25,6 +26,8 @@ enum ServiceType: String, CaseIterable {
             self = .junie
         case "grok-cli", "grok":
             self = .grok
+        case "copilot", "github-copilot":
+            self = .copilot
         default:
             return nil
         }
@@ -39,6 +42,7 @@ enum ServiceType: String, CaseIterable {
         case .cursor: return "Cursor"
         case .junie: return "Junie"
         case .grok: return "Grok"
+        case .copilot: return "GitHub Copilot"
         }
     }
 }

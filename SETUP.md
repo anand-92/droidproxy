@@ -4,7 +4,17 @@
 
 1. Open DroidProxy from your Applications folder
 2. Click the menu bar icon and select "Open Settings"
-3. Click "Connect" next to Claude Code, Codex, Gemini, or Kimi (browser OAuth), Junie (API key), or **Grok** (device-code browser login)
+3. Click "Connect" next to Claude Code, Codex, Gemini, Kimi, or **GitHub Copilot** (browser/device-code OAuth), Junie (API key), or **Grok** (device-code browser login)
+
+### GitHub Copilot
+
+1. Connect **GitHub Copilot** in Settings and complete the device-code sign-in.
+2. After the local Copilot gateway starts, click **Refresh Models**.
+3. Choose up to three models available to your Copilot subscription.
+4. Click **Apply** / **Re-apply** under Factory custom models.
+
+Only these selected Copilot models are written into `~/.factory/settings.json`. The gateway runs locally on `127.0.0.1:8319`; no Copilot credential is added to Factory settings.
+GitHub Copilot support requires Node.js 20 or later so DroidProxy can run the maintained local gateway. Node.js 22.13 or later additionally enables the gateway's local usage storage.
 
 For **Grok 4.5** (SuperGrok / X Premium+ OAuth → `api.x.ai`):
 
