@@ -196,6 +196,14 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(prompt.url.absoluteString, "https://github.com/login/device")
     }
 
+    func testCopilotDeviceCodeParserFallsBackToCodeAndURL() throws {
+        let output = "Open https://github.com/login/device, then use device code: WXYZ-1234."
+        let prompt = try XCTUnwrap(DeviceCodeCapture.parsePrompt(in: output))
+
+        XCTAssertEqual(prompt.code, "WXYZ-1234")
+        XCTAssertEqual(prompt.url.absoluteString, "https://github.com/login/device")
+    }
+
     func testCopilotSelectionIsCappedAtThreeFactoryModels() throws {
         let defaults = UserDefaults.standard
         let oldSelected = defaults.object(forKey: CopilotModelPreferences.selectedModelIDsKey)
@@ -258,6 +266,27 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(opus["noImageSupport"] as? Bool, false)
         XCTAssertEqual(opus["supportedReasoningEfforts"] as? [String], ["low", "high", "xhigh"])
         XCTAssertEqual(opus["defaultReasoningEffort"] as? String, "xhigh")
+
+        let gpt = try XCTUnwrap(entries.first { ($0["model"] as? String) == "gpt-5" })
+        XCTAssertEqual(gpt["noImageSupport"] as? Bool, true)
+        XCTAssertEqual(gpt["supportedReasoningEfforts"] as? [String], ["low", "medium", "high"])
+
+        let gemini = try XCTUnwrap(entries.first { ($0["model"] as? String) == "gemini-3-pro" })
+        XCTAssertNil(gemini["enableThinking"])
+        XCTAssertNil(gemini["supportedReasoningEfforts"])
+        XCTAssertNil(gemini["defaultReasoningEffort"])
+
+        let maxReasoningModel = DroidProxyModelCatalog.copilotModel(
+            CopilotModelDescriptor(
+                id: "reasoning-max",
+                displayName: "Reasoning Max",
+                maxOutputTokens: 4_000,
+                maxContextLimit: nil,
+                supportsVision: false,
+                reasoningEfforts: ["high", "max"]
+            )
+        ).settingsEntry
+        XCTAssertEqual(maxReasoningModel["defaultReasoningEffort"] as? String, "max")
     }
 
     private func settingsEntry(id: String) -> [String: Any]? {

@@ -353,6 +353,8 @@ struct SettingsView: View {
     @State private var junieApiKey = ""
     @State private var grokLoginSession: GrokAuth.LoginSession?
     @State private var grokUserCode: String?
+    @State private var copilotDeviceCode: String?
+    @State private var copilotVerificationURL: URL?
     @State private var authDirectoryMonitor: AuthDirectoryMonitor?
     @State private var expandedRowCount = 0
     @State private var factoryModelsInstalled = false
@@ -952,7 +954,8 @@ struct SettingsView: View {
         )
         .accentColor(AccountRowView.accent)
         .preferredColorScheme(.dark)
-        .frame(width: 480, height: 900)
+        .frame(width: 480)
+        .frame(minHeight: 600, idealHeight: 900, maxHeight: .infinity)
         .onChange(of: backgroundOpacity) { _ in
             NotificationCenter.default.post(name: .droidProxyThemeChanged, object: nil)
         }
@@ -1029,6 +1032,11 @@ struct SettingsView: View {
                 if copilotGateway.isAuthenticating {
                     ProgressView()
                         .controlSize(.small)
+                    Button("Cancel") {
+                        cancelCopilotAuthentication()
+                    }
+                    .droidGlassPlain()
+                    .controlSize(.small)
                 } else if copilotGateway.hasCredentials {
                     Button("Disconnect") {
                         disconnectCopilot()
@@ -1046,7 +1054,9 @@ struct SettingsView: View {
             }
 
             if isEnabled {
-                if copilotGateway.hasCredentials {
+                if copilotGateway.isAuthenticating {
+                    copilotDeviceCodeRow()
+                } else if copilotGateway.hasCredentials {
                     HStack(spacing: 6) {
                         Circle()
                             .fill(copilotGateway.isRunning ? Color.green : Color.orange)
@@ -1079,6 +1089,39 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
+    private func copilotDeviceCodeRow() -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let copilotDeviceCode {
+                Text("Complete GitHub Copilot sign-in with this device code:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    Text(copilotDeviceCode)
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(.semibold)
+                    Button("Copy") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(copilotDeviceCode, forType: .string)
+                    }
+                    .droidGlassPlain()
+                    .controlSize(.small)
+                    if let copilotVerificationURL {
+                        Link("Open GitHub", destination: copilotVerificationURL)
+                            .droidGlassPlain()
+                            .controlSize(.small)
+                            .pointingHandCursor()
+                    }
+                }
+            } else {
+                Text("Waiting for GitHub to provide a device code…")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.leading, 28)
+    }
+
+    @ViewBuilder
     private func copilotModelPicker() -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
@@ -1105,9 +1148,17 @@ struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
                     ForEach(0..<CopilotModelPreferences.maximumSelectedModels, id: \.self) { index in
+                        let selectedElsewhere = Set<String>(
+                            copilotModelSlots.enumerated().compactMap { slot in
+                                guard slot.offset != index, !slot.element.isEmpty else { return nil }
+                                return slot.element
+                            }
+                        )
                         Picker("Model \(index + 1)", selection: copilotModelBinding(at: index)) {
                             Text("Not selected").tag("")
-                            ForEach(copilotGateway.availableModels) { model in
+                            ForEach(copilotGateway.availableModels.filter {
+                                $0.id == copilotModelSlots[index] || !selectedElsewhere.contains($0.id)
+                            }) { model in
                                 Text(model.displayName)
                                     .tag(model.id)
                             }
@@ -1151,12 +1202,16 @@ struct SettingsView: View {
     }
 
     private func startCopilotAuthentication() {
+        copilotDeviceCode = nil
+        copilotVerificationURL = nil
         copilotGateway.startAuthentication(
             onDeviceCode: { code, verificationURL in
-                self.authResultMessage = "GitHub Copilot sign-in\n\nOpen \(verificationURL.absoluteString) and enter this code:\n\n\(code)"
-                self.showingAuthResult = true
+                self.copilotDeviceCode = code
+                self.copilotVerificationURL = verificationURL
             },
             completion: { result in
+                self.copilotDeviceCode = nil
+                self.copilotVerificationURL = nil
                 switch result {
                 case .success:
                     self.copilotGateway.start()
@@ -1167,6 +1222,12 @@ struct SettingsView: View {
                 self.showingAuthResult = true
             }
         )
+    }
+
+    private func cancelCopilotAuthentication() {
+        copilotGateway.cancelAuthentication()
+        copilotDeviceCode = nil
+        copilotVerificationURL = nil
     }
 
     private func refreshCopilotModels() {
@@ -1193,6 +1254,8 @@ struct SettingsView: View {
         if copilotGateway.disconnect() {
             copilotModelSlots = Array(repeating: "", count: CopilotModelPreferences.maximumSelectedModels)
             CopilotModelPreferences.saveSelectedModelIDs([])
+            copilotDeviceCode = nil
+            copilotVerificationURL = nil
             factoryModelsInstalled = checkFactoryModelsInstalled()
             authResultMessage = "GitHub Copilot disconnected. Re-apply Factory custom models to remove its selected models."
         } else {
@@ -1207,6 +1270,8 @@ struct SettingsView: View {
             copilotGateway.start()
         } else if !enabled {
             copilotGateway.stop()
+            copilotDeviceCode = nil
+            copilotVerificationURL = nil
         }
         factoryModelsInstalled = checkFactoryModelsInstalled()
     }

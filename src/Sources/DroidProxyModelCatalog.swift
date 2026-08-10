@@ -135,11 +135,11 @@ enum DroidProxyModelCatalog {
         )
     }
 
-    private static func copilotModel(_ descriptor: CopilotModelDescriptor) -> DroidProxyModelDefinition {
+    static func copilotModel(_ descriptor: CopilotModelDescriptor) -> DroidProxyModelDefinition {
         let levels = descriptor.reasoningEfforts.map {
             DroidProxyThinkingLevel(value: $0, displayName: $0.capitalized)
         }
-        let defaultLevelValue = ["xhigh", "high", "medium", "low", "minimal", "none"]
+        let defaultLevelValue = ["max", "xhigh", "high", "medium", "low", "minimal", "none"]
             .first(where: { descriptor.reasoningEfforts.contains($0) })
             ?? descriptor.reasoningEfforts.first
             ?? "high"

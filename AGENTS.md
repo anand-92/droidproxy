@@ -95,7 +95,7 @@ The current app/UI exposes these provider types:
 - `grok` (device-flow OAuth; credentials in `~/.cli-proxy-api/grok-cli.json`; ThinkingProxy forwards `grok-*` to `api.x.ai` and bypasses CLIProxyAPI)
 - `copilot` (device-code OAuth; credentials stay in `~/.droidproxy/copilot-api/`; the separate local Copilot API gateway serves only the user-selected models)
 
-Auth data lives in `~/.cli-proxy-api/` as JSON files. `AuthManager` scans that directory and reads fields like:
+Auth data for `AuthManager`-managed providers lives in `~/.cli-proxy-api/` as JSON files. Copilot is the exception: its gateway owns `~/.droidproxy/copilot-api/github_token`, which DroidProxy never reads.
 
 - `type`
 - `email`

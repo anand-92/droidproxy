@@ -138,12 +138,15 @@ final class CopilotGatewayManager: ObservableObject {
     private static let factoryReasoningEffortOrder = [
         "none", "minimal", "low", "medium", "high", "xhigh", "max"
     ]
-    private static let factoryReasoningEfforts: Set<String> = [
-        "none", "minimal", "low", "medium", "high", "xhigh", "max"
-    ]
+    private static let factoryReasoningEfforts = Set(factoryReasoningEffortOrder)
     private static let supportedGatewayEndpoints: Set<String> = [
         "/chat/completions", "/responses", "ws:/responses", "/v1/messages"
     ]
+
+    private enum ProcessTiming {
+        static let gracefulTerminationTimeout: TimeInterval = 2.0
+        static let terminationPollInterval: TimeInterval = 0.05
+    }
 
     static let dataDirectory = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".droidproxy")
@@ -159,6 +162,7 @@ final class CopilotGatewayManager: ObservableObject {
     private var authenticationProcess: Process?
     private var gatewayOutputPipes: [Pipe] = []
     private var authenticationOutputPipes: [Pipe] = []
+    private var isolatedProcessGroups = Set<pid_t>()
 
     init() {
         availableModels = CopilotModelPreferences.cachedModels
@@ -224,6 +228,7 @@ final class CopilotGatewayManager: ObservableObject {
 
         do {
             try process.run()
+            isolateProcessGroup(for: process)
             gatewayProcess = process
             isRunning = true
             lastError = nil
@@ -238,17 +243,20 @@ final class CopilotGatewayManager: ObservableObject {
     }
 
     func stop() {
-        if let gatewayProcess, gatewayProcess.isRunning {
-            gatewayProcess.terminate()
+        if let gatewayProcess {
+            terminate(gatewayProcess)
         }
         gatewayProcess = nil
         isRunning = false
         clearGatewayOutputPipes()
 
-        if let authenticationProcess, authenticationProcess.isRunning {
-            authenticationProcess.terminate()
-        }
-        authenticationProcess = nil
+        cancelAuthentication()
+    }
+
+    func cancelAuthentication() {
+        guard let authenticationProcess else { return }
+        terminate(authenticationProcess)
+        self.authenticationProcess = nil
         isAuthenticating = false
         clearAuthenticationOutputPipes()
     }
@@ -302,6 +310,7 @@ final class CopilotGatewayManager: ObservableObject {
 
         do {
             try process.run()
+            isolateProcessGroup(for: process)
             authenticationProcess = process
             isAuthenticating = true
             lastError = nil
@@ -359,9 +368,11 @@ final class CopilotGatewayManager: ObservableObject {
         stop()
         do {
             try FileManager.default.removeItem(at: Self.credentialsURL)
+            clearCachedModelCatalog()
             NotificationCenter.default.post(name: .authDirectoryChanged, object: nil)
             return true
         } catch CocoaError.fileNoSuchFile {
+            clearCachedModelCatalog()
             return true
         } catch {
             lastError = "Could not remove GitHub Copilot credentials."
@@ -370,12 +381,21 @@ final class CopilotGatewayManager: ObservableObject {
     }
 
     private static func npxExecutableURL() -> URL? {
-        let candidates = [
+        var candidates = [
             "/opt/homebrew/bin/npx",
             "/usr/local/bin/npx",
             "/usr/bin/npx"
         ]
-        guard let path = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+        candidates.append(
+            contentsOf: (ProcessInfo.processInfo.environment["PATH"] ?? "")
+                .split(separator: ":")
+                .map { "\($0)/npx" }
+        )
+
+        var seen = Set<String>()
+        guard let path = candidates.first(where: {
+            seen.insert($0).inserted && FileManager.default.isExecutableFile(atPath: $0)
+        }) else {
             return nil
         }
         return URL(fileURLWithPath: path)
@@ -419,6 +439,90 @@ final class CopilotGatewayManager: ObservableObject {
             pipe.fileHandleForReading.readabilityHandler = nil
         }
         pipes.removeAll()
+    }
+
+    private func clearCachedModelCatalog() {
+        availableModels = []
+        CopilotModelPreferences.saveCachedModels([])
+    }
+
+    private func isolateProcessGroup(for process: Process) {
+        let pid = process.processIdentifier
+        guard pid > 0 else { return }
+        if setpgid(pid, pid) == 0 {
+            isolatedProcessGroups.insert(pid)
+        } else {
+            NSLog("[Copilot] Could not isolate process group for PID %d", pid)
+        }
+    }
+
+    private func terminate(_ process: Process) {
+        let pid = process.processIdentifier
+        let processGroupID: pid_t? = isolatedProcessGroups.remove(pid)
+        let descendants = processGroupID == nil ? descendantProcessIDs(of: pid) : []
+
+        if let processGroupID {
+            _ = kill(-processGroupID, SIGTERM)
+        } else {
+            signal(descendants, with: SIGTERM)
+            if process.isRunning {
+                process.terminate()
+            }
+        }
+
+        let deadline = Date().addingTimeInterval(ProcessTiming.gracefulTerminationTimeout)
+        while isRunning(process, processGroupID: processGroupID, descendants: descendants), Date() < deadline {
+            Thread.sleep(forTimeInterval: ProcessTiming.terminationPollInterval)
+        }
+
+        if isRunning(process, processGroupID: processGroupID, descendants: descendants) {
+            if let processGroupID {
+                _ = kill(-processGroupID, SIGKILL)
+            } else {
+                signal(descendants, with: SIGKILL)
+                if process.isRunning {
+                    _ = kill(pid, SIGKILL)
+                }
+            }
+        }
+    }
+
+    private func isRunning(
+        _ process: Process,
+        processGroupID: pid_t?,
+        descendants: [pid_t]
+    ) -> Bool {
+        if let processGroupID {
+            return kill(-processGroupID, 0) == 0
+        }
+        return process.isRunning || descendants.contains { kill($0, 0) == 0 }
+    }
+
+    private func descendantProcessIDs(of pid: pid_t) -> [pid_t] {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        task.arguments = ["-P", String(pid)]
+        let output = Pipe()
+        task.standardOutput = output
+        task.standardError = Pipe()
+
+        guard (try? task.run()) != nil else { return [] }
+        task.waitUntilExit()
+        guard task.terminationStatus == 0,
+              let text = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) else {
+            return []
+        }
+
+        let directChildren = text
+            .split(whereSeparator: \.isNewline)
+            .compactMap { pid_t(String($0)) }
+        return directChildren + directChildren.flatMap(descendantProcessIDs)
+    }
+
+    private func signal(_ pids: [pid_t], with signal: Int32) {
+        for pid in pids.reversed() {
+            _ = kill(pid, signal)
+        }
     }
 
     static func parseModels(from data: Data) -> [CopilotModelDescriptor]? {
@@ -511,22 +615,37 @@ final class DeviceCodeCapture {
             options: .regularExpression
         )
         let codeMarker = "Please enter the code \""
-        guard let codeStart = plainText.range(of: codeMarker)?.upperBound,
-              let codeEnd = plainText[codeStart...].firstIndex(of: "\"") else {
+        if let codeStart = plainText.range(of: codeMarker)?.upperBound,
+           let codeEnd = plainText[codeStart...].firstIndex(of: "\"") {
+            let code = String(plainText[codeStart..<codeEnd])
+            let afterCode = plainText[codeEnd...]
+            if let urlStart = afterCode.range(of: " in ")?.upperBound {
+                let urlText = afterCode[urlStart...]
+                    .prefix { !$0.isWhitespace }
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !code.isEmpty, let url = URL(string: String(urlText)) {
+                    return (code, url)
+                }
+            }
+        }
+
+        let fullRange = NSRange(plainText.startIndex..., in: plainText)
+        guard let urlExpression = try? NSRegularExpression(pattern: #"https?://[^\s<>"')\]]+"#),
+              let urlMatch = urlExpression.firstMatch(in: plainText, range: fullRange),
+              let urlRange = Range(urlMatch.range, in: plainText),
+              let url = URL(
+                string: String(plainText[urlRange])
+                    .trimmingCharacters(in: CharacterSet(charactersIn: ".,;!"))
+              ),
+              let codeExpression = try? NSRegularExpression(
+                pattern: #"(?:device\s*)?code\s*(?:is|:|=)?\s*["']?([A-Z0-9]{4,}(?:-[A-Z0-9]{2,})*)"#,
+                options: .caseInsensitive
+              ),
+              let codeMatch = codeExpression.firstMatch(in: plainText, range: fullRange),
+              let codeRange = Range(codeMatch.range(at: 1), in: plainText) else {
             return nil
         }
-        let code = String(plainText[codeStart..<codeEnd])
-        let afterCode = plainText[codeEnd...]
-        guard let urlStart = afterCode.range(of: " in ")?.upperBound else {
-            return nil
-        }
-        let urlText = afterCode[urlStart...]
-            .prefix { !$0.isWhitespace }
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !code.isEmpty, let url = URL(string: String(urlText)) else {
-            return nil
-        }
-        return (code, url)
+        return (String(plainText[codeRange]), url)
     }
 }
 
