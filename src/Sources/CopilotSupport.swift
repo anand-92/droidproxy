@@ -157,6 +157,8 @@ final class CopilotGatewayManager: ObservableObject {
 
     private var gatewayProcess: Process?
     private var authenticationProcess: Process?
+    private var gatewayOutputPipes: [Pipe] = []
+    private var authenticationOutputPipes: [Pipe] = []
 
     init() {
         availableModels = CopilotModelPreferences.cachedModels
@@ -206,13 +208,14 @@ final class CopilotGatewayManager: ObservableObject {
             String(Self.gatewayPort)
         ]
         process.environment = Self.gatewayEnvironment()
-        discardOutput(from: process)
+        gatewayOutputPipes = attachOutputPipes(to: process) { _ in }
 
         process.terminationHandler = { [weak self, weak process] terminatedProcess in
             DispatchQueue.main.async {
                 guard self?.gatewayProcess === process else { return }
                 self?.gatewayProcess = nil
                 self?.isRunning = false
+                self?.clearGatewayOutputPipes()
                 if terminatedProcess.terminationStatus != 0 {
                     self?.lastError = "The local Copilot gateway stopped unexpectedly."
                 }
@@ -228,6 +231,7 @@ final class CopilotGatewayManager: ObservableObject {
             completion?(true)
         } catch {
             isRunning = false
+            clearGatewayOutputPipes()
             lastError = CopilotGatewayError.failedToStart(error.localizedDescription).localizedDescription
             completion?(false)
         }
@@ -239,6 +243,14 @@ final class CopilotGatewayManager: ObservableObject {
         }
         gatewayProcess = nil
         isRunning = false
+        clearGatewayOutputPipes()
+
+        if let authenticationProcess, authenticationProcess.isRunning {
+            authenticationProcess.terminate()
+        }
+        authenticationProcess = nil
+        isAuthenticating = false
+        clearAuthenticationOutputPipes()
     }
 
     /// Starts Copilot's device-code flow. The gateway owns the token file and
@@ -267,13 +279,16 @@ final class CopilotGatewayManager: ObservableObject {
         process.environment = Self.gatewayEnvironment()
 
         let promptCapture = DeviceCodeCapture(onDeviceCode: onDeviceCode)
-        attachAuthenticationOutputCapture(to: process, promptCapture: promptCapture)
+        authenticationOutputPipes = attachOutputPipes(to: process) { text in
+            promptCapture.append(text)
+        }
 
         process.terminationHandler = { [weak self, weak process] terminatedProcess in
             DispatchQueue.main.async {
                 guard self?.authenticationProcess === process else { return }
                 self?.authenticationProcess = nil
                 self?.isAuthenticating = false
+                self?.clearAuthenticationOutputPipes()
                 if terminatedProcess.terminationStatus == 0, Self.hasCredentials {
                     self?.lastError = nil
                     NotificationCenter.default.post(name: .authDirectoryChanged, object: nil)
@@ -292,6 +307,7 @@ final class CopilotGatewayManager: ObservableObject {
             lastError = nil
             NSLog("[Copilot] Started GitHub device authentication")
         } catch {
+            clearAuthenticationOutputPipes()
             completion(.failure(CopilotGatewayError.failedToStart(error.localizedDescription)))
         }
     }
@@ -372,32 +388,37 @@ final class CopilotGatewayManager: ObservableObject {
         return environment
     }
 
-    private func discardOutput(from process: Process) {
-        for pipe in [Pipe(), Pipe()] {
-            pipe.fileHandleForReading.readabilityHandler = { handle in
-                _ = handle.availableData
-            }
-            if process.standardOutput == nil {
-                process.standardOutput = pipe
-            } else {
-                process.standardError = pipe
-            }
-        }
-    }
-
-    private func attachAuthenticationOutputCapture(to process: Process, promptCapture: DeviceCodeCapture) {
-        for pipe in [Pipe(), Pipe()] {
+    private func attachOutputPipes(
+        to process: Process,
+        onOutput: @escaping (String) -> Void
+    ) -> [Pipe] {
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        for pipe in [outputPipe, errorPipe] {
             pipe.fileHandleForReading.readabilityHandler = { handle in
                 let data = handle.availableData
                 guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return }
-                promptCapture.append(text)
-            }
-            if process.standardOutput == nil {
-                process.standardOutput = pipe
-            } else {
-                process.standardError = pipe
+                onOutput(text)
             }
         }
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+        return [outputPipe, errorPipe]
+    }
+
+    private func clearGatewayOutputPipes() {
+        clearOutputPipes(&gatewayOutputPipes)
+    }
+
+    private func clearAuthenticationOutputPipes() {
+        clearOutputPipes(&authenticationOutputPipes)
+    }
+
+    private func clearOutputPipes(_ pipes: inout [Pipe]) {
+        for pipe in pipes {
+            pipe.fileHandleForReading.readabilityHandler = nil
+        }
+        pipes.removeAll()
     }
 
     static func parseModels(from data: Data) -> [CopilotModelDescriptor]? {
@@ -453,7 +474,7 @@ final class CopilotGatewayManager: ObservableObject {
     }
 }
 
-private final class DeviceCodeCapture {
+final class DeviceCodeCapture {
     private let lock = NSLock()
     private let onDeviceCode: (_ code: String, _ verificationURL: URL) -> Void
     private var buffer = ""
@@ -469,7 +490,7 @@ private final class DeviceCodeCapture {
         if buffer.count > 8_192 {
             buffer = String(buffer.suffix(8_192))
         }
-        let prompt = parsePrompt(in: buffer)
+        let prompt = Self.parsePrompt(in: buffer)
         let shouldDeliver = prompt != nil && !delivered
         if shouldDeliver {
             delivered = true
@@ -483,14 +504,19 @@ private final class DeviceCodeCapture {
         }
     }
 
-    private func parsePrompt(in text: String) -> (code: String, url: URL)? {
+    static func parsePrompt(in text: String) -> (code: String, url: URL)? {
+        let plainText = text.replacingOccurrences(
+            of: "\u{001B}\\[[0-?]*[ -/]*[@-~]",
+            with: "",
+            options: .regularExpression
+        )
         let codeMarker = "Please enter the code \""
-        guard let codeStart = text.range(of: codeMarker)?.upperBound,
-              let codeEnd = text[codeStart...].firstIndex(of: "\"") else {
+        guard let codeStart = plainText.range(of: codeMarker)?.upperBound,
+              let codeEnd = plainText[codeStart...].firstIndex(of: "\"") else {
             return nil
         }
-        let code = String(text[codeStart..<codeEnd])
-        let afterCode = text[codeEnd...]
+        let code = String(plainText[codeStart..<codeEnd])
+        let afterCode = plainText[codeEnd...]
         guard let urlStart = afterCode.range(of: " in ")?.upperBound else {
             return nil
         }

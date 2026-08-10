@@ -188,6 +188,14 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(opus.reasoningEfforts, ["low", "high", "xhigh"])
     }
 
+    func testCopilotDeviceCodeParserHandlesAnsiFormattedOutput() throws {
+        let output = "\u{001B}[36mℹ\u{001B}[0m Please enter the code \"ABCD-EFGH\" in https://github.com/login/device"
+        let prompt = try XCTUnwrap(DeviceCodeCapture.parsePrompt(in: output))
+
+        XCTAssertEqual(prompt.code, "ABCD-EFGH")
+        XCTAssertEqual(prompt.url.absoluteString, "https://github.com/login/device")
+    }
+
     func testCopilotSelectionIsCappedAtThreeFactoryModels() throws {
         let defaults = UserDefaults.standard
         let oldSelected = defaults.object(forKey: CopilotModelPreferences.selectedModelIDsKey)
