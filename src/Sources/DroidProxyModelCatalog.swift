@@ -392,11 +392,11 @@ enum DroidProxyModelCatalog {
 
             // Grok OAuth (SuperGrok / X Premium+) via api.x.ai.
             // provider="openai" + /v1 → Responses API; ThinkingProxy attaches the bearer.
-            // Context window from docs.x.ai (Jul 2026): 4.5=500k.
+            // Context window from docs.x.ai: grok-4.6=500k.
             DroidProxyModelDefinition(
-                baseModel: "grok-4.5",
-                idSlug: "grok-4.5",
-                displayName: "Grok 4.5",
+                baseModel: "grok-4.6",
+                idSlug: "grok-4.6",
+                displayName: "Grok 4.6",
                 maxOutputTokens: 128000,
                 maxContextLimit: 500_000,
                 provider: "openai",
@@ -428,9 +428,9 @@ enum DroidProxyModelCatalog {
                     defaultLevelValue: "high"
                 ),
                 DroidProxyModelDefinition(
-                    baseModel: "cursor-grok-4.5",
-                    idSlug: "cursor-grok-4.5",
-                    displayName: "Cursor Grok 4.5",
+                    baseModel: "cursor-grok-4.6",
+                    idSlug: "cursor-grok-4.6",
+                    displayName: "Cursor Grok 4.6",
                     maxOutputTokens: 128000,
                     provider: "generic-chat-completion-api",
                     providerKey: "cursor",
@@ -440,9 +440,9 @@ enum DroidProxyModelCatalog {
                     defaultLevelValue: "high"
                 ),
                 DroidProxyModelDefinition(
-                    baseModel: "cursor-grok-4.5-fast",
-                    idSlug: "cursor-grok-4.5-fast",
-                    displayName: "Cursor Grok 4.5 Fast",
+                    baseModel: "cursor-grok-4.6-fast",
+                    idSlug: "cursor-grok-4.6-fast",
+                    displayName: "Cursor Grok 4.6 Fast",
                     maxOutputTokens: 128000,
                     provider: "generic-chat-completion-api",
                     providerKey: "cursor",
