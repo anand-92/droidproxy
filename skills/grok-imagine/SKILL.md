@@ -122,8 +122,8 @@ and the [Images REST API](https://docs.x.ai/developers/rest-api-reference/infere
 | `model` | `grok-imagine-image-2.0` | Must start with `grok-` or the proxy won't route it. Always send this id. |
 | `prompt` | string | See Prompting. Required on edits. |
 | `aspect_ratio` | `1:1`, `3:4`, `4:3`, `9:16`, `16:9`, `2:3`, `3:2`, `9:19.5`, `19.5:9`, `9:20`, `20:9`, `1:2`, `2:1`, `auto` | Default `auto` (model picks the ratio). Icons `1:1`, banners `16:9`, stories `9:16`. |
-| `resolution` | `1k`, `2k` | Default `1k`. Stay there unless the user asks for print/hi-dpi — `2k` costs more and returns much larger files. |
-| `quality` | `low`, `medium` | **2.0 only.** Default `medium` when omitted. Do not send `high`, `hd`, or `standard`. Omit unless the user wants the cheaper/faster `low`. |
+| `resolution` | `1k`, `2k` | Default `1k`. Stay there unless the user asks for print/hi-dpi — `2k` returns much larger files. |
+| `quality` | `low`, `medium` | **2.0 only.** Default `medium` when omitted. Do not send `high`, `hd`, or `standard`. Omit unless the user asks for `low`. |
 | `response_format` | `url`, `b64_json` | `url` is the default but expires fast — prefer `b64_json` when saving to disk. |
 | `n` | 1–10 | Default 1. Same-prompt variations belong in one request via `n`, not parallel calls. |
 | `image` / `images` | object or array (max 3) | Edits only. Mutually exclusive. Each item is `{url, type:"image_url"}` or `{file_id}`. |
@@ -137,8 +137,7 @@ silently ignored. Don't reach for them.
 ## Response
 
 ```json
-{"data": [{"b64_json": "...", "mime_type": "image/jpeg", "url": "https://imgen.x.ai/..."}],
- "usage": {"cost_in_usd_ticks": 400000000}}
+{"data": [{"b64_json": "...", "mime_type": "image/jpeg", "url": "https://imgen.x.ai/..."}]}
 ```
 
 Pick the file extension from `mime_type`, not from the prompt or the filename
@@ -149,9 +148,6 @@ gave, save the correct extension and say why. `mime_type` may also be
 
 With `response_format: "url"` the URL is temporary (`imgen.x.ai`) — download it
 immediately rather than handing it to the user.
-
-`usage` may include prompt-upsampler token counts (`input_tokens_details` /
-`output_tokens_details`). You do not need to surface those unless asked.
 
 ## No transparency
 
@@ -167,9 +163,8 @@ When someone asks for a transparent PNG:
    dark header," "on a white card." Keying preserves whatever ink Imagine
    happened to render, which is usually near-black, so a mark destined for a
    dark background comes out invisible. Compare the subject's luminance to the
-   target background and invert it if they collide. It's free once you have the
-   alpha mask, and it's the difference between a usable asset and one the user
-   has to send back.
+   target background and invert it if they collide. That's the difference
+   between a usable asset and one the user has to send back.
 4. Say what you did, and mention the ink color you chose so they can ask for
    the other one.
 

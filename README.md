@@ -27,7 +27,7 @@ Each release also ships a `DroidProxy-arm64.zip.sha256` checksum. Unzip and drag
 - **Every model, every reasoning level** -- Fable 5, Opus 5, Sonnet 4.6, GPT 5.4, GPT 5.5, GPT 5.6 Terra, GPT 5.6 Sol, Gemini 3.1 Pro, Gemini 3 Flash, Kimi K3, and Kimi K2.6 are registered as Factory custom models with their full set of native reasoning levels. Reasoning effort is chosen per session from Droid CLI's model selector; DroidProxy preserves the selection and the bundled backend translates it to each provider's native request format.
 - **Fast Mode** -- Optional `service_tier=priority` for GPT 5.4, GPT 5.5, GPT 5.6 Terra, and GPT 5.6 Sol, toggled from the Settings window for lower-latency responses on the OpenAI Responses API.
 - **Usage tracking** -- Claude and Codex OAuth quota windows (5-hour + weekly) rendered in the **OAuth Quota Usage** section of the Settings window. Fetched directly from each provider's OAuth API (no `codex` CLI dependency) and refreshed on demand via the inline refresh button.
-- **Grok Imagine (image gen)** -- With Grok OAuth connected, DroidProxy also forwards OpenAI-compatible image requests (`POST /v1/images/generations` for `grok-imagine-*` models) to `api.x.ai` using your subscription — no `XAI_API_KEY`. Factory/Droid does not call that endpoint on its own; use the bundled skill below.
+- **Grok Imagine (image gen)** -- With Grok OAuth connected, DroidProxy also forwards OpenAI-compatible image requests (`POST /v1/images/generations` for `grok-imagine-*` models) to `api.x.ai` — no `XAI_API_KEY`. Factory/Droid does not call that endpoint on its own; use the bundled skill below.
 
 <p align="center">
   <img src="settings-screenshot.png" alt="DroidProxy Settings" width="420">
@@ -39,7 +39,7 @@ See [SETUP.md](SETUP.md) for authentication and manual Factory configuration ins
 
 ### Grok image generation skill
 
-If you have **Grok auth set up** in DroidProxy, you can generate images through the same proxy (subscription OAuth, not API-key billing). Grab the skill from this repo:
+If you have **Grok auth set up** in DroidProxy, you can generate images through the same proxy. Grab the skill from this repo:
 
 ```bash
 # From a clone of this repo, copy into your personal Factory skills
