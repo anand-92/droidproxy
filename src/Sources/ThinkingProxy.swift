@@ -357,17 +357,21 @@ class ThinkingProxy {
                     return
                 }
                 // Grok 4.6 Fast Mode: api.x.ai has no grok-4.6-fast. Divert to
-                // Cursor's hosted API when Fast Mode is on and a Cursor key exists.
+                // Cursor's hosted API when Fast Mode is on and Cursor is usable.
                 if let model = requestFields?.model,
                    CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(
                     model: model,
                     grok46FastMode: AppPreferences.grok46FastMode
                    ) {
-                    guard loadCursorApiKey() != nil else {
+                    if let blocker = CursorModelRewriter.cursorFastPathBlocker(
+                        betaEnabled: BETA_FLAG,
+                        cursorEnabled: isCursorEnabled(),
+                        hasCursorApiKey: loadCursorApiKey() != nil
+                    ) {
                         sendError(
                             to: connection,
                             statusCode: 401,
-                            message: "Grok 4.6 Fast Mode requires a Cursor API key. Enable Beta → Cursor and add your key (api.x.ai does not offer grok-4.6-fast)."
+                            message: blocker.errorMessage
                         )
                         return
                     }

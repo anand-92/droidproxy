@@ -49,6 +49,32 @@ final class CursorModelRewriterTests: XCTestCase {
         )
     }
 
+    func testCursorFastPathRequiresBetaCursorAndApiKey() {
+        XCTAssertEqual(
+            CursorModelRewriter.cursorFastPathBlocker(
+                betaEnabled: false, cursorEnabled: true, hasCursorApiKey: true
+            ),
+            .betaDisabled
+        )
+        XCTAssertEqual(
+            CursorModelRewriter.cursorFastPathBlocker(
+                betaEnabled: true, cursorEnabled: false, hasCursorApiKey: true
+            ),
+            .cursorDisabled
+        )
+        XCTAssertEqual(
+            CursorModelRewriter.cursorFastPathBlocker(
+                betaEnabled: true, cursorEnabled: true, hasCursorApiKey: false
+            ),
+            .missingApiKey
+        )
+        XCTAssertNil(
+            CursorModelRewriter.cursorFastPathBlocker(
+                betaEnabled: true, cursorEnabled: true, hasCursorApiKey: true
+            )
+        )
+    }
+
     func testUnknownCursorIdsPassThrough() {
         XCTAssertEqual(
             CursorModelRewriter.resolveUpstreamModel("cursor-small", grok46FastMode: true),

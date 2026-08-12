@@ -32,4 +32,34 @@ enum CursorModelRewriter {
     static func shouldDivertGrokOAuthToCursorFast(model: String, grok46FastMode: Bool) -> Bool {
         grok46FastMode && model == grok46Model
     }
+
+    /// Why the Cursor fast path cannot be used. Same gates as the normal Cursor
+    /// provider path (`BETA_FLAG`, Cursor enabled, API key present).
+    enum CursorFastPathBlocker: Equatable {
+        case betaDisabled
+        case cursorDisabled
+        case missingApiKey
+
+        var errorMessage: String {
+            switch self {
+            case .betaDisabled:
+                return "Grok 4.6 Fast Mode requires Beta mode. Enable Beta in DroidProxy settings and add a Cursor API key (api.x.ai does not offer grok-4.6-fast)."
+            case .cursorDisabled:
+                return "Grok 4.6 Fast Mode requires the Cursor provider. Enable Cursor in DroidProxy settings."
+            case .missingApiKey:
+                return "Grok 4.6 Fast Mode requires a Cursor API key. Enable Beta → Cursor and add your key (api.x.ai does not offer grok-4.6-fast)."
+            }
+        }
+    }
+
+    static func cursorFastPathBlocker(
+        betaEnabled: Bool,
+        cursorEnabled: Bool,
+        hasCursorApiKey: Bool
+    ) -> CursorFastPathBlocker? {
+        if !betaEnabled { return .betaDisabled }
+        if !cursorEnabled { return .cursorDisabled }
+        if !hasCursorApiKey { return .missingApiKey }
+        return nil
+    }
 }
