@@ -51,7 +51,7 @@ Or open [`skills/grok-imagine/SKILL.md`](skills/grok-imagine/SKILL.md) and keep 
 
 Then in Droid, ask to generate an image (or invoke the skill). The skill shells `POST http://localhost:8317/v1/images/generations` with model `grok-imagine-image` / `grok-imagine-image-quality`; ThinkingProxy injects your Grok OAuth token and forwards to xAI.
 
-**Requirements:** DroidProxy running, Grok connected in Settings. Image gen is separate from chat — selecting “DroidProxy: Grok 4.5” alone does not generate images.
+**Requirements:** DroidProxy running, Grok connected in Settings. Image gen is separate from chat — selecting “DroidProxy: Grok 4.6” alone does not generate images.
 
 ## Requirements
 

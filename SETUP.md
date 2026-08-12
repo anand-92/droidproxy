@@ -16,11 +16,11 @@
 Only these selected Copilot models are written into `~/.factory/settings.json`. The gateway runs locally on `127.0.0.1:8319`; no Copilot credential is added to Factory settings.
 GitHub Copilot support requires Node.js 20 or later so DroidProxy can run the maintained local gateway. Node.js 22.13 or later additionally enables the gateway's local usage storage.
 
-For **Grok 4.5** (SuperGrok / X Premium+ OAuth → `api.x.ai`):
+For **Grok 4.6** (SuperGrok / X Premium+ OAuth → `api.x.ai`):
 
 1. Connect **Grok** in Settings (device-code browser login)
-2. Click **Apply** / **Re-apply** under Factory models (registers `custom:droidproxy:grok-4.5`)
-3. In Droid, `/model` → **DroidProxy: Grok 4.5**
+2. Click **Apply** / **Re-apply** under Factory models (registers `custom:droidproxy:grok-4.6`)
+3. In Droid, `/model` → **DroidProxy: Grok 4.6**
 
 > Note: some SuperGrok tiers return HTTP 403 on the OAuth API surface even after a successful login. Fallback is an `XAI_API_KEY` via Factory BYOK.
 

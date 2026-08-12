@@ -8,12 +8,12 @@ final class CursorModelRewriterTests: XCTestCase {
             "composer-2.5"
         )
         XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5"),
-            "grok-4.5"
+            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.6"),
+            "grok-4.6"
         )
         XCTAssertEqual(
-            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.5-fast"),
-            "grok-4.5-fast"
+            CursorModelRewriter.resolveUpstreamModel("cursor-grok-4.6-fast"),
+            "grok-4.6-fast"
         )
     }
 
