@@ -4,7 +4,7 @@ import XCTest
 final class GrokRequestSanitizerTests: XCTestCase {
     func testRemapsCustomToolToFunction() throws {
         let request = """
-        {"model":"grok-4.5","input":"hi","tools":[{"type":"custom","name":"Read","description":"Read a file","parameters":{"type":"object","properties":{"path":{"type":"string"}}}}]}
+        {"model":"grok-4.6","input":"hi","tools":[{"type":"custom","name":"Read","description":"Read a file","parameters":{"type":"object","properties":{"path":{"type":"string"}}}}]}
         """
 
         let sanitized = GrokRequestSanitizer.sanitize(request)
@@ -20,7 +20,7 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testFlattensChatCompletionsFunctionWrapper() throws {
         let request = """
-        {"model":"grok-4.5","tools":[{"type":"function","function":{"name":"Bash","description":"Run","parameters":{"type":"object","properties":{}}}}]}
+        {"model":"grok-4.6","tools":[{"type":"function","function":{"name":"Bash","description":"Run","parameters":{"type":"object","properties":{}}}}]}
         """
 
         let sanitized = GrokRequestSanitizer.sanitize(request)
@@ -34,7 +34,7 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testKeepsBuiltinSearchTools() throws {
         let request = """
-        {"model":"grok-4.5","tools":[{"type":"web_search"},{"type":"x_search"},{"type":"function","name":"Read","parameters":{"type":"object","properties":{}}}]}
+        {"model":"grok-4.6","tools":[{"type":"web_search"},{"type":"x_search"},{"type":"function","name":"Read","parameters":{"type":"object","properties":{}}}]}
         """
 
         let sanitized = GrokRequestSanitizer.sanitize(request)
@@ -48,7 +48,7 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testDropsUnknownToolTypes() throws {
         let request = """
-        {"model":"grok-4.5","tools":[{"type":"computer_use_preview"},{"type":"function","name":"Read","parameters":{"type":"object","properties":{}}}]}
+        {"model":"grok-4.6","tools":[{"type":"computer_use_preview"},{"type":"function","name":"Read","parameters":{"type":"object","properties":{}}}]}
         """
 
         let sanitized = GrokRequestSanitizer.sanitize(request)
@@ -60,23 +60,23 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testRemovesToolsKeyWhenAllDropped() throws {
         let request = """
-        {"model":"grok-4.5","input":"hi","tools":[{"type":"computer_use_preview"}]}
+        {"model":"grok-4.6","input":"hi","tools":[{"type":"computer_use_preview"}]}
         """
 
         let sanitized = GrokRequestSanitizer.sanitize(request)
         let root = try XCTUnwrap(jsonObject(sanitized))
         XCTAssertNil(root["tools"])
-        XCTAssertEqual(root["model"] as? String, "grok-4.5")
+        XCTAssertEqual(root["model"] as? String, "grok-4.6")
     }
 
     func testLeavesBodyWithoutToolsUnchanged() {
-        let request = #"{"model":"grok-4.5","input":"hello"}"#
+        let request = #"{"model":"grok-4.6","input":"hello"}"#
         XCTAssertEqual(GrokRequestSanitizer.sanitize(request), request)
     }
 
     func testRewritesCustomToolChoice() throws {
         let request = """
-        {"model":"grok-4.5","tool_choice":{"type":"custom","name":"Read"},"tools":[{"type":"custom","name":"Read","parameters":{"type":"object","properties":{}}}]}
+        {"model":"grok-4.6","tool_choice":{"type":"custom","name":"Read"},"tools":[{"type":"custom","name":"Read","parameters":{"type":"object","properties":{}}}]}
         """
 
         let sanitized = GrokRequestSanitizer.sanitize(request)
@@ -88,7 +88,7 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testFlattensNestedFunctionToolChoice() throws {
         let request = """
-        {"model":"grok-4.5","tool_choice":{"type":"function","function":{"name":"Read"}},"tools":[{"type":"function","name":"Read","parameters":{"type":"object","properties":{}}}]}
+        {"model":"grok-4.6","tool_choice":{"type":"function","function":{"name":"Read"}},"tools":[{"type":"function","name":"Read","parameters":{"type":"object","properties":{}}}]}
         """
         let sanitized = GrokRequestSanitizer.sanitize(request)
         let root = try XCTUnwrap(jsonObject(sanitized))
@@ -100,7 +100,7 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testMapsInputSchemaToParameters() throws {
         let request = """
-        {"model":"grok-4.5","tools":[{"type":"custom","name":"Read","input_schema":{"type":"object","properties":{"path":{"type":"string"}}}}]}
+        {"model":"grok-4.6","tools":[{"type":"custom","name":"Read","input_schema":{"type":"object","properties":{"path":{"type":"string"}}}}]}
         """
         let sanitized = GrokRequestSanitizer.sanitize(request)
         let root = try XCTUnwrap(jsonObject(sanitized))
@@ -113,7 +113,7 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testDropsNamelessCustomToolAndDefaultsEmptyParameters() throws {
         let request = """
-        {"model":"grok-4.5","tools":[{"type":"custom","description":"no name"},{"type":"function","name":"Bare"}]}
+        {"model":"grok-4.6","tools":[{"type":"custom","description":"no name"},{"type":"function","name":"Bare"}]}
         """
         let sanitized = GrokRequestSanitizer.sanitize(request)
         let root = try XCTUnwrap(jsonObject(sanitized))
@@ -130,10 +130,10 @@ final class GrokRequestSanitizerTests: XCTestCase {
     }
 
     func testDropsOrphanedStringToolChoiceWithoutTools() throws {
-        let request = #"{"model":"grok-4.5","tool_choice":"auto","parallel_tool_calls":true}"#
+        let request = #"{"model":"grok-4.6","tool_choice":"auto","parallel_tool_calls":true}"#
         let sanitized = GrokRequestSanitizer.sanitize(request)
         let root = try XCTUnwrap(jsonObject(sanitized))
-        XCTAssertEqual(root["model"] as? String, "grok-4.5")
+        XCTAssertEqual(root["model"] as? String, "grok-4.6")
         XCTAssertNil(root["tool_choice"])
         XCTAssertNil(root["parallel_tool_calls"])
         XCTAssertNil(root["tools"])
@@ -141,7 +141,7 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testConvertsCustomToolCallInputItems() throws {
         let request = """
-        {"model":"grok-4.5","input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]},{"type":"custom_tool_call","call_id":"c0","name":"ApplyPatch","input":"*** Begin Patch"},{"type":"custom_tool_call_output","call_id":"c0","output":"done"}],"tools":[],"tool_choice":"auto","parallel_tool_calls":true}
+        {"model":"grok-4.6","input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]},{"type":"custom_tool_call","call_id":"c0","name":"ApplyPatch","input":"*** Begin Patch"},{"type":"custom_tool_call_output","call_id":"c0","output":"done"}],"tools":[],"tool_choice":"auto","parallel_tool_calls":true}
         """
 
         let sanitized = GrokRequestSanitizer.sanitize(request)
@@ -164,7 +164,7 @@ final class GrokRequestSanitizerTests: XCTestCase {
 
     func testCustomToolCallObjectInputBecomesArgumentsString() throws {
         let request = """
-        {"model":"grok-4.5","input":[{"type":"custom_tool_call","call_id":"c1","name":"Read","input":{"file_path":"/tmp/a"}}]}
+        {"model":"grok-4.6","input":[{"type":"custom_tool_call","call_id":"c1","name":"Read","input":{"file_path":"/tmp/a"}}]}
         """
         let sanitized = GrokRequestSanitizer.sanitize(request)
         let root = try XCTUnwrap(jsonObject(sanitized))
@@ -176,13 +176,13 @@ final class GrokRequestSanitizerTests: XCTestCase {
     }
 
     func testLeavesExistingFunctionCallInputUnchanged() throws {
-        let request = #"{"model":"grok-4.5","input":[{"type":"function_call","call_id":"f0","name":"Read","arguments":"{}"}]}"#
+        let request = #"{"model":"grok-4.6","input":[{"type":"function_call","call_id":"f0","name":"Read","arguments":"{}"}]}"#
         XCTAssertEqual(GrokRequestSanitizer.sanitize(request), request)
     }
 
     func testKeepsStringToolChoiceWhenToolsPresent() throws {
         let request = """
-        {"model":"grok-4.5","tool_choice":"auto","tools":[{"type":"function","name":"Read","parameters":{"type":"object","properties":{}}}]}
+        {"model":"grok-4.6","tool_choice":"auto","tools":[{"type":"function","name":"Read","parameters":{"type":"object","properties":{}}}]}
         """
         let sanitized = GrokRequestSanitizer.sanitize(request)
         let root = try XCTUnwrap(jsonObject(sanitized))
