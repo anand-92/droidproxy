@@ -356,6 +356,40 @@ class ThinkingProxy {
                     sendError(to: connection, statusCode: 400, message: "Grok provider is disabled in DroidProxy settings.")
                     return
                 }
+                // Grok 4.6 Fast Mode: api.x.ai has no grok-4.6-fast. Divert to
+                // Cursor's hosted API when Fast Mode is on and a Cursor key exists.
+                if let model = requestFields?.model,
+                   CursorModelRewriter.shouldDivertGrokOAuthToCursorFast(
+                    model: model,
+                    grok46FastMode: AppPreferences.grok46FastMode
+                   ) {
+                    guard loadCursorApiKey() != nil else {
+                        sendError(
+                            to: connection,
+                            statusCode: 401,
+                            message: "Grok 4.6 Fast Mode requires a Cursor API key. Enable Beta → Cursor and add your key (api.x.ai does not offer grok-4.6-fast)."
+                        )
+                        return
+                    }
+                    if let modelLocation = requestFields?.modelLocation {
+                        modifiedBody.replaceSubrange(
+                            modelLocation.valueRange,
+                            with: "\"\(CursorModelRewriter.grok46FastModel)\""
+                        )
+                        ThinkingProxy.fileLog(
+                            "REWRITE MODEL: \(model) -> \(CursorModelRewriter.grok46FastModel) (Grok Fast Mode → Cursor API)"
+                        )
+                    }
+                    forwardToCursor(
+                        method: method,
+                        path: rewrittenPath,
+                        version: httpVersion,
+                        headers: headers,
+                        body: modifiedBody,
+                        originalConnection: connection
+                    )
+                    return
+                }
                 let grokBody = GrokRequestSanitizer.sanitize(modifiedBody)
                 if grokBody != modifiedBody {
                     ThinkingProxy.fileLog("SANITIZED GROK: remapped custom tools/calls and dropped unsupported fields before api.x.ai")
@@ -483,7 +517,10 @@ class ThinkingProxy {
             return nil
         }
 
-        let backendModel = CursorModelRewriter.resolveUpstreamModel(model)
+        let backendModel = CursorModelRewriter.resolveUpstreamModel(
+            model,
+            grok46FastMode: AppPreferences.grok46FastMode
+        )
         guard backendModel != model else { return nil }
 
         var result = jsonString

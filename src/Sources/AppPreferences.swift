@@ -6,6 +6,9 @@ enum AppPreferences {
     static let gpt56TerraFastModeKey = "gpt56TerraFastMode"
     static let gpt56SolFastModeKey = "gpt56SolFastMode"
     static let gpt56LunaFastModeKey = "gpt56LunaFastMode"
+    /// Grok 4.6 Fast Mode (model-id rewrite to grok-4.6-fast via Cursor API).
+    /// Default is off — same opt-in pattern as Codex GPT Fast Mode keys.
+    static let grok46FastModeKey = "grok46FastMode"
     static let allowRemoteKey = "allowRemote"
     static let secretKeyKey = "secretKey"
     static let bindAddressKey = "bindAddress"
@@ -20,6 +23,7 @@ enum AppPreferences {
     static let defaultGpt56TerraFastMode = false
     static let defaultGpt56SolFastMode = false
     static let defaultGpt56LunaFastMode = false
+    static let defaultGrok46FastMode = false
     static let defaultAllowRemote = false
     static let defaultSecretKey = ""
     static let defaultBindAddress = "127.0.0.1"
@@ -49,6 +53,10 @@ enum AppPreferences {
 
     static var gpt56LunaFastMode: Bool {
         UserDefaults.standard.bool(forKey: gpt56LunaFastModeKey)
+    }
+
+    static var grok46FastMode: Bool {
+        UserDefaults.standard.bool(forKey: grok46FastModeKey)
     }
 
     static var allowRemote: Bool {

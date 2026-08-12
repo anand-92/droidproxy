@@ -22,6 +22,8 @@ For **Grok 4.6** (SuperGrok / X Premium+ OAuth → `api.x.ai`):
 2. Click **Apply** / **Re-apply** under Factory models (registers `custom:droidproxy:grok-4.6`)
 3. In Droid, `/model` → **DroidProxy: Grok 4.6**
 
+Optional **Grok 4.6 Fast Mode** (Settings → Grok): rewrites `grok-4.6` → `grok-4.6-fast` through the Cursor API. Enable Beta → Cursor and add a Cursor API key first; `api.x.ai` does not offer `grok-4.6-fast`. Default off.
+
 > Note: some SuperGrok tiers return HTTP 403 on the OAuth API surface even after a successful login. Fallback is an `XAI_API_KEY` via Factory BYOK.
 
 ### Grok Imagine (image generation)
