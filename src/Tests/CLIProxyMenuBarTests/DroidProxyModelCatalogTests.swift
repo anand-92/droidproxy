@@ -92,6 +92,20 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(gemini["supportedReasoningEfforts"] as? [String], ["high"])
     }
 
+    func testGemini37FlashHighUsesAntigravityModelMetadata() throws {
+        let gemini = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:gemini-3.7-flash-high"))
+
+        XCTAssertEqual(gemini["model"] as? String, "gemini-3.7-flash-high")
+        XCTAssertEqual(gemini["provider"] as? String, "openai")
+        XCTAssertEqual(gemini["baseUrl"] as? String, "http://localhost:8317/v1")
+        XCTAssertEqual(gemini["displayName"] as? String, "DroidProxy: Antigravity: Gemini 3.7 Flash (High)")
+        XCTAssertEqual(gemini["maxOutputTokens"] as? Int, 65536)
+        XCTAssertNil(gemini["enableThinking"])
+        XCTAssertNil(gemini["reasoningEffort"])
+        XCTAssertNil(gemini["defaultReasoningEffort"])
+        XCTAssertNil(gemini["supportedReasoningEfforts"])
+    }
+
     func testGrok46UsesOpenAIProviderAndApiXAIProxy() throws {
         let grok = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.6"))
 
