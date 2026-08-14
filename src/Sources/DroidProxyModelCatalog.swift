@@ -300,9 +300,7 @@ enum DroidProxyModelCatalog {
             antigravityModel(
                 baseModel: "gemini-3.7-flash-high",
                 idSlug: "gemini-3.7-flash-high",
-                displayName: "Gemini 3.7 Flash (High)",
-                levels: [],
-                defaultLevelValue: ""
+                displayName: "Gemini 3.7 Flash (High)"
             ),
             antigravityModel(
                 baseModel: "gemini-3.1-flash-lite",
