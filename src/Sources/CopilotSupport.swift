@@ -455,11 +455,15 @@ final class CopilotGatewayManager: ObservableObject {
         environment["HOST"] = "127.0.0.1"
         environment["NO_UPDATE_NOTIFIER"] = "true"
 
+        // Prepend unconditionally: an earlier PATH entry holding a different node
+        // would otherwise win the shebang lookup and pair the wrong runtime with
+        // the npx that was chosen.
         let binDirectory = npxURL.deletingLastPathComponent().path
-        let existingPath = environment["PATH"] ?? ""
-        if !existingPath.split(separator: ":").contains(where: { $0 == binDirectory }) {
-            environment["PATH"] = existingPath.isEmpty ? binDirectory : "\(binDirectory):\(existingPath)"
-        }
+        let remainingEntries = (environment["PATH"] ?? "")
+            .split(separator: ":", omittingEmptySubsequences: true)
+            .filter { $0 != binDirectory }
+        environment["PATH"] = ([binDirectory] + remainingEntries.map(String.init))
+            .joined(separator: ":")
         return environment
     }
 
