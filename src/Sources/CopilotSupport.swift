@@ -104,7 +104,7 @@ enum CopilotGatewayError: LocalizedError {
     case notAuthenticated
     case gatewayNotRunning
     case failedToStart(String)
-    case authenticationFailed
+    case authenticationFailed(String?)
     case invalidModelResponse
     case requestFailed
 
@@ -118,8 +118,11 @@ enum CopilotGatewayError: LocalizedError {
             return "The local Copilot gateway is not running. Start it, then refresh models."
         case .failedToStart(let detail):
             return "Could not start the local Copilot gateway: \(detail)"
-        case .authenticationFailed:
-            return "GitHub Copilot authentication did not complete. Please try again."
+        case .authenticationFailed(let detail):
+            guard let detail, !detail.isEmpty else {
+                return "GitHub Copilot authentication did not complete. Please try again."
+            }
+            return "GitHub Copilot authentication did not complete: \(detail)"
         case .invalidModelResponse:
             return "The Copilot gateway returned an invalid model catalog."
         case .requestFailed:
@@ -211,7 +214,7 @@ final class CopilotGatewayManager: ObservableObject {
             "--port",
             String(Self.gatewayPort)
         ]
-        process.environment = Self.gatewayEnvironment()
+        process.environment = Self.gatewayEnvironment(npxURL: npxURL)
         gatewayOutputPipes = attachOutputPipes(to: process) { _ in }
 
         process.terminationHandler = { [weak self, weak process] terminatedProcess in
@@ -284,10 +287,12 @@ final class CopilotGatewayManager: ObservableObject {
             "--provider",
             "copilot"
         ]
-        process.environment = Self.gatewayEnvironment()
+        process.environment = Self.gatewayEnvironment(npxURL: npxURL)
 
         let promptCapture = DeviceCodeCapture(onDeviceCode: onDeviceCode)
+        let transcript = ProcessTranscript()
         authenticationOutputPipes = attachOutputPipes(to: process) { text in
+            transcript.append(text)
             promptCapture.append(text)
         }
 
@@ -302,8 +307,12 @@ final class CopilotGatewayManager: ObservableObject {
                     NotificationCenter.default.post(name: .authDirectoryChanged, object: nil)
                     completion(.success(()))
                 } else {
-                    self?.lastError = CopilotGatewayError.authenticationFailed.localizedDescription
-                    completion(.failure(CopilotGatewayError.authenticationFailed))
+                    let detail = transcript.failureDetail(exitCode: terminatedProcess.terminationStatus)
+                    NSLog("[Copilot] Device authentication failed (exit %d): %@",
+                          terminatedProcess.terminationStatus, detail ?? "no output")
+                    let error = CopilotGatewayError.authenticationFailed(detail)
+                    self?.lastError = error.localizedDescription
+                    completion(.failure(error))
                 }
             }
         }
@@ -381,6 +390,7 @@ final class CopilotGatewayManager: ObservableObject {
     }
 
     private static func npxExecutableURL() -> URL? {
+        let fileManager = FileManager.default
         var candidates = [
             "/opt/homebrew/bin/npx",
             "/usr/local/bin/npx",
@@ -391,20 +401,65 @@ final class CopilotGatewayManager: ObservableObject {
                 .split(separator: ":")
                 .map { "\($0)/npx" }
         )
+        candidates.append(contentsOf: nodeVersionManagerBinDirectories().map { "\($0)/npx" })
 
         var seen = Set<String>()
-        guard let path = candidates.first(where: {
-            seen.insert($0).inserted && FileManager.default.isExecutableFile(atPath: $0)
-        }) else {
-            return nil
+        let executables = candidates.filter {
+            seen.insert($0).inserted && fileManager.isExecutableFile(atPath: $0)
         }
+
+        // npx is a `#!/usr/bin/env node` script, so prefer an install whose own
+        // bin directory also ships node; that directory is what makes the
+        // shebang resolvable from the app's minimal PATH.
+        let preferred = executables.first {
+            let binDirectory = URL(fileURLWithPath: $0).deletingLastPathComponent().path
+            return fileManager.isExecutableFile(atPath: "\(binDirectory)/node")
+        }
+        guard let path = preferred ?? executables.first else { return nil }
         return URL(fileURLWithPath: path)
     }
 
-    private static func gatewayEnvironment() -> [String: String] {
+    /// Bin directories for the common per-user Node version managers. These are
+    /// never on a Finder-launched app's PATH, so they have to be probed directly.
+    private static func nodeVersionManagerBinDirectories() -> [String] {
+        let fileManager = FileManager.default
+        let home = fileManager.homeDirectoryForCurrentUser
+        let versionRoots = [
+            home.appendingPathComponent(".nvm/versions/node"),
+            home.appendingPathComponent(".local/share/fnm/node-versions"),
+            home.appendingPathComponent("Library/Application Support/fnm/node-versions"),
+            home.appendingPathComponent(".volta/tools/image/node")
+        ]
+
+        return versionRoots.flatMap { root -> [String] in
+            let versions = (try? fileManager.contentsOfDirectory(atPath: root.path)) ?? []
+            return versions
+                .sorted { $0.compare($1, options: .numeric) == .orderedDescending }
+                .flatMap { version in
+                    // fnm nests the install one level deeper than nvm/volta.
+                    [
+                        root.appendingPathComponent(version).appendingPathComponent("bin").path,
+                        root.appendingPathComponent(version)
+                            .appendingPathComponent("installation")
+                            .appendingPathComponent("bin").path
+                    ]
+                }
+        }
+    }
+
+    /// A Finder-launched app inherits only `/usr/bin:/bin:/usr/sbin:/sbin`, which
+    /// does not contain node. Without node's bin directory on PATH, npx's
+    /// `#!/usr/bin/env node` shebang exits 127 before the CLI ever runs.
+    private static func gatewayEnvironment(npxURL: URL) -> [String: String] {
         var environment = ProcessInfo.processInfo.environment
         environment["HOST"] = "127.0.0.1"
         environment["NO_UPDATE_NOTIFIER"] = "true"
+
+        let binDirectory = npxURL.deletingLastPathComponent().path
+        let existingPath = environment["PATH"] ?? ""
+        if !existingPath.split(separator: ":").contains(where: { $0 == binDirectory }) {
+            environment["PATH"] = existingPath.isEmpty ? binDirectory : "\(binDirectory):\(existingPath)"
+        }
         return environment
     }
 
@@ -575,6 +630,42 @@ final class CopilotGatewayManager: ObservableObject {
         return models.sorted {
             $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
         }
+    }
+}
+
+/// Retains the tail of a child process's combined output so a non-zero exit can
+/// be reported with the reason the CLI printed instead of a generic message.
+final class ProcessTranscript {
+    private static let maximumRetainedCharacters = 4_096
+    private let lock = NSLock()
+    private var buffer = ""
+
+    func append(_ text: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        buffer += text
+        if buffer.count > Self.maximumRetainedCharacters {
+            buffer = String(buffer.suffix(Self.maximumRetainedCharacters))
+        }
+    }
+
+    func failureDetail(exitCode: Int32) -> String? {
+        lock.lock()
+        let text = buffer
+        lock.unlock()
+
+        let lastLine = text
+            .replacingOccurrences(
+                of: "\u{001B}\\[[0-?]*[ -/]*[@-~]",
+                with: "",
+                options: .regularExpression
+            )
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .last { !$0.isEmpty }
+
+        guard let lastLine else { return "the sign-in helper exited with code \(exitCode)." }
+        return "\(lastLine) (exit code \(exitCode))"
     }
 }
 
