@@ -11,7 +11,8 @@ import Foundation
 /// Client tools are remapped to `"function"`; unsupported tool types are dropped.
 /// Nested chat-completions function wrappers are flattened. Custom tool-call
 /// history items become `function_call` / `function_call_output` with object
-/// `arguments` (xAI rejects non-object argument values).
+/// `arguments` (xAI rejects non-object argument values). Execute/Bash/Shell
+/// schemas get a required `command` property when Factory omitted it.
 enum GrokRequestSanitizer {
     /// Tool `type` values accepted by api.x.ai Responses (from the 422 allowlist).
     static let allowedToolTypes: Set<String> = [
@@ -31,6 +32,8 @@ enum GrokRequestSanitizer {
         "type": "object",
         "properties": [:] as [String: Any]
     ]
+
+    static let executeToolNames: Set<String> = ["Execute", "Bash", "Shell"]
 
     /// Returns a body safe for api.x.ai, or the original string when unchanged / unparseable.
     /// Re-serialization may reorder JSON keys (acceptable for api.x.ai; not used on Anthropic paths).
@@ -143,7 +146,10 @@ enum GrokRequestSanitizer {
             case "custom_tool_call":
                 item["type"] = "function_call"
                 if item["input"] != nil {
-                    item["arguments"] = customToolCallArgumentsJSON(item["input"])
+                    item["arguments"] = customToolCallArgumentsJSON(
+                        item["input"],
+                        toolName: item["name"] as? String
+                    )
                     item.removeValue(forKey: "input")
                 } else if item["arguments"] == nil {
                     item["arguments"] = "{}"
@@ -197,7 +203,59 @@ enum GrokRequestSanitizer {
             flat["strict"] = strict
         }
 
+        ensureKnownToolParameters(&flat)
         return flat
+    }
+
+    /// Grok often calls Execute with only `summary` when `command` is missing
+    /// from the schema (or buried). Pin the required field on the way out.
+    @discardableResult
+    static func ensureKnownToolParameters(_ tool: inout [String: Any]) -> Bool {
+        guard let name = tool["name"] as? String else { return false }
+        var params = tool["parameters"] as? [String: Any] ?? ["type": "object"]
+        var props = params["properties"] as? [String: Any] ?? [:]
+        var required = params["required"] as? [String] ?? []
+        var changed = false
+
+        func ensureProperty(_ key: String, description: String) {
+            if props[key] == nil {
+                props[key] = [
+                    "type": "string",
+                    "description": description
+                ]
+                changed = true
+            }
+            if !required.contains(key) {
+                required.insert(key, at: 0)
+                changed = true
+            }
+        }
+
+        if executeToolNames.contains(name) {
+            let wasMissing = props["command"] == nil || !required.contains("command")
+            ensureProperty(
+                "command",
+                description: "The exact shell command to run. Required. Never omit this field or replace it with summary."
+            )
+            if wasMissing {
+                let suffix = " The command field is required and must be the exact shell string; summary is optional metadata only."
+                if let description = tool["description"] as? String,
+                   !description.contains("command field is required") {
+                    tool["description"] = description + suffix
+                    changed = true
+                } else if tool["description"] == nil {
+                    tool["description"] = "Run a shell command." + suffix
+                    changed = true
+                }
+            }
+        }
+
+        guard changed else { return false }
+        params["type"] = "object"
+        params["properties"] = props
+        params["required"] = required
+        tool["parameters"] = params
+        return true
     }
 
     /// Returns a rewritten tool_choice when `custom` must become `function`; nil if unchanged.
@@ -250,7 +308,7 @@ enum GrokRequestSanitizer {
     }
 
     /// Wrap freeform custom-tool `input` into a JSON-object arguments string.
-    private static func customToolCallArgumentsJSON(_ value: Any?) -> String {
+    private static func customToolCallArgumentsJSON(_ value: Any?, toolName: String? = nil) -> String {
         guard let value else { return "{}" }
 
         if let text = value as? String {
@@ -260,7 +318,8 @@ enum GrokRequestSanitizer {
                (try? JSONSerialization.jsonObject(with: data)) is [String: Any] {
                 return trimmed
             }
-            if let encoded = jsonString(["input": text]) {
+            let key = executeToolNames.contains(toolName ?? "") ? "command" : "input"
+            if let encoded = jsonString([key: text]) {
                 return encoded
             }
             return "{}"
