@@ -120,6 +120,13 @@ final class GrokEndFeatureRunRepairTests: XCTestCase {
         XCTAssertNil(repaired.arguments["command"])
     }
 
+    func testDoesNotInferExecuteFromSummaryAlone() {
+        let inferred = GrokEndFeatureRunRepair.repairArgumentsJSONInferred(
+            argumentsJSON: #"{"summary":"pwd"}"#
+        )
+        XCTAssertNil(inferred)
+    }
+
     func testExtractsFencedCommandFromAssistantText() {
         let repaired = GrokEndFeatureRunRepair.repair(
             name: "Execute",

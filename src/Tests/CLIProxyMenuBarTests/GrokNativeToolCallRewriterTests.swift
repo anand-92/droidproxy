@@ -206,7 +206,7 @@ final class GrokNativeToolCallRewriterTests: XCTestCase {
 
         let rewritten = GrokNativeToolCallRewriter.rewriteHTTPResponse(raw)
         XCTAssertNotEqual(rewritten, raw)
-        let text = String(decoding: rewritten, as: UTF8.self)
+        let text = try XCTUnwrap(String(data: rewritten, encoding: .utf8))
         XCTAssertTrue(text.contains("tool_calls"))
         XCTAssertTrue(text.contains("atlas-builder"))
         XCTAssertTrue(text.contains("Content-Length:"))
@@ -218,5 +218,36 @@ final class GrokNativeToolCallRewriterTests: XCTestCase {
         var raw = Data("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(json.utf8.count)\r\n\r\n".utf8)
         raw.append(Data(json.utf8))
         XCTAssertEqual(GrokNativeToolCallRewriter.rewriteHTTPResponse(raw), raw)
+    }
+
+    func testRewritesChunkedSSEHTTPResponseAndRebuildsContentLength() throws {
+        let sse = """
+        data: {"id":"chatcmpl_1","object":"chat.completion.chunk","created":1,"model":"grok-4.6-fast","choices":[{"index":0,"delta":{"role":"assistant","content":"Working."},"finish_reason":null}]}
+
+        data: {"id":"chatcmpl_1","object":"chat.completion.chunk","created":1,"model":"grok-4.6-fast","choices":[{"index":0,"delta":{"content":"<|tool_calls_begin|><|tool_call_begin|>\\nExecute\\n<|tool_sep|>command\\nls\\n<|tool_call_end|><|tool_calls_end|>"},"finish_reason":null}]}
+
+        data: {"id":"chatcmpl_1","object":"chat.completion.chunk","created":1,"model":"grok-4.6-fast","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+        data: [DONE]
+
+        """
+        let body = Data(sse.utf8)
+        var chunked = Data()
+        chunked.append(Data("\(String(body.count, radix: 16))\r\n".utf8))
+        chunked.append(body)
+        chunked.append(Data("\r\n0\r\n\r\n".utf8))
+
+        var raw = Data("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nTransfer-Encoding: chunked\r\n\r\n".utf8)
+        raw.append(chunked)
+
+        let rewritten = GrokNativeToolCallRewriter.rewriteHTTPResponse(raw)
+        XCTAssertNotEqual(rewritten, raw)
+        let text = try XCTUnwrap(String(data: rewritten, encoding: .utf8))
+        XCTAssertTrue(text.contains("Content-Type: text/event-stream"))
+        XCTAssertTrue(text.contains("Content-Length:"))
+        XCTAssertFalse(text.contains("Transfer-Encoding:"))
+        XCTAssertTrue(text.contains("\"finish_reason\":\"tool_calls\""))
+        XCTAssertTrue(text.contains("\"name\":\"Execute\""))
+        XCTAssertFalse(text.contains("tool_calls_begin"))
     }
 }

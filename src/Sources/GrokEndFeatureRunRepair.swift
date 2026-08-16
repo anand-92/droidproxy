@@ -537,13 +537,13 @@ enum GrokEndFeatureRunRepair {
         return Repair(arguments: args, changed: false, notes: [])
     }
 
+    /// Infer Execute only from a command-shaped field. `summary` / `riskLevel`
+    /// alone are too common on other tools and must not steal the repair path.
     private static func looksLikeExecute(_ object: [String: Any]) -> Bool {
         object["cmd"] != nil
             || object["shell"] != nil
             || object["bash"] != nil
             || object["script"] != nil
-            || object["summary"] != nil
-            || object["riskLevel"] != nil
             || object["command"] != nil
     }
 

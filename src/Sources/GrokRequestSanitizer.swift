@@ -33,7 +33,7 @@ enum GrokRequestSanitizer {
         "properties": [:] as [String: Any]
     ]
 
-    static let executeToolNames: Set<String> = ["Execute", "Bash", "Shell"]
+    static let executeToolNames = GrokEndFeatureRunRepair.executeToolNames
 
     /// Returns a body safe for api.x.ai, or the original string when unchanged / unparseable.
     /// Re-serialization may reorder JSON keys (acceptable for api.x.ai; not used on Anthropic paths).

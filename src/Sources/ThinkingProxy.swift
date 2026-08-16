@@ -1112,7 +1112,10 @@ class ThinkingProxy {
             switch state {
             case .ready:
                 var forwardedRequest = "\(method) \(path) \(version)\r\n"
-                let excludedHeaders: Set<String> = ["host", "content-length", "connection", "transfer-encoding", "authorization"]
+                var excludedHeaders: Set<String> = ["host", "content-length", "connection", "transfer-encoding", "authorization"]
+                if rewriteGrokNativeToolCalls {
+                    excludedHeaders.insert("accept-encoding")
+                }
                 for (name, value) in headers {
                     if !excludedHeaders.contains(name.lowercased()) {
                         forwardedRequest += "\(name): \(value)\r\n"
@@ -1121,6 +1124,9 @@ class ThinkingProxy {
                 
                 forwardedRequest += "Host: \(cursorHost)\r\n"
                 forwardedRequest += "Authorization: Bearer \(apiKey)\r\n"
+                if rewriteGrokNativeToolCalls {
+                    forwardedRequest += "Accept-Encoding: identity\r\n"
+                }
                 forwardedRequest += "Connection: close\r\n"
                 forwardedRequest += "Content-Length: \(body.utf8.count)\r\n\r\n"
                 forwardedRequest += body
@@ -1492,6 +1498,10 @@ class ThinkingProxy {
         }
     }
 
+    /// Upper bound for buffered Grok rewriting. Beyond this we stop buffering
+    /// and relay the remaining bytes unchanged.
+    private static let grokRewriteBufferLimit = 8 * 1024 * 1024
+
     /// Buffer a Grok/Cursor-Grok response so native `<|tool_calls_begin|>` markup
     /// can be lifted into OpenAI `tool_calls` before Factory sees the stream.
     private func accumulateAndRewriteGrokResponse(
@@ -1517,6 +1527,19 @@ class ThinkingProxy {
             var next = accumulated
             if let data, !data.isEmpty {
                 next.append(data)
+            }
+
+            if next.count > Self.grokRewriteBufferLimit {
+                ThinkingProxy.fileLog("GROK REWRITE ABORTED: response exceeded \(Self.grokRewriteBufferLimit) bytes; relaying unchanged")
+                originalConnection.send(content: next, completion: .contentProcessed({ _ in
+                    self.relayUpstreamResponse(
+                        from: targetConnection,
+                        originalConnection: originalConnection,
+                        label: label,
+                        rewriteGrokNativeToolCalls: false
+                    )
+                }))
+                return
             }
 
             if isComplete {
