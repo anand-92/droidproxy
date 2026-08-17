@@ -18,6 +18,21 @@ final class GrokRequestSanitizerTests: XCTestCase {
         XCTAssertFalse(sanitized.contains("\"type\":\"custom\""))
     }
 
+    func testPinsRequiredCommandOnExecuteSchema() throws {
+        let request = """
+        {"model":"grok-4.6","tools":[{"type":"custom","name":"Execute","description":"Run a command","parameters":{"type":"object","properties":{"summary":{"type":"string"}}}}]}
+        """
+        let sanitized = GrokRequestSanitizer.sanitize(request)
+        let root = try XCTUnwrap(jsonObject(sanitized))
+        let tools = try XCTUnwrap(root["tools"] as? [[String: Any]])
+        let parameters = try XCTUnwrap(tools[0]["parameters"] as? [String: Any])
+        let properties = try XCTUnwrap(parameters["properties"] as? [String: Any])
+        let required = try XCTUnwrap(parameters["required"] as? [String])
+        XCTAssertNotNil(properties["command"])
+        XCTAssertTrue(required.contains("command"))
+        XCTAssertTrue((tools[0]["description"] as? String)?.contains("command field is required") == true)
+    }
+
     func testFlattensChatCompletionsFunctionWrapper() throws {
         let request = """
         {"model":"grok-4.6","tools":[{"type":"function","function":{"name":"Bash","description":"Run","parameters":{"type":"object","properties":{}}}}]}
@@ -160,6 +175,19 @@ final class GrokRequestSanitizerTests: XCTestCase {
         XCTAssertNil(root["tools"])
         XCTAssertNil(root["tool_choice"])
         XCTAssertNil(root["parallel_tool_calls"])
+    }
+
+    func testExecuteCustomToolCallStringInputBecomesCommand() throws {
+        let request = """
+        {"model":"grok-4.6","input":[{"type":"custom_tool_call","call_id":"c2","name":"Execute","input":"pwd"}]}
+        """
+        let sanitized = GrokRequestSanitizer.sanitize(request)
+        let root = try XCTUnwrap(jsonObject(sanitized))
+        let input = try XCTUnwrap(root["input"] as? [[String: Any]])
+        let arguments = try XCTUnwrap(input[0]["arguments"] as? String)
+        let argsObj = try XCTUnwrap(jsonObject(arguments))
+        XCTAssertEqual(argsObj["command"] as? String, "pwd")
+        XCTAssertNil(argsObj["input"])
     }
 
     func testCustomToolCallObjectInputBecomesArgumentsString() throws {
