@@ -8,11 +8,15 @@ import Network
  into request bodies. It still:
 
  - Rewrites the Anthropic-Beta header to drop `redact-thinking-2026-02-12` when a Claude
-   request enables thinking, so Claude emits visible thinking blocks.
+   request enables thinking, so Claude emits visible thinking blocks. Always strips
+   `fast-mode-*` on Claude requests so CLIProxyAPI does not treat seat-cap 429s as
+   request-scoped (Claude has no Fast mode).
  - Injects `service_tier: "priority"` for OpenAI Responses API requests on the user-enabled
    GPT 5.x fast-mode models (these toggles are independent of reasoning effort).
  - Rewrites Gemini `/v1/responses` to `/v1/chat/completions` since the backend does not
    support Gemini via the Responses API endpoint.
+ - Rewrites Grok native `<|tool_calls_begin|>` markup leaked into chat-completion
+   content into OpenAI `tool_calls` so Factory's generic OpenAI adapter executes them.
 
  JSON edits and hot-path inspections are surgical (no full JSON re-serialization) so
  Anthropic prompt-cache key ordering is preserved and large prompts avoid parse overhead.
@@ -47,21 +51,6 @@ class ThinkingProxy {
         }
     }
 
-    private enum Config {
-        static let anthropicVersion = "2023-06-01"
-        static let claudeRedactedThinkingBeta = "redact-thinking-2026-02-12"
-        static let claudeVisibleThinkingBetas = [
-            "claude-code-20250219",
-            "oauth-2025-04-20",
-            "interleaved-thinking-2025-05-14",
-            "context-management-2025-06-27",
-            "prompt-caching-scope-2026-01-05",
-            "structured-outputs-2025-12-15",
-            "fast-mode-2026-02-01",
-            "token-efficient-tools-2026-03-28"
-        ]
-    }
-    
     /**
      Starts the thinking proxy server on port 8317
      */
@@ -330,11 +319,25 @@ class ThinkingProxy {
                     sendError(to: connection, statusCode: 400, message: "Cursor provider is disabled in DroidProxy settings.")
                     return
                 }
+                let catalogModel = requestFields?.model
                 if let result = rewriteCursorModelAlias(jsonString: modifiedBody, fields: requestFields) {
                     modifiedBody = result
                     requestFields = inspectRequestJSONFields(in: modifiedBody)
                 }
-                forwardToCursor(method: method, path: rewrittenPath, version: httpVersion, headers: headers, body: modifiedBody, originalConnection: connection)
+                // Check catalog id (`cursor-grok-4.6`) and upstream id (`grok-4.6`)
+                // so alias rewrite cannot drop the native-markup buffer.
+                let rewriteGrokNativeToolCalls =
+                    GrokNativeToolCallRewriter.shouldRewrite(model: catalogModel)
+                    || GrokNativeToolCallRewriter.shouldRewrite(model: requestFields?.model)
+                forwardToCursor(
+                    method: method,
+                    path: rewrittenPath,
+                    version: httpVersion,
+                    headers: headers,
+                    body: modifiedBody,
+                    originalConnection: connection,
+                    rewriteGrokNativeToolCalls: rewriteGrokNativeToolCalls
+                )
                 return
             }
             if isJunieModel(requestFields) {
@@ -390,7 +393,8 @@ class ThinkingProxy {
                         version: httpVersion,
                         headers: headers,
                         body: modifiedBody,
-                        originalConnection: connection
+                        originalConnection: connection,
+                        rewriteGrokNativeToolCalls: true
                     )
                     return
                 }
@@ -437,12 +441,23 @@ class ThinkingProxy {
     }
 
     private func headersForForwarding(_ headers: [(String, String)], requestFields: RequestJSONFields?) -> [(String, String)] {
-        guard shouldRequestVisibleClaudeThinking(requestFields) else {
+        guard let model = requestFields?.model, isClaudeModel(model) else {
             return headers
         }
 
-        ThinkingProxy.fileLog("CLAUDE visible thinking enabled: removing \(Config.claudeRedactedThinkingBeta) from Anthropic-Beta")
-        return headersWithVisibleClaudeThinkingBetas(headers)
+        let visibleThinking = shouldRequestVisibleClaudeThinking(requestFields)
+        if visibleThinking {
+            ThinkingProxy.fileLog("CLAUDE visible thinking enabled: removing \(ClaudeAnthropicBetaRewriter.redactedThinkingBeta) from Anthropic-Beta")
+        }
+        if headers.contains(where: { name, value in
+            name.caseInsensitiveCompare("anthropic-beta") == .orderedSame
+                && value.split(separator: ",").contains(where: { ClaudeAnthropicBetaRewriter.isFastModeBeta(String($0)) })
+        }) {
+            NSLog("[ThinkingProxy] Stripped fast-mode beta from Anthropic-Beta so seat-cap 429s can fail over")
+            ThinkingProxy.fileLog("CLAUDE stripped fast-mode beta from Anthropic-Beta so seat-cap 429s can fail over")
+        }
+
+        return ClaudeAnthropicBetaRewriter.rewrite(headers, requestVisibleThinking: visibleThinking)
     }
 
     private func shouldRequestVisibleClaudeThinking(_ requestFields: RequestJSONFields?) -> Bool {
@@ -462,39 +477,6 @@ class ThinkingProxy {
 
     private func isClaudeModel(_ model: String) -> Bool {
         model.starts(with: "claude-") || model.starts(with: "gemini-claude-")
-    }
-
-    private func headersWithVisibleClaudeThinkingBetas(_ headers: [(String, String)]) -> [(String, String)] {
-        var forwardedHeaders: [(String, String)] = []
-        var betaCandidates: [String] = []
-
-        for (name, value) in headers {
-            if name.caseInsensitiveCompare("anthropic-beta") == .orderedSame {
-                betaCandidates.append(contentsOf: parseAnthropicBetas(value))
-                continue
-            }
-            forwardedHeaders.append((name, value))
-        }
-
-        betaCandidates.append(contentsOf: Config.claudeVisibleThinkingBetas)
-
-        var seen = Set<String>()
-        let visibleBetas = betaCandidates.compactMap { rawBeta -> String? in
-            let beta = rawBeta.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !beta.isEmpty else { return nil }
-            let normalizedBeta = beta.lowercased()
-            guard normalizedBeta != Config.claudeRedactedThinkingBeta else { return nil }
-            guard !seen.contains(normalizedBeta) else { return nil }
-            seen.insert(normalizedBeta)
-            return beta
-        }
-
-        forwardedHeaders.append(("Anthropic-Beta", visibleBetas.joined(separator: ",")))
-        return forwardedHeaders
-    }
-
-    private func parseAnthropicBetas(_ value: String) -> [String] {
-        value.split(separator: ",").map { String($0) }
     }
 
     private static let antigravityModelAliases: [String: String] = [
@@ -1103,7 +1085,15 @@ class ThinkingProxy {
         return nil
     }
 
-    private func forwardToCursor(method: String, path: String, version: String, headers: [(String, String)], body: String, originalConnection: NWConnection) {
+    private func forwardToCursor(
+        method: String,
+        path: String,
+        version: String,
+        headers: [(String, String)],
+        body: String,
+        originalConnection: NWConnection,
+        rewriteGrokNativeToolCalls: Bool = false
+    ) {
         guard let apiKey = loadCursorApiKey() else {
             NSLog("[ThinkingProxy] Error: No active Cursor API key found")
             sendError(to: originalConnection, statusCode: 401, message: "No active Cursor API key found. Please add a Cursor key in DroidProxy settings.")
@@ -1122,7 +1112,10 @@ class ThinkingProxy {
             switch state {
             case .ready:
                 var forwardedRequest = "\(method) \(path) \(version)\r\n"
-                let excludedHeaders: Set<String> = ["host", "content-length", "connection", "transfer-encoding", "authorization"]
+                var excludedHeaders: Set<String> = ["host", "content-length", "connection", "transfer-encoding", "authorization"]
+                if rewriteGrokNativeToolCalls {
+                    excludedHeaders.insert("accept-encoding")
+                }
                 for (name, value) in headers {
                     if !excludedHeaders.contains(name.lowercased()) {
                         forwardedRequest += "\(name): \(value)\r\n"
@@ -1131,6 +1124,9 @@ class ThinkingProxy {
                 
                 forwardedRequest += "Host: \(cursorHost)\r\n"
                 forwardedRequest += "Authorization: Bearer \(apiKey)\r\n"
+                if rewriteGrokNativeToolCalls {
+                    forwardedRequest += "Accept-Encoding: identity\r\n"
+                }
                 forwardedRequest += "Connection: close\r\n"
                 forwardedRequest += "Content-Length: \(body.utf8.count)\r\n\r\n"
                 forwardedRequest += body
@@ -1142,7 +1138,11 @@ class ThinkingProxy {
                             targetConnection.cancel()
                             originalConnection.cancel()
                         } else {
-                            self.receiveCursorResponse(from: targetConnection, originalConnection: originalConnection)
+                            self.receiveCursorResponse(
+                                from: targetConnection,
+                                originalConnection: originalConnection,
+                                rewriteGrokNativeToolCalls: rewriteGrokNativeToolCalls
+                            )
                         }
                     }))
                 }
@@ -1160,8 +1160,17 @@ class ThinkingProxy {
         targetConnection.start(queue: .global(qos: .userInitiated))
     }
 
-    private func receiveCursorResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
-        relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Cursor")
+    private func receiveCursorResponse(
+        from targetConnection: NWConnection,
+        originalConnection: NWConnection,
+        rewriteGrokNativeToolCalls: Bool
+    ) {
+        relayUpstreamResponse(
+            from: targetConnection,
+            originalConnection: originalConnection,
+            label: "Cursor",
+            rewriteGrokNativeToolCalls: rewriteGrokNativeToolCalls
+        )
     }
 
     // MARK: - Junie (JetBrains AI) API Proxying
@@ -1422,11 +1431,30 @@ class ThinkingProxy {
     }
 
     private func receiveGrokResponse(from targetConnection: NWConnection, originalConnection: NWConnection) {
-        relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: "Grok")
+        relayUpstreamResponse(
+            from: targetConnection,
+            originalConnection: originalConnection,
+            label: "Grok",
+            rewriteGrokNativeToolCalls: true
+        )
     }
 
     /// Shared TLS upstream → client relay used by Cursor / Junie / Grok paths.
-    private func relayUpstreamResponse(from targetConnection: NWConnection, originalConnection: NWConnection, label: String) {
+    private func relayUpstreamResponse(
+        from targetConnection: NWConnection,
+        originalConnection: NWConnection,
+        label: String,
+        rewriteGrokNativeToolCalls: Bool = false
+    ) {
+        if rewriteGrokNativeToolCalls {
+            accumulateAndRewriteGrokResponse(
+                from: targetConnection,
+                originalConnection: originalConnection,
+                label: label
+            )
+            return
+        }
+
         targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
 
@@ -1440,6 +1468,13 @@ class ThinkingProxy {
             guard let data = data, !data.isEmpty else {
                 if isComplete {
                     self.finishStreaming(target: targetConnection, client: originalConnection)
+                } else {
+                    self.relayUpstreamResponse(
+                        from: targetConnection,
+                        originalConnection: originalConnection,
+                        label: label,
+                        rewriteGrokNativeToolCalls: false
+                    )
                 }
                 return
             }
@@ -1452,10 +1487,92 @@ class ThinkingProxy {
                 if isComplete {
                     self.finishStreaming(target: targetConnection, client: originalConnection)
                 } else {
-                    self.relayUpstreamResponse(from: targetConnection, originalConnection: originalConnection, label: label)
+                    self.relayUpstreamResponse(
+                        from: targetConnection,
+                        originalConnection: originalConnection,
+                        label: label,
+                        rewriteGrokNativeToolCalls: false
+                    )
                 }
             }))
         }
+    }
+
+    /// Upper bound for buffered Grok rewriting. Beyond this we stop buffering
+    /// and relay the remaining bytes unchanged.
+    private static let grokRewriteBufferLimit = 8 * 1024 * 1024
+
+    /// Buffer a Grok/Cursor-Grok response so native `<|tool_calls_begin|>` markup
+    /// can be lifted into OpenAI `tool_calls` before Factory sees the stream.
+    private func accumulateAndRewriteGrokResponse(
+        from targetConnection: NWConnection,
+        originalConnection: NWConnection,
+        label: String,
+        accumulated: Data = Data()
+    ) {
+        targetConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                NSLog("[ThinkingProxy] Receive \(label) response error: \(error)")
+                if !accumulated.isEmpty {
+                    self.sendRewrittenGrokResponse(accumulated, to: originalConnection, target: targetConnection, label: label)
+                } else {
+                    targetConnection.cancel()
+                    originalConnection.cancel()
+                }
+                return
+            }
+
+            var next = accumulated
+            if let data, !data.isEmpty {
+                next.append(data)
+            }
+
+            if next.count > Self.grokRewriteBufferLimit {
+                ThinkingProxy.fileLog("GROK REWRITE ABORTED: response exceeded \(Self.grokRewriteBufferLimit) bytes; relaying unchanged")
+                originalConnection.send(content: next, completion: .contentProcessed({ _ in
+                    self.relayUpstreamResponse(
+                        from: targetConnection,
+                        originalConnection: originalConnection,
+                        label: label,
+                        rewriteGrokNativeToolCalls: false
+                    )
+                }))
+                return
+            }
+
+            if isComplete {
+                self.sendRewrittenGrokResponse(next, to: originalConnection, target: targetConnection, label: label)
+            } else {
+                self.accumulateAndRewriteGrokResponse(
+                    from: targetConnection,
+                    originalConnection: originalConnection,
+                    label: label,
+                    accumulated: next
+                )
+            }
+        }
+    }
+
+    private func sendRewrittenGrokResponse(
+        _ raw: Data,
+        to originalConnection: NWConnection,
+        target targetConnection: NWConnection,
+        label: String
+    ) {
+        let rewritten = GrokNativeToolCallRewriter.rewriteHTTPResponse(raw)
+        if rewritten != raw {
+            ThinkingProxy.fileLog("REWROTE \(label) GROK RESPONSE (native tool markup and/or EndFeatureRun repair)")
+            NSLog("[ThinkingProxy] Rewrote \(label) Grok response (native tool markup and/or EndFeatureRun repair)")
+        }
+
+        originalConnection.send(content: rewritten, completion: .contentProcessed({ sendError in
+            if let sendError = sendError {
+                NSLog("[ThinkingProxy] Send \(label) rewritten response error: \(sendError)")
+            }
+            self.finishStreaming(target: targetConnection, client: originalConnection)
+        }))
     }
 }
 
