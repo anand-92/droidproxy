@@ -113,6 +113,26 @@ final class ClaudeAuthSeatFilesTests: XCTestCase {
             ]),
             "Josef Chen (Team)"
         )
+        XCTAssertEqual(
+            ClaudeAuthSeatFiles.seatDisplayLabel(email: email, json: [
+                "organization_name": "KAIKAKU",
+                "organization_type": "enterprise"
+            ]),
+            "KAIKAKU (Enterprise)"
+        )
+        XCTAssertEqual(
+            ClaudeAuthSeatFiles.seatDisplayLabel(email: email, json: [
+                "organization_type": "enterprise"
+            ]),
+            "Enterprise"
+        )
+        XCTAssertEqual(
+            ClaudeAuthSeatFiles.seatDisplayLabel(email: email, json: [
+                "organization_name": "Josef Chen",
+                "organization_type": "claude_pro"
+            ]),
+            "Personal Pro"
+        )
     }
 
     func testMissingOrganizationNameYieldsNoSuffix() {
@@ -176,6 +196,15 @@ final class ClaudeAuthSeatFilesTests: XCTestCase {
             fields: .init(uuid: personalUUID, name: "Josef Chen")
         )
         XCTAssertEqual(name, "claude-\(email)-\(personalUUID).json")
+    }
+
+    func testUniqueFilenameRejectsPathEscapingEmail() {
+        let fields = ClaudeAuthSeatFiles.OrganizationFields(uuid: personalUUID, name: "Josef Chen")
+        XCTAssertNil(ClaudeAuthSeatFiles.uniqueFilename(email: "../evil@x.com", fields: fields))
+        XCTAssertNil(ClaudeAuthSeatFiles.uniqueFilename(email: "foo/bar@x.com", fields: fields))
+        XCTAssertNil(ClaudeAuthSeatFiles.uniqueFilename(email: "foo\\bar@x.com", fields: fields))
+        XCTAssertNil(ClaudeAuthSeatFiles.uniqueFilename(email: ".", fields: fields))
+        XCTAssertNil(ClaudeAuthSeatFiles.uniqueFilename(email: "..", fields: fields))
     }
 
     func testCanonicalFilenameMatchesCLIProxyAPI() {
@@ -263,6 +292,42 @@ final class ClaudeAuthSeatFilesTests: XCTestCase {
 
         XCTAssertNil(ClaudeAuthSeatFiles.migrateFile(at: scratch.appendingPathComponent("claude-\(email).json")))
         XCTAssertEqual(jsonNames(), ["claude-\(email).json"])
+    }
+
+    func testNameOnlyCanonicalFileMigratesToSanitizedSuffix() throws {
+        try writeJSON(
+            named: "claude-\(email).json",
+            [
+                "type": "claude",
+                "email": email,
+                "organization_name": "Acme Inc",
+                "access_token": "name-only-token"
+            ]
+        )
+
+        let dest = ClaudeAuthSeatFiles.migrateFile(
+            at: scratch.appendingPathComponent("claude-\(email).json")
+        )
+        XCTAssertEqual(dest?.lastPathComponent, "claude-\(email)-Acme-Inc.json")
+        XCTAssertEqual(jsonNames(), ["claude-\(email)-Acme-Inc.json"])
+        XCTAssertEqual(marker(in: "claude-\(email)-Acme-Inc.json"), "name-only-token")
+        XCTAssertEqual(posixPermissions(of: "claude-\(email)-Acme-Inc.json"), 0o600)
+    }
+
+    func testMigratedDestinationIsOwnerReadableOnly() throws {
+        try writeClaudeFile(
+            named: "claude-\(email).json",
+            email: email,
+            orgName: "Josef Chen",
+            orgUUID: personalUUID,
+            marker: "personal-token"
+        )
+
+        let dest = ClaudeAuthSeatFiles.migrateFile(
+            at: scratch.appendingPathComponent("claude-\(email).json")
+        )
+        XCTAssertEqual(dest?.lastPathComponent, "claude-\(email)-\(personalUUID).json")
+        XCTAssertEqual(posixPermissions(of: "claude-\(email)-\(personalUUID).json"), 0o600)
     }
 
     func testAlreadySuffixedNameMigratesToUUID() throws {
@@ -356,5 +421,14 @@ final class ClaudeAuthSeatFilesTests: XCTestCase {
             return nil
         }
         return json["access_token"] as? String
+    }
+
+    private func posixPermissions(of filename: String) -> Int? {
+        let url = scratch.appendingPathComponent(filename)
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let mode = attrs[.posixPermissions] as? NSNumber else {
+            return nil
+        }
+        return mode.intValue
     }
 }

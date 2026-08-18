@@ -64,8 +64,7 @@ enum ClaudeAuthSeatFiles {
 
     /// UUID when present (stable); otherwise a filesystem-safe organization name.
     static func uniqueFilename(email: String, fields: OrganizationFields) -> String? {
-        let email = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !email.isEmpty else { return nil }
+        guard let email = filenameSafeEmail(email) else { return nil }
         if let suffix = filenameSafeSuffix(fields.uuid) ?? filenameSafeSuffix(fields.name) {
             return "claude-\(email)-\(suffix).json"
         }
@@ -134,10 +133,14 @@ enum ClaudeAuthSeatFiles {
             return nil
         }
 
-        let dest = url.deletingLastPathComponent().appendingPathComponent(destName)
+        let destDir = url.deletingLastPathComponent().standardizedFileURL
+        let dest = destDir.appendingPathComponent(destName)
+        guard dest.deletingLastPathComponent().standardizedFileURL == destDir else {
+            NSLog("[ClaudeAuthSeatFiles] Refusing destination outside auth directory: %@", destName)
+            return nil
+        }
         do {
-            try data.write(to: dest, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: dest.path)
+            try writeRestrictedFile(data, to: dest)
             if url.standardizedFileURL != dest.standardizedFileURL {
                 try FileManager.default.removeItem(at: url)
             }
@@ -206,14 +209,12 @@ enum ClaudeAuthSeatFiles {
 
     private static func isPersonalMaxHint(_ raw: String) -> Bool {
         let value = raw.lowercased()
-        return value.contains("claude_max")
-            || value == "max"
-            || value.contains("default_claude_max")
+        return value.contains("claude_max") || value == "max"
     }
 
     private static func isPersonalProHint(_ raw: String) -> Bool {
         let value = raw.lowercased()
-        return value.contains("claude_pro") || value == "pro" || value == "claude_pro"
+        return value.contains("claude_pro") || value == "pro"
     }
 
     private static func isTeamHint(_ raw: String) -> Bool {
@@ -293,6 +294,45 @@ enum ClaudeAuthSeatFiles {
         guard let string = value as? String else { return nil }
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Rejects values that would escape the auth directory as a path component.
+    /// `@` stays so existing `claude-{email}-{uuid}.json` names keep matching.
+    private static func filenameSafeEmail(_ raw: String) -> String? {
+        let email = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !email.isEmpty else { return nil }
+        if email.contains("/") || email.contains("\\") || email == "." || email == ".." {
+            NSLog("[ClaudeAuthSeatFiles] Refusing unsafe email in filename: %@", email)
+            return nil
+        }
+        return email
+    }
+
+    /// Creates `dest` at 0o600 so OAuth tokens are never written world-readable.
+    private static func writeRestrictedFile(_ data: Data, to dest: URL) throws {
+        let temp = dest.deletingLastPathComponent()
+            .appendingPathComponent(".claude-seat-\(UUID().uuidString).tmp")
+        guard FileManager.default.createFile(
+            atPath: temp.path,
+            contents: data,
+            attributes: [.posixPermissions: 0o600]
+        ) else {
+            throw NSError(
+                domain: "ClaudeAuthSeatFiles",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to create \(temp.lastPathComponent)"]
+            )
+        }
+        do {
+            if FileManager.default.fileExists(atPath: dest.path) {
+                _ = try FileManager.default.replaceItemAt(dest, withItemAt: temp)
+            } else {
+                try FileManager.default.moveItem(at: temp, to: dest)
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: temp)
+            throw error
+        }
     }
 
     private static func filenameSafeSuffix(_ raw: String?) -> String? {
