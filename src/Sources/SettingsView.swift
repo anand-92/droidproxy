@@ -1089,12 +1089,19 @@ struct SettingsView: View {
                 } else if copilotGateway.hasCredentials {
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(copilotGateway.isRunning ? Color.green : Color.orange)
+                            .fill(copilotGatewayStatusColor)
                             .frame(width: 6, height: 6)
-                        Text(copilotGateway.isRunning ? "Local gateway running" : "Local gateway starting")
+                        Text(copilotGatewayStatusText)
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Spacer()
+                        if case .failed = copilotGateway.state {
+                            Button("Retry") {
+                                copilotGateway.start()
+                            }
+                            .droidGlassPlain()
+                            .controlSize(.small)
+                        }
                         Button("Refresh Models") {
                             refreshCopilotModels()
                         }
@@ -1103,6 +1110,15 @@ struct SettingsView: View {
                         .disabled(!copilotGateway.isRunning)
                     }
                     .padding(.leading, 28)
+
+                    if let failure = copilotGateway.state.failureDescription {
+                        Text(failure)
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .textSelection(.enabled)
+                            .padding(.leading, 28)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     copilotModelPicker()
                 } else {
@@ -1116,6 +1132,30 @@ struct SettingsView: View {
         }
         .padding(.vertical, 4)
         .help("Runs the maintained Copilot API gateway locally on port \(CopilotGatewayManager.gatewayPort).")
+    }
+
+    private var copilotGatewayStatusColor: Color {
+        switch copilotGateway.state {
+        case .running:
+            return .green
+        case .failed:
+            return .red
+        case .idle, .starting:
+            return .orange
+        }
+    }
+
+    private var copilotGatewayStatusText: String {
+        switch copilotGateway.state {
+        case .idle:
+            return "Local gateway stopped"
+        case .starting:
+            return "Local gateway starting"
+        case .running:
+            return "Local gateway running"
+        case .failed:
+            return "Local gateway failed to start"
+        }
     }
 
     @ViewBuilder
