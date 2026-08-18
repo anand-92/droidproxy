@@ -56,6 +56,10 @@ struct AuthAccount: Identifiable, Equatable {
     let expired: Date?
     let filePath: URL
     let isDisabled: Bool
+    /// Raw `organization_name` from the Claude auth JSON, if present.
+    let organizationName: String?
+    /// Classified Settings/quota suffix (`Personal Max`, `{org} (Team)`, or raw name).
+    let claudeSeatLabel: String?
 
     var isExpired: Bool {
         guard let expired else { return false }
@@ -63,9 +67,18 @@ struct AuthAccount: Identifiable, Equatable {
     }
 
     var displayName: String {
-        if let email, !email.isEmpty { return email }
-        if let login, !login.isEmpty { return login }
-        return id
+        let base: String
+        if let email, !email.isEmpty {
+            base = email
+        } else if let login, !login.isEmpty {
+            base = login
+        } else {
+            return id
+        }
+        if type == .claude, let claudeSeatLabel, !claudeSeatLabel.isEmpty {
+            return "\(base) · \(claudeSeatLabel)"
+        }
+        return base
     }
 
     static func == (lhs: AuthAccount, rhs: AuthAccount) -> Bool {
@@ -102,6 +115,7 @@ class AuthManager: ObservableObject {
 
     func checkAuthStatus() {
         let authDir = AuthPaths.authDirectory
+        ClaudeAuthSeatFiles.migrateCanonicalFiles(in: authDir)
         let files: [URL]
         do {
             files = try FileManager.default.contentsOfDirectory(at: authDir, includingPropertiesForKeys: nil)
@@ -181,6 +195,20 @@ class AuthManager: ObservableObject {
 
         NSLog("[AuthStatus] Found type '%@' in %@", typeString, file.lastPathComponent)
 
+        let organizationName: String?
+        let claudeSeatLabel: String?
+        if serviceType == .claude {
+            let fields = ClaudeAuthSeatFiles.organizationFields(from: json)
+            organizationName = fields.name
+            claudeSeatLabel = ClaudeAuthSeatFiles.seatDisplayLabel(
+                email: json["email"] as? String,
+                json: json
+            )
+        } else {
+            organizationName = nil
+            claudeSeatLabel = nil
+        }
+
         return AuthAccount(
             id: file.lastPathComponent,
             email: json["email"] as? String,
@@ -188,7 +216,9 @@ class AuthManager: ObservableObject {
             type: serviceType,
             expired: parseExpiry(json["expired"] as? String),
             filePath: file,
-            isDisabled: json["disabled"] as? Bool ?? false
+            isDisabled: json["disabled"] as? Bool ?? false,
+            organizationName: organizationName,
+            claudeSeatLabel: claudeSeatLabel
         )
     }
 

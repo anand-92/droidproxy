@@ -337,6 +337,7 @@ class ServerManager: ObservableObject {
                 NSLog("[Auth] Process terminated with exit code: %d", process.terminationStatus)
                 guard process.terminationStatus == 0 else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    ClaudeAuthSeatFiles.migrateCanonicalFiles(in: AuthPaths.authDirectory)
                     NotificationCenter.default.post(name: .authDirectoryChanged, object: nil)
                 }
             }

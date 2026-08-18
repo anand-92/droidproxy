@@ -408,6 +408,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
 
     private func startMonitoringAuthDirectory() {
         authDirectoryMonitor = AuthDirectoryMonitor(debounceInterval: 0.5, logPrefix: "[AppDelegate]") {
+            ClaudeAuthSeatFiles.migrateCanonicalFiles(in: AuthPaths.authDirectory)
             NotificationCenter.default.post(name: .authDirectoryChanged, object: nil)
         }
         authDirectoryMonitor?.start()
