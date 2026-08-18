@@ -99,11 +99,29 @@ enum CopilotModelPreferences {
     }
 }
 
+/// Lifecycle of the local Copilot gateway child process. A dedicated `failed`
+/// case exists because `Process.run()` returning without throwing only means the
+/// executable was spawned; the gateway can still exit before it binds its port,
+/// and that outcome has to be distinguishable from a start still in flight.
+enum CopilotGatewayState: Equatable {
+    case idle
+    case starting
+    case running
+    case failed(String)
+
+    var failureDescription: String? {
+        guard case .failed(let detail) = self else { return nil }
+        return detail
+    }
+}
+
 enum CopilotGatewayError: LocalizedError {
     case nodeNotInstalled
     case notAuthenticated
     case gatewayNotRunning
     case failedToStart(String)
+    case stoppedUnexpectedly(String)
+    case neverBecameReady(String?)
     case authenticationFailed(String?)
     case invalidModelResponse
     case requestFailed
@@ -118,6 +136,13 @@ enum CopilotGatewayError: LocalizedError {
             return "The local Copilot gateway is not running. Start it, then refresh models."
         case .failedToStart(let detail):
             return "Could not start the local Copilot gateway: \(detail)"
+        case .stoppedUnexpectedly(let detail):
+            return "The local Copilot gateway stopped unexpectedly: \(detail)"
+        case .neverBecameReady(let detail):
+            guard let detail, !detail.isEmpty else {
+                return "The local Copilot gateway never started serving requests on port \(CopilotGatewayManager.gatewayPort)."
+            }
+            return "The local Copilot gateway never started serving requests on port \(CopilotGatewayManager.gatewayPort): \(detail)"
         case .authenticationFailed(let detail):
             guard let detail, !detail.isEmpty else {
                 return "GitHub Copilot authentication did not complete. Please try again."
@@ -151,12 +176,20 @@ final class CopilotGatewayManager: ObservableObject {
         static let terminationPollInterval: TimeInterval = 0.05
     }
 
+    /// The first run of a given package version downloads it through `npx`, so
+    /// the readiness window has to tolerate a cold npm cache.
+    private enum ReadinessTiming {
+        static let timeout: TimeInterval = 90
+        static let pollInterval: TimeInterval = 0.5
+        static let probeTimeout: TimeInterval = 3
+    }
+
     static let dataDirectory = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".droidproxy")
         .appendingPathComponent("copilot-api")
     static let credentialsURL = dataDirectory.appendingPathComponent("github_token")
 
-    @Published private(set) var isRunning = false
+    @Published private(set) var state: CopilotGatewayState = .idle
     @Published private(set) var isAuthenticating = false
     @Published private(set) var availableModels: [CopilotModelDescriptor]
     @Published private(set) var lastError: String?
@@ -166,9 +199,15 @@ final class CopilotGatewayManager: ObservableObject {
     private var gatewayOutputPipes: [Pipe] = []
     private var authenticationOutputPipes: [Pipe] = []
     private var isolatedProcessGroups = Set<pid_t>()
+    private var gatewayTranscript: ProcessTranscript?
+    private var readinessGeneration = 0
 
     init() {
         availableModels = CopilotModelPreferences.cachedModels
+    }
+
+    var isRunning: Bool {
+        state == .running
     }
 
     var hasCredentials: Bool {
@@ -184,22 +223,19 @@ final class CopilotGatewayManager: ObservableObject {
     }
 
     func start(completion: ((Bool) -> Void)? = nil) {
-        if let gatewayProcess, gatewayProcess.isRunning {
-            isRunning = true
-            completion?(true)
+        if let gatewayProcess, gatewayProcess.isRunning, state == .running || state == .starting {
+            completion?(state == .running)
             return
         }
 
         guard hasCredentials else {
-            isRunning = false
-            lastError = CopilotGatewayError.notAuthenticated.localizedDescription
+            fail(with: .notAuthenticated)
             completion?(false)
             return
         }
 
         guard let npxURL = Self.npxExecutableURL() else {
-            isRunning = false
-            lastError = CopilotGatewayError.nodeNotInstalled.localizedDescription
+            fail(with: .nodeNotInstalled)
             completion?(false)
             return
         }
@@ -215,17 +251,26 @@ final class CopilotGatewayManager: ObservableObject {
             String(Self.gatewayPort)
         ]
         process.environment = Self.gatewayEnvironment(npxURL: npxURL)
-        gatewayOutputPipes = attachOutputPipes(to: process) { _ in }
+
+        let transcript = ProcessTranscript()
+        gatewayTranscript = transcript
+        gatewayOutputPipes = attachOutputPipes(to: process) { text in
+            transcript.append(text)
+        }
 
         process.terminationHandler = { [weak self, weak process] terminatedProcess in
             DispatchQueue.main.async {
-                guard self?.gatewayProcess === process else { return }
-                self?.gatewayProcess = nil
-                self?.isRunning = false
-                self?.clearGatewayOutputPipes()
-                if terminatedProcess.terminationStatus != 0 {
-                    self?.lastError = "The local Copilot gateway stopped unexpectedly."
-                }
+                guard let self, self.gatewayProcess === process else { return }
+                self.gatewayProcess = nil
+                self.clearGatewayOutputPipes()
+                // Supersede any in-flight readiness poll so it cannot overwrite
+                // this exit with a stale timeout message.
+                self.readinessGeneration += 1
+                let detail = transcript.failureDetail(exitCode: terminatedProcess.terminationStatus)
+                self.gatewayTranscript = nil
+                NSLog("[Copilot] Local gateway exited (status %d): %@",
+                      terminatedProcess.terminationStatus, detail ?? "no output")
+                self.fail(with: .stoppedUnexpectedly(detail ?? "exit code \(terminatedProcess.terminationStatus)"))
             }
         }
 
@@ -233,27 +278,107 @@ final class CopilotGatewayManager: ObservableObject {
             try process.run()
             isolateProcessGroup(for: process)
             gatewayProcess = process
-            isRunning = true
+            state = .starting
             lastError = nil
-            NSLog("[Copilot] Started local gateway on port %d", Self.gatewayPort)
-            completion?(true)
+            NSLog("[Copilot] Launched local gateway on port %d, waiting for readiness", Self.gatewayPort)
+            waitForReadiness(of: process, transcript: transcript, completion: completion)
         } catch {
-            isRunning = false
             clearGatewayOutputPipes()
-            lastError = CopilotGatewayError.failedToStart(error.localizedDescription).localizedDescription
+            gatewayTranscript = nil
+            fail(with: .failedToStart(error.localizedDescription))
             completion?(false)
         }
     }
 
     func stop() {
+        stopGateway()
+        state = .idle
+        lastError = nil
+        cancelAuthentication()
+    }
+
+    /// Tears down the gateway child process without touching authentication or
+    /// publishing a state, so callers can decide whether the outcome is a
+    /// deliberate stop or a failure.
+    private func stopGateway() {
+        // Bump first so the termination handler's failure path and any pending
+        // readiness poll are both treated as superseded by this teardown.
+        readinessGeneration += 1
         if let gatewayProcess {
+            gatewayProcess.terminationHandler = nil
             terminate(gatewayProcess)
         }
         gatewayProcess = nil
-        isRunning = false
+        gatewayTranscript = nil
         clearGatewayOutputPipes()
+    }
 
-        cancelAuthentication()
+    /// Polls the gateway's own `/models` endpoint until it answers, because a
+    /// successfully spawned `npx` says nothing about whether the gateway bound
+    /// its port. Without this, a gateway that exits early (for example when
+    /// node is missing from the child's PATH) is indistinguishable from one
+    /// that is still booting.
+    private func waitForReadiness(
+        of process: Process,
+        transcript: ProcessTranscript,
+        completion: ((Bool) -> Void)?
+    ) {
+        readinessGeneration += 1
+        let generation = readinessGeneration
+        let deadline = Date().addingTimeInterval(ReadinessTiming.timeout)
+
+        func poll() {
+            guard generation == readinessGeneration, gatewayProcess === process else { return }
+
+            probeReadiness { [weak self] isReady in
+                guard let self, generation == self.readinessGeneration, self.gatewayProcess === process else {
+                    return
+                }
+
+                if isReady {
+                    self.state = .running
+                    self.lastError = nil
+                    NSLog("[Copilot] Local gateway is serving requests on port %d", Self.gatewayPort)
+                    completion?(true)
+                    return
+                }
+
+                guard Date() < deadline else {
+                    NSLog("[Copilot] Local gateway did not become ready within %.0fs", ReadinessTiming.timeout)
+                    let detail = transcript.lastMeaningfulLine()
+                    self.stopGateway()
+                    self.fail(with: .neverBecameReady(detail))
+                    completion?(false)
+                    return
+                }
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + ReadinessTiming.pollInterval, execute: poll)
+            }
+        }
+
+        poll()
+    }
+
+    private func probeReadiness(completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: "\(Self.gatewayBaseURL)/models") else {
+            completion(false)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = ReadinessTiming.probeTimeout
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { _, response, _ in
+            let isReady = (response as? HTTPURLResponse)?.statusCode == 200
+            DispatchQueue.main.async { completion(isReady) }
+        }.resume()
+    }
+
+    private func fail(with error: CopilotGatewayError) {
+        let description = error.localizedDescription
+        state = .failed(description)
+        lastError = description
     }
 
     func cancelAuthentication() {
@@ -654,11 +779,20 @@ final class ProcessTranscript {
     }
 
     func failureDetail(exitCode: Int32) -> String? {
+        guard let lastLine = lastMeaningfulLine() else {
+            return "the sign-in helper exited with code \(exitCode)."
+        }
+        return "\(lastLine) (exit code \(exitCode))"
+    }
+
+    /// The last non-blank line of output with ANSI escapes stripped, so a
+    /// failure can be reported with the reason the child process printed.
+    func lastMeaningfulLine() -> String? {
         lock.lock()
         let text = buffer
         lock.unlock()
 
-        let lastLine = text
+        return text
             .replacingOccurrences(
                 of: "\u{001B}\\[[0-?]*[ -/]*[@-~]",
                 with: "",
@@ -667,9 +801,6 @@ final class ProcessTranscript {
             .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .last { !$0.isEmpty }
-
-        guard let lastLine else { return "the sign-in helper exited with code \(exitCode)." }
-        return "\(lastLine) (exit code \(exitCode))"
     }
 }
 
