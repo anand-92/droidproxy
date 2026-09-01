@@ -14,6 +14,17 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(fable["maxOutputTokens"] as? Int, 128000)
     }
 
+    func testFable51MatchesOpus48EffortLevels() throws {
+        let fable = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:fable-5-1"))
+
+        XCTAssertEqual(fable["model"] as? String, "claude-fable-5-1")
+        XCTAssertEqual(fable["enableThinking"] as? Bool, true)
+        XCTAssertEqual(fable["reasoningEffort"] as? String, "xhigh")
+        XCTAssertEqual(fable["defaultReasoningEffort"] as? String, "xhigh")
+        XCTAssertEqual(fable["supportedReasoningEfforts"] as? [String], ["low", "medium", "high", "xhigh", "max"])
+        XCTAssertEqual(fable["maxOutputTokens"] as? Int, 128000)
+    }
+
     func testApplyWritesBothOpus5AndOpus48ForClaudeProvider() throws {
         // Apply/Re-apply serializes every enabled definition via settingsModels();
         // both Opus entries are providerKey "claude", so enabling Claude writes both.

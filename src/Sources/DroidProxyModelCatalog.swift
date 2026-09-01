@@ -168,6 +168,18 @@ enum DroidProxyModelCatalog {
     static var definitions: [DroidProxyModelDefinition] {
         var list = [
             DroidProxyModelDefinition(
+                baseModel: "claude-fable-5-1",
+                idSlug: "fable-5-1",
+                displayName: "Fable 5.1",
+                maxOutputTokens: 128000,
+                provider: "anthropic",
+                providerKey: "claude",
+                baseURL: "http://localhost:8317",
+                kind: .claudeAdaptive,
+                levels: claudeAdvancedLevels,
+                defaultLevelValue: "xhigh"
+            ),
+            DroidProxyModelDefinition(
                 baseModel: "claude-fable-5",
                 idSlug: "fable-5",
                 displayName: "Fable 5",
@@ -374,6 +386,18 @@ enum DroidProxyModelCatalog {
                 baseModel: "junie-claude-opus-5",
                 idSlug: "junie-claude-opus-5",
                 displayName: "Junie Opus 5",
+                maxOutputTokens: 128000,
+                provider: "anthropic",
+                providerKey: "junie",
+                baseURL: "http://localhost:8317",
+                kind: .junie,
+                levels: claudeAdvancedLevels,
+                defaultLevelValue: "xhigh"
+            ),
+            DroidProxyModelDefinition(
+                baseModel: "junie-claude-fable-5-1",
+                idSlug: "junie-claude-fable-5-1",
+                displayName: "Junie Fable 5.1",
                 maxOutputTokens: 128000,
                 provider: "anthropic",
                 providerKey: "junie",
