@@ -37,6 +37,17 @@ cp -R skills/grok-imagine ~/.factory/skills/
 
 See [`skills/grok-imagine/SKILL.md`](skills/grok-imagine/SKILL.md). With DroidProxy running and Grok connected, the skill posts to `http://localhost:8317/v1/images/generations` (`grok-imagine-image-2.0`); the proxy injects your subscription bearer and forwards to `api.x.ai`.
 
+### GPT Image (Codex OAuth)
+
+Same pattern as Grok, but through Codex. ChatGPT Plus/Pro OAuth is required; Free accounts are skipped (`auth_not_found`). Image gen counts against Codex quota, not an `OPENAI_API_KEY` bill.
+
+```bash
+mkdir -p ~/.factory/skills
+cp -R skills/gpt-image ~/.factory/skills/
+```
+
+See [`skills/gpt-image/SKILL.md`](skills/gpt-image/SKILL.md). With DroidProxy running and Codex connected, the skill posts to `http://localhost:8317/v1/images/generations` (`gpt-image-2`); CLIProxyAPI injects your Codex bearer. Selecting a DroidProxy GPT chat model does not generate images.
+
 ## 2. Configure Factory
 
 Open `~/.factory/settings.json` and add the following to the `customModels` array:
