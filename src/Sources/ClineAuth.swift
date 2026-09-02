@@ -400,6 +400,13 @@ enum ClineAuth {
 
         let parameters = NWParameters.tcp
         parameters.allowLocalEndpointReuse = false
+        // Loopback-only: without this the listener accepts the one-shot callback
+        // from any host that can reach this machine, letting a code from an
+        // account the user did not choose be exchanged and persisted. The port
+        // must stay `.any` here — NWListener rejects a required endpoint that
+        // also pins a port with EINVAL ("Local endpoint has port set, cannot
+        // override"), since the port comes from the `on:` argument below.
+        parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: .any)
 
         var listener: NWListener?
         do {

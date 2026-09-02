@@ -1327,13 +1327,16 @@ class ThinkingProxy {
     // `chat.completion.chunk` objects. We therefore relay SSE incrementally and
     // buffer only non-streaming responses so the envelope can be stripped.
 
-    /// Cline free models use OpenRouter-style slugs (`kwaipilot/kat-coder-pro`);
-    /// no other DroidProxy route sends a `model` containing "/".
+    /// Cline free models use OpenRouter-style slugs (`kwaipilot/kat-coder-pro`).
+    /// Matched against the catalog rather than the shape of the ID so a user's
+    /// own namespaced custom model pointed at this proxy is not claimed here.
+    static func isClineModel(_ model: String?) -> Bool {
+        guard let model else { return false }
+        return DroidProxyModelCatalog.clineBaseModels.contains(model)
+    }
+
     private func isClineModel(_ requestFields: RequestJSONFields?) -> Bool {
-        guard let model = requestFields?.model else {
-            return false
-        }
-        return model.contains("/")
+        Self.isClineModel(requestFields?.model)
     }
 
     private func isClineEnabled() -> Bool {

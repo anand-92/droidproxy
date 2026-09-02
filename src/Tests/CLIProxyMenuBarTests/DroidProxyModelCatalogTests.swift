@@ -186,6 +186,23 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         )
     }
 
+    func testClineModelDetectionMatchesCatalogSlugsOnly() {
+        XCTAssertEqual(
+            DroidProxyModelCatalog.clineBaseModels,
+            Set(["kwaipilot/kat-coder-pro", "arcee-ai/trinity-large-preview:free"])
+        )
+
+        XCTAssertTrue(ThinkingProxy.isClineModel("kwaipilot/kat-coder-pro"))
+        XCTAssertTrue(ThinkingProxy.isClineModel("arcee-ai/trinity-large-preview:free"))
+
+        // A user's own namespaced custom model pointed at :8317 must not be
+        // claimed as Cline traffic.
+        XCTAssertFalse(ThinkingProxy.isClineModel("openai/gpt-4o"))
+        XCTAssertFalse(ThinkingProxy.isClineModel("kwaipilot/kat-coder-pro-unknown"))
+        XCTAssertFalse(ThinkingProxy.isClineModel("claude-opus-5"))
+        XCTAssertFalse(ThinkingProxy.isClineModel(nil))
+    }
+
     func testGrokContextLimitsMatchXAIDocs() throws {
         let grok46 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:grok-4.6"))
 

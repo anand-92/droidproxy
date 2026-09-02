@@ -439,8 +439,8 @@ enum DroidProxyModelCatalog {
 
             // Cline free-model promos (api.cline.bot), gated on Cline account OAuth.
             // The free list rotates; these entries mirror Cline's own current
-            // fallback list. baseModel is the OpenRouter-style upstream slug, which
-            // is how ThinkingProxy detects Cline traffic (contains "/").
+            // fallback list. baseModel is the OpenRouter-style upstream slug, and
+            // ThinkingProxy matches these slugs exactly to detect Cline traffic.
             DroidProxyModelDefinition(
                 baseModel: "kwaipilot/kat-coder-pro",
                 idSlug: "cline-kat-coder-pro",
@@ -541,6 +541,14 @@ enum DroidProxyModelCatalog {
 
     static var allSettingsIDs: Set<String> {
         Set(definitions.map(\.simpleID))
+    }
+
+    /// Upstream slugs of the Cline free models, used by ThinkingProxy to claim
+    /// Cline traffic. Matching the catalog exactly keeps unrelated namespaced
+    /// custom models (e.g. a user's own `openai/gpt-4o` entry pointed at
+    /// `localhost:8317`) from being misrouted to api.cline.bot.
+    static var clineBaseModels: Set<String> {
+        Set(definitions.filter { $0.kind == .cline }.map(\.baseModel))
     }
 
     /// Smallest safe starting `index` for appending new entries to Factory's
