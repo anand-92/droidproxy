@@ -4,9 +4,19 @@ import { ArrowRightIcon } from './icons'
 const codePlain = `// What "Apply" writes for you — no need to touch this yourself.
 "customModels": [
   {
+    "model": "claude-fable-5-1",
+    "id": "custom:droidproxy:fable-5-1",
+    "index": 0,
+    "baseUrl": "http://localhost:8317",
+    "apiKey": "***",
+    "displayName": "DroidProxy: Fable 5.1",
+    "maxOutputTokens": 128000,
+    "provider": "anthropic"
+  },
+  {
     "model": "claude-fable-5",
     "id": "custom:droidproxy:fable-5",
-    "index": 0,
+    "index": 1,
     "baseUrl": "http://localhost:8317",
     "apiKey": "***",
     "displayName": "DroidProxy: Fable 5",
@@ -16,7 +26,7 @@ const codePlain = `// What "Apply" writes for you — no need to touch this your
   {
     "model": "claude-opus-5",
     "id": "custom:droidproxy:opus-5",
-    "index": 1,
+    "index": 2,
     "baseUrl": "http://localhost:8317",
     "apiKey": "***",
     "displayName": "DroidProxy: Opus 5",
@@ -26,7 +36,7 @@ const codePlain = `// What "Apply" writes for you — no need to touch this your
   {
     "model": "claude-sonnet-4-6",
     "id": "custom:droidproxy:sonnet-4-6",
-    "index": 2,
+    "index": 3,
     "baseUrl": "http://localhost:8317",
     "apiKey": "***",
     "displayName": "DroidProxy: Sonnet 4.6",
@@ -39,9 +49,19 @@ const codePlain = `// What "Apply" writes for you — no need to touch this your
 const codeHtml = `<span class="c">// What "Apply" writes for you — no need to touch this yourself.</span>
 <span class="k">"customModels"</span>: [
   {
+    <span class="k">"model"</span>: <span class="s">"claude-fable-5-1"</span>,
+    <span class="k">"id"</span>: <span class="s">"custom:droidproxy:fable-5-1"</span>,
+    <span class="k">"index"</span>: <span class="n">0</span>,
+    <span class="k">"baseUrl"</span>: <span class="s">"http://localhost:8317"</span>,
+    <span class="k">"apiKey"</span>: <span class="s">"***"</span>,
+    <span class="k">"displayName"</span>: <span class="s">"DroidProxy: Fable 5.1"</span>,
+    <span class="k">"maxOutputTokens"</span>: <span class="n">128000</span>,
+    <span class="k">"provider"</span>: <span class="s">"anthropic"</span>
+  },
+  {
     <span class="k">"model"</span>: <span class="s">"claude-fable-5"</span>,
     <span class="k">"id"</span>: <span class="s">"custom:droidproxy:fable-5"</span>,
-    <span class="k">"index"</span>: <span class="n">0</span>,
+    <span class="k">"index"</span>: <span class="n">1</span>,
     <span class="k">"baseUrl"</span>: <span class="s">"http://localhost:8317"</span>,
     <span class="k">"apiKey"</span>: <span class="s">"***"</span>,
     <span class="k">"displayName"</span>: <span class="s">"DroidProxy: Fable 5"</span>,
@@ -51,7 +71,7 @@ const codeHtml = `<span class="c">// What "Apply" writes for you — no need to 
   {
     <span class="k">"model"</span>: <span class="s">"claude-opus-5"</span>,
     <span class="k">"id"</span>: <span class="s">"custom:droidproxy:opus-5"</span>,
-    <span class="k">"index"</span>: <span class="n">1</span>,
+    <span class="k">"index"</span>: <span class="n">2</span>,
     <span class="k">"baseUrl"</span>: <span class="s">"http://localhost:8317"</span>,
     <span class="k">"apiKey"</span>: <span class="s">"***"</span>,
     <span class="k">"displayName"</span>: <span class="s">"DroidProxy: Opus 5"</span>,
@@ -61,7 +81,7 @@ const codeHtml = `<span class="c">// What "Apply" writes for you — no need to 
   {
     <span class="k">"model"</span>: <span class="s">"claude-sonnet-4-6"</span>,
     <span class="k">"id"</span>: <span class="s">"custom:droidproxy:sonnet-4-6"</span>,
-    <span class="k">"index"</span>: <span class="n">2</span>,
+    <span class="k">"index"</span>: <span class="n">3</span>,
     <span class="k">"baseUrl"</span>: <span class="s">"http://localhost:8317"</span>,
     <span class="k">"apiKey"</span>: <span class="s">"***"</span>,
     <span class="k">"displayName"</span>: <span class="s">"DroidProxy: Sonnet 4.6"</span>,
