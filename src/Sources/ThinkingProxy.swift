@@ -425,7 +425,7 @@ class ThinkingProxy {
         // Rewrite /v1/responses to /v1/chat/completions only for OAuth Code Assist
         // Gemini models (the `-preview` suffixed ones served by the gemini-cli executor),
         // which do not support the Responses API endpoint. Antigravity-routed Gemini
-        // models (e.g. `gemini-3.6-flash-high`, `gemini-pro-agent`) DO support /v1/responses
+        // models (e.g. `gemini-3.8-flash-high`, `gemini-pro-agent`) DO support /v1/responses
         // natively, so we must NOT rewrite their path — doing so would cause the
         // backend to return chat-completions SSE that Droid CLI can't parse, hanging
         // the stream.

@@ -89,34 +89,6 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertFalse(modelsWithoutKimi.contains { ($0["id"] as? String) == "custom:droidproxy:kimi-k3" })
     }
 
-    func testGemini36FlashHighUsesAntigravityModelMetadata() throws {
-        let gemini = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:gemini-3.6-flash-high"))
-
-        XCTAssertEqual(gemini["model"] as? String, "gemini-3.6-flash-high")
-        XCTAssertEqual(gemini["provider"] as? String, "openai")
-        XCTAssertEqual(gemini["baseUrl"] as? String, "http://localhost:8317/v1")
-        XCTAssertEqual(gemini["displayName"] as? String, "DroidProxy: Antigravity: Gemini 3.6 Flash (High)")
-        XCTAssertEqual(gemini["maxOutputTokens"] as? Int, 65536)
-        XCTAssertEqual(gemini["enableThinking"] as? Bool, true)
-        XCTAssertEqual(gemini["reasoningEffort"] as? String, "high")
-        XCTAssertEqual(gemini["defaultReasoningEffort"] as? String, "high")
-        XCTAssertEqual(gemini["supportedReasoningEfforts"] as? [String], ["high"])
-    }
-
-    func testGemini37FlashHighUsesAntigravityModelMetadata() throws {
-        let gemini = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:gemini-3.7-flash-high"))
-
-        XCTAssertEqual(gemini["model"] as? String, "gemini-3.7-flash-high")
-        XCTAssertEqual(gemini["provider"] as? String, "openai")
-        XCTAssertEqual(gemini["baseUrl"] as? String, "http://localhost:8317/v1")
-        XCTAssertEqual(gemini["displayName"] as? String, "DroidProxy: Antigravity: Gemini 3.7 Flash (High)")
-        XCTAssertEqual(gemini["maxOutputTokens"] as? Int, 65536)
-        XCTAssertEqual(gemini["enableThinking"] as? Bool, true)
-        XCTAssertEqual(gemini["reasoningEffort"] as? String, "high")
-        XCTAssertEqual(gemini["defaultReasoningEffort"] as? String, "high")
-        XCTAssertEqual(gemini["supportedReasoningEfforts"] as? [String], ["high"])
-    }
-
     func testGemini38FlashHighUsesAntigravityModelMetadata() throws {
         let gemini = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:gemini-3.8-flash-high"))
 
