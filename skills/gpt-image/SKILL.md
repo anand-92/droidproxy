@@ -14,9 +14,9 @@ description: |
 
 Generate and edit images with **`gpt-image-2`** using the ChatGPT / Codex
 OAuth session that powers DroidProxy GPT chat. This is the current GPT Image
-model (text or image → image). Use `gpt-image-1.5` only if the user asks for
-it. Do not send `gpt-image-1`, `dall-e-2`, `dall-e-3`, or any `gpt-5.*` chat
-id to these endpoints.
+model (text or image → image). Always send `gpt-image-2`. Do not send older
+image ids (`gpt-image-1.5`, `gpt-image-1`, `dall-e-2`, `dall-e-3`) or any
+`gpt-5.*` chat id to these endpoints.
 
 Two things you can't guess and that everything else depends on:
 
@@ -79,8 +79,7 @@ Two things that bite here:
   (`usage_limit_reached`, `auth_not_found`, `moderation_blocked`) — the raw
   text is specific and worth reading.
 
-Default `quality` to **`low`**. Codex image gen shares ChatGPT Plus/Pro quota;
-`medium`/`high` cost more and are slower. Raise quality only when the user asks.
+Default `quality` to **`low`**. Raise quality only when the user asks.
 
 ## Edit
 
@@ -112,7 +111,7 @@ Routing and model ids are DroidProxy / CLIProxyAPI, not `api.openai.com`.
 
 | Field | Values | Notes |
 |---|---|---|
-| `model` | `gpt-image-2` (default), `gpt-image-1.5` | Always send one of these. Chat ids (`gpt-5.4`, `gpt-5.6-terra`, …) return 400. |
+| `model` | `gpt-image-2` | Always send this id. Chat ids (`gpt-5.4`, `gpt-5.6-terra`, …) return 400. |
 | `prompt` | string | See Prompting. Required on generate and edit. |
 | `size` | `1024x1024`, `1024x1536`, `1536x1024` | Square / portrait / landscape. Stick to these three. |
 | `quality` | `low`, `medium`, `high` | Default **`low`** on this skill. Do not send `hd`, `standard`, or `auto`. |

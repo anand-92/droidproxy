@@ -39,7 +39,7 @@ See [`skills/grok-imagine/SKILL.md`](skills/grok-imagine/SKILL.md). With DroidPr
 
 ### GPT Image (Codex OAuth)
 
-Same pattern as Grok, but through Codex. ChatGPT Plus/Pro OAuth is required; Free accounts are skipped (`auth_not_found`). Image gen counts against Codex quota, not an `OPENAI_API_KEY` bill.
+Same pattern as Grok, but through Codex. ChatGPT Plus/Pro OAuth is required; Free accounts are skipped (`auth_not_found`).
 
 ```bash
 mkdir -p ~/.factory/skills
