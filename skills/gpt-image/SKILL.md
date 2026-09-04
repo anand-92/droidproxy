@@ -5,7 +5,8 @@ description: |
   Generate or edit images via GPT Image 2 (gpt-image-2) through DroidProxy
   Codex OAuth (no OPENAI_API_KEY). Use when the user asks to generate,
   create, draw, or edit an image with GPT, OpenAI, Codex, gpt-image, or
-  DALL-E, and DroidProxy Codex OAuth is available. Prefer this over
+  DALL-E — including transparent PNGs, stickers, cutouts, and campaign
+  assets — and DroidProxy Codex OAuth is available. Prefer this over
   inventing image URLs or base64. If they name Grok or Imagine, use
   grok-imagine instead.
 ---
@@ -143,16 +144,33 @@ still prefer `b64_json` and write a file.
 
 ## Transparency
 
-Unlike Grok Imagine, GPT Image can emit a real alpha channel:
+Unlike Grok Imagine, GPT Image can emit a real alpha channel. **Only when the
+user asks for a transparent image** (PNG with alpha, sticker, cutout, icon on
+any background, campaign/presentation asset, print-on-demand design), fetch
+[Transparent image assets](https://developers.openai.com/cookbook/examples/multimodal/transparent-image-assets-for-campaigns-and-presentations)
+and follow its prompting and parameter patterns for this request. Do not load
+it otherwise.
+
+Always send both fields — `background` alone is not enough:
 
 ```json
 {"background":"transparent","output_format":"png"}
 ```
 
-If that 400s, generate on a flat, uniform background that contrasts with the
-subject and key it out locally (PIL, ImageMagick). Recolor the subject for the
-background they named before you finish — a near-black mark on a dark header
-is invisible. Say what you did.
+The prompt beats the API field. If it describes a backdrop, scene, color,
+plinth, or shadow, the model may paint that instead of alpha. Keep the prompt
+on an isolated subject and say so: fully transparent alpha, no backdrop, no
+rectangle, no plinth, no cast shadow. For charts, ask for a transparent plot
+area and no card, frame, or filled panel — not just a transparent silhouette.
+
+Match `size` to the asset: icons/stickers `1024x1024`, product shots
+`1024x1536`, charts `1536x1024`. After decoding, confirm a real alpha channel
+(RGBA / PNG `tRNS`). If the file is opaque, tighten the prompt and retry once.
+
+If `background:transparent` 400s, generate on a flat, uniform background that
+contrasts with the subject and key it out locally (PIL, ImageMagick). Recolor
+the subject for the background they named before you finish — a near-black
+mark on a dark header is invisible. Say what you did.
 
 ## Failures
 
