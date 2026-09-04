@@ -336,6 +336,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.gpt56TerraFastModeKey) private var gpt56TerraFastMode = AppPreferences.defaultGpt56TerraFastMode
     @AppStorage(AppPreferences.gpt56LunaFastModeKey) private var gpt56LunaFastMode = AppPreferences.defaultGpt56LunaFastMode
     @AppStorage(AppPreferences.gpt56SolFastModeKey) private var gpt56SolFastMode = AppPreferences.defaultGpt56SolFastMode
+    @AppStorage(AppPreferences.gpt6AstraFastModeKey) private var gpt6AstraFastMode = AppPreferences.defaultGpt6AstraFastMode
     @AppStorage(AppPreferences.grok46FastModeKey) private var grok46FastMode = AppPreferences.defaultGrok46FastMode
     @AppStorage(AppPreferences.allowRemoteKey) private var allowRemote = AppPreferences.defaultAllowRemote
     @AppStorage(AppPreferences.secretKeyKey) private var secretKey = AppPreferences.defaultSecretKey
@@ -837,6 +838,11 @@ struct SettingsView: View {
                                     "GPT 5.6 Sol",
                                     isOn: $gpt56SolFastMode,
                                     helpText: "Injects service_tier=priority for GPT 5.6 Sol Responses API requests (Codex fast mode)"
+                                )
+                                codexFastModeToggleRow(
+                                    "GPT 6 Astra",
+                                    isOn: $gpt6AstraFastMode,
+                                    helpText: "Injects service_tier=priority for GPT 6 Astra Responses API requests (Codex fast mode)"
                                 )
                             }
                         }

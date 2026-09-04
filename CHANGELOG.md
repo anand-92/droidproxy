@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
+- **GPT 6 Astra** -- OpenAI's GPT-6 flagship (`gpt-6-astra`) is registered as Factory custom model `custom:droidproxy:gpt-6-astra` with its native effort levels (`low` / `medium` / `high` / `xhigh` / `max`, default `medium`), 1.05M context window, and 128k output-token ceiling. An opt-in Fast Mode toggle injects `service_tier=priority`. The bundled CLIProxyAPI is updated to 7.2.151 for Codex OAuth routing support.
 - **GPT Image skill** -- Bundled `skills/gpt-image` posts `gpt-image-2` to `POST http://localhost:8317/v1/images/generations` and `/v1/images/edits` using Codex OAuth. No `OPENAI_API_KEY`. Requires ChatGPT Plus/Pro; image gen is separate from GPT chat models, same as Grok Imagine.
 - **Grok 4.6 Fast Mode** -- Opt-in Settings toggle under Grok rewrites `grok-4.6` → `grok-4.6-fast` via the Cursor API (`api.x.ai` does not expose the fast variant). Requires a Cursor API key under Beta → Cursor. Default off, matching Codex Fast Mode.
 - **Kimi K3** -- Moonshot AI's flagship model (`kimi-k3`) is registered as Factory custom model `custom:droidproxy:kimi-k3` with its currently supported `max` reasoning effort, a 65,536-token output ceiling, and routing through Kimi OAuth. The bundled CLIProxyAPI is updated to 7.2.83 so K3 is recognized and its reasoning metadata is translated for the Kimi Code API.

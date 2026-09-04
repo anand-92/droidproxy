@@ -72,6 +72,21 @@ final class DroidProxyModelCatalogTests: XCTestCase {
         XCTAssertEqual(luna["supportedReasoningEfforts"] as? [String], ["none", "low", "medium", "high", "xhigh", "max"])
     }
 
+    func testGpt6AstraUsesNativeModelMetadata() throws {
+        let astra = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:gpt-6-astra"))
+
+        XCTAssertEqual(astra["model"] as? String, "gpt-6-astra")
+        XCTAssertEqual(astra["provider"] as? String, "openai")
+        XCTAssertEqual(astra["baseUrl"] as? String, "http://localhost:8317/v1")
+        XCTAssertEqual(astra["displayName"] as? String, "DroidProxy: GPT 6 Astra")
+        XCTAssertEqual(astra["maxOutputTokens"] as? Int, 128000)
+        XCTAssertEqual(astra["maxContextLimit"] as? Int, 1_050_000)
+        XCTAssertEqual(astra["enableThinking"] as? Bool, true)
+        XCTAssertEqual(astra["reasoningEffort"] as? String, "medium")
+        XCTAssertEqual(astra["defaultReasoningEffort"] as? String, "medium")
+        XCTAssertEqual(astra["supportedReasoningEfforts"] as? [String], ["low", "medium", "high", "xhigh", "max"])
+    }
+
     func testKimiK3UsesMaxReasoningMetadata() throws {
         let kimiK3 = try XCTUnwrap(settingsEntry(id: "custom:droidproxy:kimi-k3"))
 

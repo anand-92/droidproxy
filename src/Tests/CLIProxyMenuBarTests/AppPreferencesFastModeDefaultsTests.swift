@@ -10,6 +10,7 @@ final class AppPreferencesFastModeDefaultsTests: XCTestCase {
         XCTAssertFalse(AppPreferences.defaultGpt56TerraFastMode)
         XCTAssertFalse(AppPreferences.defaultGpt56LunaFastMode)
         XCTAssertFalse(AppPreferences.defaultGpt56SolFastMode)
+        XCTAssertFalse(AppPreferences.defaultGpt6AstraFastMode)
         XCTAssertFalse(AppPreferences.defaultGrok46FastMode)
     }
 
@@ -21,6 +22,7 @@ final class AppPreferencesFastModeDefaultsTests: XCTestCase {
             AppPreferences.gpt56TerraFastModeKey,
             AppPreferences.gpt56LunaFastModeKey,
             AppPreferences.gpt56SolFastModeKey,
+            AppPreferences.gpt6AstraFastModeKey,
             AppPreferences.grok46FastModeKey
         ]
         for key in keys {
@@ -31,6 +33,7 @@ final class AppPreferencesFastModeDefaultsTests: XCTestCase {
         XCTAssertFalse(AppPreferences.gpt56TerraFastMode)
         XCTAssertFalse(AppPreferences.gpt56LunaFastMode)
         XCTAssertFalse(AppPreferences.gpt56SolFastMode)
+        XCTAssertFalse(AppPreferences.gpt6AstraFastMode)
         XCTAssertFalse(AppPreferences.grok46FastMode)
     }
 }

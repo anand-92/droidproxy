@@ -11,8 +11,8 @@ import Network
    request enables thinking, so Claude emits visible thinking blocks. Always strips
    `fast-mode-*` on Claude requests so CLIProxyAPI does not treat seat-cap 429s as
    request-scoped (Claude has no Fast mode).
- - Injects `service_tier: "priority"` for OpenAI Responses API requests on the user-enabled
-   GPT 5.x fast-mode models (these toggles are independent of reasoning effort).
+ - Injects `service_tier: "priority"` for OpenAI Responses API requests on user-enabled
+   GPT fast-mode models (these toggles are independent of reasoning effort).
  - Rewrites Gemini `/v1/responses` to `/v1/chat/completions` since the backend does not
    support Gemini via the Responses API endpoint.
  - Rewrites Grok native `<|tool_calls_begin|>` markup leaked into chat-completion
@@ -883,6 +883,8 @@ class ThinkingProxy {
             guard AppPreferences.gpt56LunaFastMode else { return nil }
         case "gpt-5.6-sol":
             guard AppPreferences.gpt56SolFastMode else { return nil }
+        case "gpt-6-astra":
+            guard AppPreferences.gpt6AstraFastMode else { return nil }
         default:
             return nil
         }
@@ -1575,4 +1577,3 @@ class ThinkingProxy {
         }))
     }
 }
-

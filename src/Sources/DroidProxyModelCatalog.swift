@@ -112,6 +112,7 @@ enum DroidProxyModelCatalog {
     private static let codexLevels = [low, medium, high, xhigh]
     private static let gpt56Levels = [none, low, medium, high, xhigh, max]
     private static let gpt56SolLevels = [dynamic, low, medium, high, xhigh, max]
+    private static let gpt6AstraLevels = [low, medium, high, xhigh, max]
 
     private static func antigravityModel(
         baseModel: String,
@@ -286,6 +287,19 @@ enum DroidProxyModelCatalog {
                 baseURL: "http://localhost:8317/v1",
                 kind: .codex,
                 levels: gpt56SolLevels,
+                defaultLevelValue: "medium"
+            ),
+            DroidProxyModelDefinition(
+                baseModel: "gpt-6-astra",
+                idSlug: "gpt-6-astra",
+                displayName: "GPT 6 Astra",
+                maxOutputTokens: 128000,
+                maxContextLimit: 1_050_000,
+                provider: "openai",
+                providerKey: "codex",
+                baseURL: "http://localhost:8317/v1",
+                kind: .codex,
+                levels: gpt6AstraLevels,
                 defaultLevelValue: "medium"
             ),
             // Antigravity subscription models routed through the antigravity executor via
