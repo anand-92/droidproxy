@@ -1,10 +1,13 @@
 ---
 name: gpt-image
-version: 1.0.0
-description: >
-  Generate or edit images with gpt-image-2 through DroidProxy Codex OAuth.
-  Use when the user asks to generate, create, draw, or edit an image with
-  GPT, OpenAI, Codex, gpt-image, or DALL-E, including transparent PNGs.
+version: 1.1.0
+description: |
+  Generate or edit images via GPT Image 2 (gpt-image-2) through DroidProxy
+  Codex OAuth (no OPENAI_API_KEY). Use when the user asks to generate,
+  create, draw, or edit an image with GPT, OpenAI, Codex, gpt-image, or
+  DALL-E, including transparent PNGs, and DroidProxy Codex OAuth is
+  available. Prefer this over inventing image URLs or base64. If they
+  name Grok or Imagine, use grok-imagine instead.
 ---
 
 # GPT Image 2 (via DroidProxy Codex)
@@ -19,7 +22,7 @@ image the user already attached.
 
 ## Generate
 
-Requests often take 30–70s. Use `--max-time 180`. Default `quality` to
+Requests often take 15–70s. Use `--max-time 180`. Default `quality` to
 `low`; raise it only when the user asks (or for small chart text).
 
 ```bash
@@ -44,16 +47,32 @@ Codex errors are JSON (`usage_limit_reached`, `auth_not_found`,
 
 ## Edit
 
-Same auth. JSON with a data URL — no upload step, no `file_id`.
+Same auth. JSON with a data URL — no upload step, no `file_id`. Do **not**
+pass the data URL through `jq --arg`: a typical generated PNG is larger
+than `ARG_MAX` (~1MB on macOS) and `jq` dies with `Argument list too long`.
+Write the data URL to a file and use `--rawfile`, then POST with
+`--data-binary`. Decode the same way as Generate.
 
 ```bash
-SRC="data:image/png;base64,$(base64 -i ./photo.png)"
-curl -sS --max-time 180 http://localhost:8317/v1/images/edits \
+SRC_FILE=$(mktemp)
+REQ=$(mktemp)
+printf 'data:image/png;base64,%s' "$(base64 -i ./photo.png)" > "$SRC_FILE"
+jq -n --arg p "Make it blue-tinted studio lighting" --rawfile u "$SRC_FILE" \
+  '{model:"gpt-image-2", prompt:$p, images:[{image_url:$u}], quality:"low",
+    response_format:"b64_json"}' > "$REQ"
+
+RESP=$(curl -sS --max-time 180 http://localhost:8317/v1/images/edits \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer dummy-not-used" \
-  -d "$(jq -n --arg p "Make it blue-tinted studio lighting" --arg u "$SRC" \
-    '{model:"gpt-image-2", prompt:$p, images:[{image_url:$u}],
-      response_format:"b64_json"}')"
+  --data-binary @"$REQ")
+rm -f "$SRC_FILE" "$REQ"
+
+if B64=$(printf '%s' "$RESP" | jq -er '.data[0].b64_json' 2>/dev/null); then
+  printf '%s' "$B64" | base64 -d > out.png
+else
+  printf '%s\n' "$RESP" >&2
+  exit 1
+fi
 ```
 
 Pick the data-URL mime from the source (`image/jpeg`, `image/png`,
@@ -76,10 +95,10 @@ do not generate the likeness from text alone.
 
 | Field | Values | Notes |
 |---|---|---|
-| `model` | `gpt-image-2` | Always this id. |
+| `model` | `gpt-image-2` | Always this id. Send `gpt-image-1.5` only if the user asks. |
 | `prompt` | string | Required on generate and edit. |
-| `size` | `1024x1024`, `1024x1536`, `1536x1024` | Square / portrait / landscape. |
-| `quality` | `low`, `medium`, `high` | Default `low`. Do not send `hd`, `standard`, or `auto`. |
+| `size` | `1024x1024`, `1024x1536`, `1536x1024` | Hint only. Codex OAuth often ignores it. |
+| `quality` | `low`, `medium`, `high` | Default `low`. Do not send `hd`, `standard`, or `auto`. Codex may still return `medium`. |
 | `response_format` | `b64_json` | Always send this when saving to disk. |
 | `n` | integer | Default 1. Same-prompt variations use `n`, not parallel calls. |
 | `background` | `auto`, `opaque`, `transparent` | `transparent` needs `output_format` `png` or `webp`. |
@@ -88,17 +107,34 @@ do not generate the likeness from text alone.
 | `images` | `[{image_url}]` | Edits only. Data URL or https URL. |
 | `mask` | `{image_url}` | Edits only. PNG with alpha. |
 
-Pick the file extension from `output_format` when present, otherwise from
-the decoded magic bytes (`PNG` / `JFIF` / `RIFF…WEBP`).
+## Response
+
+```json
+{"created": 0, "background": "opaque", "data": [{"b64_json": "..."}],
+ "output_format": "png", "quality": "low", "size": "1536x1024", "usage": {}}
+```
+
+`.data[0]` is only `b64_json` — no `url`, no `mime_type`. Pick the file
+extension from top-level `output_format` when present, otherwise from the
+decoded magic bytes (`PNG` / `JFIF` / `RIFF…WEBP`).
+
+Codex OAuth often ignores `size` and sometimes `quality`. A `1024x1024` /
+`low` request may come back `1536x1024` / `low`, or an off-enum size like
+`1312x1199` with `quality: medium`. Trust the response `size` / `quality` /
+`background` and the decoded IHDR. Do **not** retry just because they
+differ from the request.
 
 ## Transparency
 
-When the user wants a transparent PNG (sticker, cutout, icon, campaign
-asset, slide chart, print design), send both:
+When the user **explicitly** wants a transparent PNG or alpha background
+(sticker, cutout, icon), send both:
 
 ```json
 {"background":"transparent","output_format":"png"}
 ```
+
+If they asked for a campaign, slide, or print asset without mentioning
+transparency, keep opaque or ask. Don't assume.
 
 The prompt beats `background`. If it describes a backdrop, scene, color,
 plinth, or shadow, the model paints that instead of alpha. Keep the prompt
@@ -111,6 +147,7 @@ on an isolated subject and say so explicitly:
 
 Size by use: icons/stickers `1024x1024`, product shots `1024x1536`, charts
 `1536x1024`. Raise `quality` to `high` when the asset has small text.
+Expect the returned pixel size to differ; that's not a failure.
 
 **Products / campaign cutouts.** One object. No scene. Ask for fully
 transparent alpha around the silhouette. Good for reuse across storefronts
@@ -133,7 +170,8 @@ too (no white rectangle or badge). Composite locally; do not bake the
 print onto the garment in one generation if they need to reuse it.
 
 After decoding, confirm a real alpha channel (RGBA / PNG `tRNS`) and that
-some pixels are fully transparent. If the file is opaque, strip backdrop
+some pixels are fully transparent. Also check top-level
+`"background":"transparent"`. If the file is opaque, strip backdrop
 language from the prompt and retry once.
 
 If `background:transparent` 400s, generate on a flat uniform background
@@ -150,6 +188,8 @@ near-black mark on a dark header is invisible. Say what you did.
 | `usage_limit_reached` (`plan_type`, `resets_in_seconds`) | Quota exhausted. Tell the user when it resets. Do not retry in a loop. |
 | 401 after a long idle | OAuth session dead — Settings → Connect Codex |
 | 400 unsupported model | You sent a chat id. Use `gpt-image-2`. |
+| `jq: Argument list too long` | You put a data URL in `jq --arg`. Use `--rawfile` as in Edit. |
+| Response `size`/`quality` ≠ request | Not a failure. Save the image. Do not retry. |
 
 On `moderation_blocked`, stop. Don't retry and don't paraphrase the prompt
 to evade the filter. Report the API's own message. Never invent image
