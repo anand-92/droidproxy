@@ -33,22 +33,6 @@ const models = [
   },
   {
     icon: '/assets/icon-codex.png',
-    name: 'GPT 5.4',
-    id: 'gpt-5.4',
-    levels: ['low', 'medium', 'high', 'xhigh'],
-    max: '128,000',
-    provider: 'OpenAI',
-  },
-  {
-    icon: '/assets/icon-codex.png',
-    name: 'GPT 5.5',
-    id: 'gpt-5.5',
-    levels: ['low', 'medium', 'high', 'xhigh'],
-    max: '128,000',
-    provider: 'OpenAI',
-  },
-  {
-    icon: '/assets/icon-codex.png',
     name: 'GPT 5.6 Terra',
     id: 'gpt-5.6-terra',
     levels: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],

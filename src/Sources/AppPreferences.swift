@@ -1,9 +1,7 @@
 import Foundation
 
 enum AppPreferences {
-    static let gpt54FastModeKey = "gpt54FastMode"
-    static let gpt55FastModeKey = "gpt55FastMode"
-    static let gpt56TerraFastModeKey = "gpt56TerraFastMode"
+    static let gpt56TerraFastModeKey = "******************"
     static let gpt56SolFastModeKey = "gpt56SolFastMode"
     static let gpt56LunaFastModeKey = "gpt56LunaFastMode"
     static let gpt6AstraFastModeKey = "gpt6AstraFastMode"
@@ -19,8 +17,6 @@ enum AppPreferences {
     static let verboseLoggingKey = "verboseLogging"
     static let sequentialAccountFailoverKey = "sequentialAccountFailover"
 
-    static let defaultGpt54FastMode = false
-    static let defaultGpt55FastMode = false
     static let defaultGpt56TerraFastMode = false
     static let defaultGpt56SolFastMode = false
     static let defaultGpt56LunaFastMode = false
@@ -36,14 +32,6 @@ enum AppPreferences {
     /// Opt-in. Off preserves the historical round-robin routing and globally
     /// disabled cooldowns, so existing single-account users see no change.
     static let defaultSequentialAccountFailover = false
-
-    static var gpt54FastMode: Bool {
-        UserDefaults.standard.bool(forKey: gpt54FastModeKey)
-    }
-
-    static var gpt55FastMode: Bool {
-        UserDefaults.standard.bool(forKey: gpt55FastModeKey)
-    }
 
     static var gpt56TerraFastMode: Bool {
         UserDefaults.standard.bool(forKey: gpt56TerraFastModeKey)

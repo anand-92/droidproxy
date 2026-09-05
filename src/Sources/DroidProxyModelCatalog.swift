@@ -230,30 +230,6 @@ enum DroidProxyModelCatalog {
             ),
 
             DroidProxyModelDefinition(
-                baseModel: "gpt-5.4",
-                idSlug: "gpt-5.4",
-                displayName: "GPT 5.4",
-                maxOutputTokens: 128000,
-                provider: "openai",
-                providerKey: "codex",
-                baseURL: "http://localhost:8317/v1",
-                kind: .codex,
-                levels: codexLevels,
-                defaultLevelValue: "high"
-            ),
-            DroidProxyModelDefinition(
-                baseModel: "gpt-5.5",
-                idSlug: "gpt-5.5",
-                displayName: "GPT 5.5",
-                maxOutputTokens: 128000,
-                provider: "openai",
-                providerKey: "codex",
-                baseURL: "http://localhost:8317/v1",
-                kind: .codex,
-                levels: codexLevels,
-                defaultLevelValue: "high"
-            ),
-            DroidProxyModelDefinition(
                 baseModel: "gpt-5.6-terra",
                 idSlug: "gpt-5.6-terra",
                 displayName: "GPT 5.6 Terra",

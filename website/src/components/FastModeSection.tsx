@@ -1,6 +1,6 @@
 const fastModeCode = `<span class="c">// Fast Mode adds one field to your GPT requests.</span>
 {
-  <span class="k">"model"</span>: <span class="s">"gpt-5.5"</span>,
+  <span class="k">"model"</span>: <span class="s">"gpt-5.6-terra"</span>,
   <span class="k">"service_tier"</span>: <span class="s">"priority"</span>,   <span class="c">// ← added by Fast Mode</span>
   <span class="k">"reasoning"</span>: { <span class="k">"effort"</span>: <span class="s">"high"</span> }   <span class="c">// ← chosen in Droid CLI</span>
 }`
@@ -17,7 +17,7 @@ export default function FastModeSection() {
             <dt>What it does</dt>
             <dd>Adds <span className="mono">service_tier: priority</span> to GPT requests on the Responses API for lower-latency responses</dd>
             <dt>Works with</dt>
-            <dd>GPT 5.4, GPT 5.5, GPT 5.6 Terra, and GPT 5.6 Sol — toggle each one in the Settings window</dd>
+            <dd>GPT 5.6 Terra and GPT 5.6 Sol — toggle each one in the Settings window</dd>
             <dt>When to use</dt>
             <dd>Interactive sessions where responsiveness matters more than conserving priority capacity</dd>
             <dt>Reasoning effort</dt>

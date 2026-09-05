@@ -331,8 +331,6 @@ struct SettingsView: View {
     @StateObject private var authManager = AuthManager()
     @StateObject private var oauthUsageTracker = OAuthUsageTracker()
     @State private var launchAtLogin = false
-    @AppStorage(AppPreferences.gpt54FastModeKey) private var gpt54FastMode = AppPreferences.defaultGpt54FastMode
-    @AppStorage(AppPreferences.gpt55FastModeKey) private var gpt55FastMode = AppPreferences.defaultGpt55FastMode
     @AppStorage(AppPreferences.gpt56TerraFastModeKey) private var gpt56TerraFastMode = AppPreferences.defaultGpt56TerraFastMode
     @AppStorage(AppPreferences.gpt56LunaFastModeKey) private var gpt56LunaFastMode = AppPreferences.defaultGpt56LunaFastMode
     @AppStorage(AppPreferences.gpt56SolFastModeKey) private var gpt56SolFastMode = AppPreferences.defaultGpt56SolFastMode
@@ -814,16 +812,6 @@ struct SettingsView: View {
                                 }
                             }
                             if codexFastModeExpanded {
-                                codexFastModeToggleRow(
-                                    "GPT 5.4",
-                                    isOn: $gpt54FastMode,
-                                    helpText: "Injects service_tier=priority for GPT 5.4 Responses API requests (Codex fast mode)"
-                                )
-                                codexFastModeToggleRow(
-                                    "GPT 5.5",
-                                    isOn: $gpt55FastMode,
-                                    helpText: "Injects service_tier=priority for GPT 5.5 Responses API requests (Codex fast mode)"
-                                )
                                 codexFastModeToggleRow(
                                     "GPT 5.6 Terra",
                                     isOn: $gpt56TerraFastMode,

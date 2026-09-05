@@ -43,7 +43,7 @@ const codePlain = `// What "Apply" writes for you — no need to touch this your
     "maxOutputTokens": 64000,
     "provider": "anthropic"
   }
-  // + GPT 5.4, GPT 5.5, Gemini, Kimi
+  // + GPT 5.6, Gemini, Kimi
 ]`
 
 const codeHtml = `<span class="c">// What "Apply" writes for you — no need to touch this yourself.</span>
@@ -88,7 +88,7 @@ const codeHtml = `<span class="c">// What "Apply" writes for you — no need to 
     <span class="k">"maxOutputTokens"</span>: <span class="n">64000</span>,
     <span class="k">"provider"</span>: <span class="s">"anthropic"</span>
   }
-  <span class="c">// + GPT 5.4, GPT 5.5, Gemini, Kimi</span>
+  <span class="c">// + GPT 5.6, Gemini, Kimi</span>
 ]`
 
 export default function InstallSection() {
